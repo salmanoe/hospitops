@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>id.co.hospitops</groupId>
+        <artifactId>hotel-backend</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>coverage-aggregate</artifactId>
+    <name>HospitOps Coverage Aggregate</name>
+    <packaging>pom</packaging>
+
+    <!--
+        This module has NO source code.
+        Its only job is to aggregate JaCoCo coverage reports from all other
+        modules into a single XML file that SonarQube reads.
+
+        WHY a separate module:
+          JaCoCo's report-aggregate goal only includes coverage from modules
+          that are declared as direct dependencies. By listing ALL domain
+          modules here, we guarantee the aggregate report covers the full
+          codebase — including cross-module coverage from integration tests.
+
+        Output (when running -Pcoverage):
+          coverage-aggregate/target/site/jacoco-aggregate/jacoco.xml
+
+        This path is referenced in the parent pom via:
+          sonar.coverage.jacoco.xmlReportPaths
+    -->
+
+    <dependencies>
+        <!-- Every module that contains source code must be listed here.
+             The report-aggregate goal only picks up direct dependencies. -->
+        <dependency>
+            <groupId>id.co.hospitops</groupId>
+            <artifactId>shared</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>id.co.hospitops</groupId>
+            <artifactId>identity</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>id.co.hospitops</groupId>
+            <artifactId>room</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>id.co.hospitops</groupId>
+            <artifactId>guest</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>id.co.hospitops</groupId>
+            <artifactId>reservation</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>id.co.hospitops</groupId>
+            <artifactId>housekeeping</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>id.co.hospitops</groupId>
+            <artifactId>billing</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>id.co.hospitops</groupId>
+            <artifactId>bootstrap</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>report-aggregate</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report-aggregate</goal>
+                        </goals>
+                        <configuration>
+                            <formats>
+                                <format>XML</format>
+                                <format>HTML</format>
+                            </formats>
+                            <!--
+                                Output location — referenced in parent pom
+                                via sonar.coverage.jacoco.xmlReportPaths.
+                            -->
+                            <outputDirectory>
+                                ${project.build.directory}/site/jacoco-aggregate
+                            </outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

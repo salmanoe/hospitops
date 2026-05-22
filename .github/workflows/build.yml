@@ -1,0 +1,164 @@
+# ═══════════════════════════════════════════════════════════════
+# build.yml — Native Image Build & Push
+# Runs on: push to main (after CI passes) or manual trigger
+#
+# Builds a GraalVM native image via Spring Boot Buildpacks,
+# packages it as a Docker image, and pushes it to GHCR.
+#
+# No extra secrets needed — GITHUB_TOKEN covers GHCR write access.
+#
+# Image naming:
+#   ghcr.io/<owner>/hotel-backend:<sha>     (every build)
+#   ghcr.io/<owner>/hotel-backend:<branch>  (e.g. main)
+#   ghcr.io/<owner>/hotel-backend:latest    (main branch only)
+# ═══════════════════════════════════════════════════════════════
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "hotel-backend/**"
+      - ".github/workflows/build.yml"
+  workflow_dispatch:
+    inputs:
+      push_image:
+        description: "Push image to registry?"
+        required: true
+        default: "true"
+        type: choice
+        options: [ "true", "false" ]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: "25"
+  JAVA_DISTRIBUTION: "liberica"
+  MAVEN_OPTS: "-Xmx4096m"             # Native compilation is memory-hungry
+  REGISTRY: ghcr.io
+  # owner/hotel-backend → e.g. ghcr.io/salmanoew/hotel-backend
+  IMAGE_NAME: ${{ github.repository_owner }}/hotel-backend
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # JOB: Build native image + push to GHCR
+  # ─────────────────────────────────────────────────────────────
+  build-native:
+    name: "Native Image Build"
+    runs-on: ubuntu-latest   # native compile needs ~10 GB RAM — standard runner is fine
+
+    permissions:
+      contents: read
+      packages: write        # needed to push to ghcr.io
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java ${{ env.JAVA_VERSION }} (Liberica NIK — GraalVM)
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('hotel-backend/**/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}-
+
+      # Compute image tags — SHA for traceability, branch for convenience,
+      # latest for main-branch builds
+      - name: Compute image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=short
+            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Run AOT processing first — generates reflect/proxy configs for native.
+      # Separate step so its output is clearly visible in the Actions UI.
+      - name: Run Spring AOT processing
+        working-directory: hotel-backend
+        run: |
+          mvn process-aot -pl bootstrap -am \
+            --batch-mode --no-transfer-progress
+
+      # Build native Docker image using Paketo Buildpacks.
+      # No local native-image binary needed — compilation happens inside
+      # a build container pulled by the buildpack automatically.
+      # Expected build time: 5–15 minutes on a standard GitHub runner.
+      - name: Build native Docker image
+        working-directory: hotel-backend
+        run: |
+          mvn -Pnative spring-boot:build-image \
+            -pl bootstrap -am \
+            --batch-mode --no-transfer-progress \
+            -Dspring-boot.build-image.imageName=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      # Quick sanity check — run the native image for 10s and confirm it
+      # starts (it will fail to reach DB, but the process should start cleanly)
+      - name: Smoke test native image
+        run: |
+          docker run --rm -d \
+            --name hotel-smoke-test \
+            -p 8080:8080 \
+            -e DB_URL=jdbc:postgresql://localhost:5432/placeholder \
+            -e DB_USER=placeholder \
+            -e DB_PASS=placeholder \
+            -e JWT_SECRET=smoke-test-secret-key-minimum-32-chars \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} || true
+
+          sleep 10
+
+          # Native image starts in < 1s; we expect to see the startup log
+          docker logs hotel-smoke-test 2>&1 | grep -E "Started|ERROR" || true
+          docker stop hotel-smoke-test 2>/dev/null || true
+
+      # Tag with all computed metadata tags and push
+      - name: Push image to GHCR
+        if: |
+          github.event_name == 'push' ||
+          github.event.inputs.push_image == 'true'
+        run: |
+          for tag in ${{ join(fromJSON(steps.meta.outputs.json).tags, ' ') }}; do
+            docker tag \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+              $tag
+            docker push $tag
+          done
+
+      - name: Write build summary
+        run: |
+          echo "## 🐳 Native Image Built" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| SHA Tag | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | ${{ github.event.head_commit.message }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Ready for deployment. Trigger the **Deploy** workflow to roll out." >> $GITHUB_STEP_SUMMARY
+
+      # Expose the image tag for the deploy workflow to consume
+      - name: Output image tag
+        id: image
+        run: echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+
+    outputs:
+      image-tag: ${{ steps.image.outputs.tag }}

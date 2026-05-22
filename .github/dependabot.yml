@@ -1,0 +1,64 @@
+# ═══════════════════════════════════════════════════════════════
+# dependabot.yml — Automated dependency updates
+#
+# Dependabot opens PRs automatically when dependencies are outdated.
+# PRs are small and targeted — one library / action at a time.
+#
+# Schedule: weekly on Monday morning (low-traffic window).
+# ═══════════════════════════════════════════════════════════════
+
+version: 2
+
+updates:
+
+  # ── Maven (hotel-backend) ─────────────────────────────────────
+  # Covers all pom.xml files in the multi-module project.
+  - package-ecosystem: maven
+    directory: /hotel-backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: '07:00'
+      timezone: Asia/Jakarta
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - java
+    commit-message:
+      prefix: 'chore(deps)'
+    # Group minor/patch updates into a single PR to reduce noise.
+    # Major version bumps always get their own PR.
+    groups:
+      spring-boot-ecosystem:
+        patterns:
+          - 'org.springframework*'
+          - 'org.hibernate*'
+          - 'org.flywaydb*'
+        update-types:
+          - minor
+          - patch
+      testing:
+        patterns:
+          - 'org.testcontainers*'
+          - 'org.junit*'
+          - 'org.mockito*'
+        update-types:
+          - minor
+          - patch
+
+  # ── GitHub Actions ────────────────────────────────────────────
+  # Keeps action versions (e.g. actions/checkout@v4) pinned to
+  # the latest release. Uses SHA-pinning best-practice comments.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '07:00'
+      timezone: Asia/Jakarta
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: 'chore(ci)'

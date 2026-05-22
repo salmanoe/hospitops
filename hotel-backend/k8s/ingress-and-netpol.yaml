@@ -1,0 +1,157 @@
+# ═══════════════════════════════════════════════════════════════
+# k8s/ingress.yaml
+#
+# Requires an Ingress Controller installed in the cluster.
+# Options (choose one):
+#   Nginx:   kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
+#   Traefik: helm install traefik traefik/traefik
+#   AWS ALB: aws-load-balancer-controller
+#
+# TLS: Uses cert-manager with Let's Encrypt.
+# Install cert-manager:
+#   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+# ═══════════════════════════════════════════════════════════════
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hotel-ingress
+  namespace: hotel
+  labels:
+    app: hotel-backend
+  annotations:
+    # Nginx ingress controller
+    kubernetes.io/ingress.class: "nginx"
+
+    # TLS via cert-manager + Let's Encrypt
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+    # Increase timeout for PDF generation (can take a few seconds)
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+
+    # Body size limit (for future file uploads)
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+
+    # Rate limiting — protect the login endpoint
+    nginx.ingress.kubernetes.io/limit-rps: "20"
+
+    # CORS handled by Spring Boot — don't double-handle in Nginx
+    nginx.ingress.kubernetes.io/enable-cors: "false"
+
+spec:
+  tls:
+    - hosts:
+        - api.hotel.yourdomain.com
+      secretName: hotel-tls-secret   # cert-manager creates this automatically
+
+  rules:
+    - host: api.hotel.yourdomain.com
+      http:
+        paths:
+          # All API traffic → hotel-backend-service
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: hotel-backend-service
+                port:
+                  number: 80
+
+          # Actuator health — for external monitoring (optional)
+          # Comment out if you don't want health exposed externally
+          - path: /actuator/health
+            pathType: Prefix
+            backend:
+              service:
+                name: hotel-backend-service
+                port:
+                  number: 80
+
+---
+# ═══════════════════════════════════════════════════════════════
+# k8s/network-policy.yaml
+# Restrict traffic between pods — defense in depth
+# ═══════════════════════════════════════════════════════════════
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hotel-backend-netpol
+  namespace: hotel
+spec:
+  podSelector:
+    matchLabels:
+      app: hotel-backend
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    # Only allow traffic from Ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+
+  egress:
+    # Allow outbound to PostgreSQL only
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector: { }
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
+# ═══════════════════════════════════════════════════════════════
+# k8s/network-policy-postgres.yaml
+# PostgreSQL only accepts traffic from the app
+# ═══════════════════════════════════════════════════════════════
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-netpol
+  namespace: hotel
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    # Only hotel-backend pods can connect to PostgreSQL
+    - from:
+        - podSelector:
+            matchLabels:
+              app: hotel-backend
+      ports:
+        - protocol: TCP
+          port: 5432
+
+  egress:
+    # PostgreSQL doesn't need outbound except DNS
+    - to:
+        - namespaceSelector: { }
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53

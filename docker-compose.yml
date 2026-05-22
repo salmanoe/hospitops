@@ -1,0 +1,132 @@
+# ═══════════════════════════════════════════════════════════════
+# docker-compose.yml — Full local development stack
+# Run from the repo root (hospitops/).
+#
+# Services:
+#   postgres   PostgreSQL 17          → internal only
+#   app        Spring Boot backend    → internal (via nginx)
+#   frontend   Nginx + static HTML    → http://localhost
+#
+# Common commands:
+#   docker compose up              # start everything, stream logs
+#   docker compose up --build      # rebuild app image first, then start
+#   docker compose up -d           # detached (background)
+#   docker compose down            # stop, keep data volumes
+#   docker compose down -v         # stop and wipe all data
+#   docker compose logs -f app     # tail backend logs
+#   docker compose logs -f frontend
+#   docker compose restart app     # reload backend after a change
+#
+# SonarQube (optional):
+#   docker compose --profile sonar up -d sonarqube
+# ═══════════════════════════════════════════════════════════════
+
+services:
+
+  # ── PostgreSQL 17 ────────────────────────────────────────────
+  # Internal only — not exposed outside the Compose network.
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-hotel_db}
+      POSTGRES_USER:     ${POSTGRES_USER:-hotel_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-yourpassword}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"   # Exposed so IDE-launched backends can connect directly
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hotel_user} -d ${POSTGRES_DB:-hotel_db}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  # ── Spring Boot Application ──────────────────────────────────
+  # Internal only — reached by the browser through the nginx proxy,
+  # not exposed directly. Backend listens on port 8080 inside the network.
+  app:
+    build:
+      context: ./hotel-backend
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+
+      # Database — "postgres" is the Compose service hostname
+      DB_URL:      jdbc:postgresql://postgres:5432/${POSTGRES_DB:-hotel_db}
+      DB_USER:     ${POSTGRES_USER:-hotel_user}
+      DB_PASS:     ${POSTGRES_PASSWORD:-yourpassword}
+      DB_POOL_MAX: ${DB_POOL_MAX:-15}
+
+      # JWT
+      JWT_SECRET:        ${JWT_SECRET:-dev-local-jwt-secret-change-in-production-min-32}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-28800000}
+
+      # CORS — the browser origin is http://localhost (nginx, port 80)
+      FRONTEND_URL: http://localhost
+
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
+
+      PROMETHEUS_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # Polls the Spring Boot readiness probe — UP only after Flyway migrations
+      # and all beans are initialised. start_period gives Spring Boot time to
+      # compile AOT sources and run migrations before the first check.
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health/readiness 2>/dev/null | grep -q '\"status\":\"UP\"' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+    restart: unless-stopped
+
+  # ── Nginx — Frontend + API proxy ────────────────────────────
+  # Serves static HTML/CSS/JS from hotel-frontend/ and proxies
+  # /api/* → http://app:8080 (matches core.js: BASE = '/api/v1').
+  # Files are volume-mounted so edits to HTML/CSS/JS are live
+  # without rebuilding the container.
+  frontend:
+    image: nginx:alpine
+    volumes:
+      - ./hotel-frontend:/usr/share/nginx/html:ro
+      - ./hotel-frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:80"     # App is at http://localhost
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── SonarQube CE (optional) ──────────────────────────────────
+  # Not started by default. Activate with:
+  #   docker compose --profile sonar up -d sonarqube
+  #
+  # First login: admin / admin (SonarQube will prompt you to change it)
+  # Then generate a token under My Account → Security and run:
+  #   cd hotel-backend
+  #   mvn sonar:sonar -Psonar \
+  #     -Dsonar.host.url=http://localhost:9000 \
+  #     -Dsonar.token=<YOUR_TOKEN>
+  sonarqube:
+    image: sonarqube:community
+    profiles: [sonar]
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - sonarqube-data:/opt/sonarqube/data
+      - sonarqube-logs:/opt/sonarqube/logs
+      - sonarqube-extensions:/opt/sonarqube/extensions
+    ports:
+      - "9000:9000"
+    restart: unless-stopped
+
+# ── Named volumes ─────────────────────────────────────────────
+volumes:
+  postgres-data:
+  sonarqube-data:
+  sonarqube-logs:
+  sonarqube-extensions:

@@ -1,0 +1,32 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Maven
+target/
+*.class
+*.jar
+*.war
+
+# Native image
+*.so
+*.dll
+*.dylib
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment — never commit secrets
+.env
+*.env.local
+/*.md
+/*.docx
+
+# SonarQube scanner cache
+.scannerwork/

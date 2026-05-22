@@ -1,0 +1,177 @@
+# ═══════════════════════════════════════════════════════════════
+# k8s/namespace.yaml
+# ═══════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hotel
+  labels:
+    app.kubernetes.io/managed-by: kubectl
+    environment: production
+
+---
+# ═══════════════════════════════════════════════════════════════
+# k8s/postgres/secret.yaml
+#
+# IMPORTANT: Never commit real secrets to Git.
+# Use one of these instead in production:
+#   - Sealed Secrets (https://github.com/bitnami-labs/sealed-secrets)
+#   - External Secrets Operator (AWS SSM, HashiCorp Vault, GCP Secret Manager)
+#   - Helm --set with CI/CD injection
+#
+# Values here are base64-encoded. Encode with:
+#   echo -n "yourvalue" | base64
+#
+# Defaults below:
+#   hotel_user     → aG90ZWxfdXNlcg==
+#   yourpassword   → eW91cnBhc3N3b3Jk
+#   hotel_db       → aG90ZWxfZGI=
+# ═══════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: hotel
+  labels:
+    app: postgres
+    app.kubernetes.io/component: database
+type: Opaque
+data:
+  POSTGRES_USER: aG90ZWxfdXNlcg==      # hotel_user
+  POSTGRES_PASSWORD: eW91cnBhc3N3b3Jk      # yourpassword
+  POSTGRES_DB: aG90ZWxfZGI=          # hotel_db
+
+---
+# ═══════════════════════════════════════════════════════════════
+# k8s/postgres/configmap.yaml
+# ═══════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: hotel
+  labels:
+    app: postgres
+data:
+  POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+  # Tuning for a small-medium hotel workload (~40 rooms, light concurrency)
+  POSTGRES_SHARED_BUFFERS: "256MB"
+  POSTGRES_EFFECTIVE_CACHE: "768MB"
+  POSTGRES_MAX_CONNECTIONS: "100"
+
+---
+# ═══════════════════════════════════════════════════════════════
+# k8s/postgres/pvc.yaml
+# Persistent Volume Claim — database storage survives pod restarts
+# ═══════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: hotel
+  labels:
+    app: postgres
+spec:
+  accessModes:
+    - ReadWriteOnce       # Single node — fine for PostgreSQL
+  resources:
+    requests:
+      storage: 10Gi
+  # storageClassName: standard   # Use your cluster's storage class
+  #                              # GKE: standard-rwo | AKS: managed-csi | EKS: gp2
+
+---
+# ═══════════════════════════════════════════════════════════════
+# k8s/postgres/deployment.yaml
+# ═══════════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: hotel
+  labels:
+    app: postgres
+    app.kubernetes.io/component: database
+spec:
+  replicas: 1     # PostgreSQL is stateful — single replica with PVC
+  selector:
+    matchLabels:
+      app: postgres
+  strategy:
+    type: Recreate  # Required for ReadWriteOnce PVC — no rolling update
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: postgres-secret
+            - configMapRef:
+                name: postgres-config
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - hotel_user
+                - -d
+                - hotel_db
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - hotel_user
+                - -d
+                - hotel_db
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+
+---
+# ═══════════════════════════════════════════════════════════════
+# k8s/postgres/service.yaml
+# ClusterIP — only reachable within the cluster
+# DNS: postgres-service.hotel.svc.cluster.local
+# ═══════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: hotel
+  labels:
+    app: postgres
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP

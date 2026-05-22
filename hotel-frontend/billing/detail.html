@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Invoice — HospitOps</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="/assets/css/custom.css" rel="stylesheet"/>
+</head>
+<body data-page="billing">
+<div id="sidebar"></div>
+<div id="main-content">
+    <div class="topbar">
+        <h2 class="page-title" id="invoice-title">Invoice</h2>
+        <div class="d-flex gap-2">
+            <a href="/billing/list.html" class="btn btn-outline-secondary btn-sm">← Back</a>
+            <button id="pdf-btn" class="btn btn-outline-secondary btn-sm">⬇ PDF</button>
+            <button id="pay-btn" class="btn btn-gold btn-sm d-none">Record Payment</button>
+        </div>
+    </div>
+    <div class="page-body">
+        <div style="max-width:760px">
+
+            <!-- Invoice header card -->
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="text-muted" style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase">Invoice No.</div>
+                            <div class="fw-bold" id="inv-number">—</div>
+                            <div id="inv-status" class="mt-1"></div>
+                            <div class="text-muted mt-2" style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase">Guest</div>
+                            <div id="inv-guest">—</div>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <div class="text-muted small">Issued</div>
+                            <div id="inv-issued">—</div>
+                            <div class="text-muted small mt-1">Due</div>
+                            <div id="inv-due">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Line items -->
+            <div class="card mb-3">
+                <div class="card-header">Line Items</div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr><th>Description</th><th class="text-center">Qty</th>
+                                <th class="text-end">Unit Price</th><th class="text-end">Total</th></tr>
+                        </thead>
+                        <tbody id="items-tbody"></tbody>
+                        <tfoot id="items-tfoot"></tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Payment history -->
+            <div class="card mb-3" id="payments-card" style="display:none">
+                <div class="card-header">Payment History</div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr><th>Date</th><th>Method</th><th>Reference</th>
+                                <th class="text-end">Amount</th></tr>
+                        </thead>
+                        <tbody id="payments-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="payModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Record Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Balance Due</label>
+                    <div id="modal-balance" class="fw-bold fs-5" style="color:var(--hospitops-gold)">—</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Amount (IDR) *</label>
+                    <input type="number" id="pay-amount" class="form-control" min="1000" step="1000"/>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Payment Method *</label>
+                    <select id="pay-method" class="form-select">
+                        <option value="CASH">Cash</option>
+                        <option value="CREDIT_CARD">Credit Card</option>
+                        <option value="DEBIT_CARD">Debit Card</option>
+                        <option value="BANK_TRANSFER">Bank Transfer</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Reference No.</label>
+                    <input type="text" id="pay-ref" class="form-control"
+                           placeholder="Card / transfer reference"/>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="pay-confirm-btn" class="btn btn-success">✓ Confirm Payment</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/core.js"></script>
+<script src="/assets/js/layout.js"></script>
+<script>
+Auth.requireAuth();
+const invoiceId = Utils.getParam('id');
+const payModal  = new bootstrap.Modal(document.getElementById('payModal'));
+let invoice;
+
+async function load() {
+    invoice = await API.invoices.get(invoiceId);
+
+    document.getElementById('invoice-title').textContent =
+        invoice.invoiceNumber || 'Invoice';
+    document.getElementById('inv-number').textContent  = invoice.invoiceNumber;
+    document.getElementById('inv-status').innerHTML    = Utils.statusBadge(invoice.paymentStatus);
+    document.getElementById('inv-guest').textContent   = invoice.guestName || '—';
+    document.getElementById('inv-issued').textContent  = Utils.formatDateTime(invoice.issuedAt);
+    document.getElementById('inv-due').textContent     = invoice.dueDate ? Utils.formatDate(invoice.dueDate) : 'Upon checkout';
+
+    // Show pay button if not fully paid
+    if (invoice.paymentStatus !== 'PAID') {
+        document.getElementById('pay-btn').classList.remove('d-none');
+    }
+
+    // Line items
+    document.getElementById('items-tbody').innerHTML =
+        (invoice.items || []).map(i => `
+            <tr>
+                <td>${i.description}</td>
+                <td class="text-center">${i.quantity}</td>
+                <td class="text-end">${Utils.formatRp(i.unitPrice)}</td>
+                <td class="text-end">${Utils.formatRp(i.totalPrice)}</td>
+            </tr>`).join('');
+
+    // Totals footer
+    const discountRow = invoice.discountAmount > 0 ? `
+        <tr>
+            <td colspan="3" class="text-end text-muted">Discount</td>
+            <td class="text-end text-success">− ${Utils.formatRp(invoice.discountAmount)}</td>
+        </tr>` : '';
+
+    document.getElementById('items-tfoot').innerHTML = `
+        <tr class="text-muted">
+            <td colspan="3" class="text-end">Subtotal</td>
+            <td class="text-end">${Utils.formatRp(invoice.subtotal)}</td>
+        </tr>
+        <tr class="text-muted">
+            <td colspan="3" class="text-end">Tax (11%)</td>
+            <td class="text-end">${Utils.formatRp(invoice.taxAmount)}</td>
+        </tr>
+        ${discountRow}
+        <tr>
+            <td colspan="3" class="text-end fw-bold">Total</td>
+            <td class="text-end fw-bold" style="color:var(--hospitops-gold)">${Utils.formatRp(invoice.totalAmount)}</td>
+        </tr>
+        <tr>
+            <td colspan="3" class="text-end text-success">Paid</td>
+            <td class="text-end text-success">${Utils.formatRp(invoice.totalPaid)}</td>
+        </tr>
+        <tr>
+            <td colspan="3" class="text-end ${invoice.balance > 0 ? 'text-danger fw-bold' : 'text-muted'}">Balance</td>
+            <td class="text-end ${invoice.balance > 0 ? 'text-danger fw-bold' : 'text-muted'}">${Utils.formatRp(invoice.balance)}</td>
+        </tr>`;
+
+    // Payment history
+    if ((invoice.payments || []).length > 0) {
+        document.getElementById('payments-card').style.display = '';
+        document.getElementById('payments-tbody').innerHTML =
+            invoice.payments.map(p => `
+                <tr>
+                    <td>${Utils.formatDateTime(p.paidAt)}</td>
+                    <td>${p.method.replace('_', ' ')}</td>
+                    <td class="text-muted small">${p.referenceNo || '—'}</td>
+                    <td class="text-end text-success">${Utils.formatRp(p.amount)}</td>
+                </tr>`).join('');
+    }
+}
+
+// PDF
+document.getElementById('pdf-btn').addEventListener('click', async () => {
+    try {
+        const blob = await API.invoices.pdf(invoiceId);
+        Utils.downloadPdf(blob, `${invoice.invoiceNumber}.pdf`);
+    } catch (e) { Utils.toast('PDF download failed', 'danger'); }
+});
+
+// Open payment modal
+document.getElementById('pay-btn').addEventListener('click', () => {
+    document.getElementById('modal-balance').textContent = Utils.formatRp(invoice.balance);
+    document.getElementById('pay-amount').value = invoice.balance;
+    payModal.show();
+});
+
+// Confirm payment
+document.getElementById('pay-confirm-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('pay-confirm-btn');
+    Utils.loading(btn, true);
+    try {
+        await API.invoices.recordPayment(invoiceId, {
+            amount:     +document.getElementById('pay-amount').value,
+            method:      document.getElementById('pay-method').value,
+            referenceNo: document.getElementById('pay-ref').value || null,
+        });
+        Utils.toast('Payment recorded successfully');
+        payModal.hide();
+        load();
+    } catch (e) { Utils.toast(e.message, 'danger'); }
+    Utils.loading(btn, false);
+});
+
+load();
+</script>
+</body>
+</html>

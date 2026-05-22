@@ -1,0 +1,221 @@
+# ═══════════════════════════════════════════════════════════════
+# bootstrap/src/main/resources/application.yml
+#
+# All sensitive values come from environment variables.
+# In K8s these are injected from Secrets and ConfigMaps.
+# ═══════════════════════════════════════════════════════════════
+spring:
+  application:
+    name: hospitops-backend
+
+  # ── Change 5: Virtual Threads ─────────────────────────────────
+  # Enables Project Loom virtual threads across the entire app:
+  #   - Tomcat request threads     → virtual
+  #   - @Async tasks               → virtual
+  #   - Scheduled tasks            → virtual
+  #   - Spring Security filters    → virtual
+  #
+  # Why safe with JDBC on Java 25:
+  #   JEP 491 (shipped in Java 24, inherited by Java 25) fixed the
+  #   synchronized pinning problem. Virtual threads now unmount
+  #   their carrier even inside synchronized blocks during I/O.
+  #   JDBC calls (PostgreSQL driver) park the virtual thread cheaply;
+  #   the carrier thread is freed immediately to serve other requests.
+  #
+  # The real ceiling is now HikariCP pool size (not thread count).
+  # We tune pool size in datasource.hikari below.
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    # K8s:   jdbc:postgresql://postgres-service.hotel.svc.cluster.local:5432/hotel_db
+    # Local: jdbc:postgresql://localhost:5432/hotel_db
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/hotel_db}
+    username: ${DB_USER:hotel_user}
+    password: ${DB_PASS:yourpassword}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      # With virtual threads: the pool is now the only concurrency ceiling.
+      # Virtual threads queue cheaply for connections — no thread starvation.
+      # For a 40-room hotel: 15 connections handles concurrent check-in/out
+      # bursts comfortably. Raise only if monitoring shows pool saturation.
+      maximum-pool-size: ${DB_POOL_MAX:15}
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      # Keeps connections alive through K8s network idle timeouts
+      keepalive-time: 60000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate      # Flyway owns the schema — never let JPA touch it
+    show-sql: false
+    open-in-view: false       # Never true in REST APIs
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        jdbc:
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
+        # ── Change 1 (runtime side): Tell Hibernate to use build-time
+        # enhanced entities instead of runtime ByteBuddy proxy generation.
+        # The enhance plugin instruments bytecode at compile time;
+        # this property tells Hibernate ORM to trust that instrumentation.
+        bytecode:
+          provider: none        # Disables runtime ByteBuddy — safe because
+            # hibernate-enhance-maven-plugin already did
+          # the work at compile time
+        # ── Change 2: @ConcreteProxy support ──────────────────────
+        # When an entity is annotated with @ConcreteProxy, Hibernate
+        # uses the concrete class itself rather than a proxy subclass
+        # for lazy associations. Required for native image compatibility
+        # when enhanced bytecode is used.
+        # (Applied per-entity via @ConcreteProxy annotation — see JPA entities)
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+    # Fail fast if the migration folder is missing from the classpath.
+    # Without this, Flyway silently finds 0 migrations and exits cleanly,
+    # then Hibernate validates an empty schema and throws a confusing error.
+    fail-on-missing-locations: true
+
+  # ── Change 6: AOT Repositories ────────────────────────────────
+  # Spring Data 2025.1 (bundled with Spring Boot 4) generates concrete
+  # implementations of all repository query methods at BUILD TIME.
+  # Replaces runtime proxy/reflection with actual compiled source code.
+  #
+  # Benefits:
+  #   - Native image: no reflection needed for query method dispatch
+  #   - JVM mode:     faster startup, debuggable in IDE (IntelliJ 2025.3+)
+  #   - Both:         query validation at build time, not first request
+  #
+  # Enabled by default in Spring Data 2025.1. Explicit here for clarity.
+  # To disable: set spring.aot.jpa.repositories.enabled=false
+  aot:
+    repositories:
+      enabled: true
+
+  jackson:
+    default-property-inclusion: non_null
+    # Jackson 3.x (tools.jackson) removed SerializationFeature.WRITE_DATES_AS_TIMESTAMPS.
+    # ISO-8601 string output for java.time types is now the default when JavaTimeModule
+    # is registered — no explicit serialization flag is needed or valid here.
+    deserialization:
+      fail-on-unknown-properties: false
+
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+server:
+  port: ${PORT:8080}
+  # Graceful shutdown: finish in-flight requests before pod terminates.
+  # K8s sends SIGTERM, Spring waits up to shutdown.grace-period.
+  shutdown: graceful
+  servlet:
+    context-path: /
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# ── JWT ──────────────────────────────────────────────────────────
+# R-13 FIX: The fallback value below is ONLY acceptable for local development.
+# In staging / production the JWT_SECRET environment variable MUST be set to a
+# cryptographically random string of at least 32 characters.
+# JwtUtil validates the key length at startup and throws if it is too short.
+# To generate a suitable secret:
+#   openssl rand -base64 48
+hospitops:
+  jwt:
+    secret: ${JWT_SECRET:hotelux-super-secret-key-change-in-production-min-32-chars}
+    expiration-ms: ${JWT_EXPIRATION_MS:28800000}   # 8 hours
+
+  cors:
+    allowed-origins:
+      - ${FRONTEND_URL:http://localhost:5500}
+
+# ── Actuator — K8s liveness & readiness probes ───────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      # Exposes:
+      #   /actuator/health/liveness   → K8s livenessProbe
+      #   /actuator/health/readiness  → K8s readinessProbe
+      probes:
+        enabled: true
+      show-details: when-authorized
+      show-components: always
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+    db:
+      enabled: true
+    diskspace:
+      enabled: false          # Not useful in containers
+  prometheus:
+    metrics:
+      export:
+        enabled: ${PROMETHEUS_ENABLED:false}
+
+# ── Logging ──────────────────────────────────────────────────────
+logging:
+  level:
+    id.co.hospitops: ${LOG_LEVEL:INFO}
+    org.hibernate.SQL: WARN
+    org.flywaydb: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{spanId}] %logger{36} - %msg%n"
+
+---
+# ── Dev profile (local, non-K8s) ────────────────────────────────
+spring:
+  config:
+    activate:
+      on-profile: dev
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    id.co.hospitops: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+
+---
+# ── K8s profile ──────────────────────────────────────────────────
+# Activated automatically in K8s via:
+#   env:
+#     - name: SPRING_PROFILES_ACTIVE
+#       value: k8s
+spring:
+  config:
+    activate:
+      on-profile: k8s
+
+# Structured JSON logging for log aggregators
+logging:
+  structured:
+    format:
+      console: ecs      # Elastic Common Schema — works with Loki/ELK/Datadog
+
+management:
+  endpoint:
+    health:
+      show-details: always   # Ops team needs full details
+  prometheus:
+    metrics:
+      export:
+        enabled: true

@@ -1,0 +1,226 @@
+# ═══════════════════════════════════════════════════════════════
+# k8s/sonarqube.yaml
+#
+# Self-hosted SonarQube Community Edition for local dev and CI.
+# Access: http://localhost:9000 (after port-forward) or via Ingress.
+# Default login: admin / admin (change on first login)
+#
+# For production: consider SonarQube Cloud (SaaS) instead.
+# Apply: kubectl apply -f k8s/sonarqube.yaml
+# ═══════════════════════════════════════════════════════════════
+
+---
+# ── PostgreSQL for SonarQube (separate from app DB) ─────────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonar-postgres-pvc
+  namespace: hotel
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sonar-postgres-secret
+  namespace: hotel
+type: Opaque
+data:
+  POSTGRES_USER: c29uYXI=          # sonar
+  POSTGRES_PASSWORD: c29uYXI=          # sonar
+  POSTGRES_DB: c29uYXJxdWJl      # sonarqube
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonar-postgres
+  namespace: hotel
+  labels:
+    app: sonar-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sonar-postgres
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: sonar-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          envFrom:
+            - secretRef:
+                name: sonar-postgres-secret
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: sonar-postgres-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonar-postgres-service
+  namespace: hotel
+spec:
+  type: ClusterIP
+  selector:
+    app: sonar-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+
+---
+# ── SonarQube ────────────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonarqube-data-pvc
+  namespace: hotel
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonarqube-logs-pvc
+  namespace: hotel
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonarqube
+  namespace: hotel
+  labels:
+    app: sonarqube
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sonarqube
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: sonarqube
+    spec:
+      # SonarQube requires vm.max_map_count >= 524288
+      # This init container sets it on the node
+      initContainers:
+        - name: init-sysctl
+          image: busybox
+          command: [ 'sh', '-c', 'sysctl -w vm.max_map_count=524288' ]
+          securityContext:
+            privileged: true
+
+      containers:
+        - name: sonarqube
+          image: sonarqube:community
+          ports:
+            - containerPort: 9000
+          env:
+            - name: SONAR_JDBC_URL
+              value: "jdbc:postgresql://sonar-postgres-service:5432/sonarqube"
+            - name: SONAR_JDBC_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: sonar-postgres-secret
+                  key: POSTGRES_USER
+            - name: SONAR_JDBC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sonar-postgres-secret
+                  key: POSTGRES_PASSWORD
+            # JVM tuning for SonarQube
+            - name: SONAR_WEB_JAVAOPTS
+              value: "-Xmx512m -Xms128m"
+            - name: SONAR_CE_JAVAOPTS
+              value: "-Xmx512m -Xms128m"
+            - name: SONAR_SEARCH_JAVAOPTS
+              value: "-Xmx512m -Xms512m -XX:MaxDirectMemorySize=256m"
+          volumeMounts:
+            - name: data
+              mountPath: /opt/sonarqube/data
+            - name: logs
+              mountPath: /opt/sonarqube/logs
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1.5Gi"
+            limits:
+              cpu: "2000m"
+              memory: "3Gi"
+          livenessProbe:
+            httpGet:
+              path: /api/system/status
+              port: 9000
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /api/system/status
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 10
+
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: sonarqube-data-pvc
+        - name: logs
+          persistentVolumeClaim:
+            claimName: sonarqube-logs-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarqube-service
+  namespace: hotel
+  labels:
+    app: sonarqube
+spec:
+  type: ClusterIP
+  selector:
+    app: sonarqube
+  ports:
+    - name: http
+      port: 9000
+      targetPort: 9000

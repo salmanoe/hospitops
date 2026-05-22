@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>id.co.hospitops</groupId>
+        <artifactId>hotel-backend</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>housekeeping</artifactId>
+    <name>HospitOps Housekeeping Module</name>
+
+    <dependencies>
+        <dependency>
+            <groupId>id.co.hospitops</groupId>
+            <artifactId>shared</artifactId>
+        </dependency>
+
+        <!--
+            B7 FIX: RoomStatusAdapter calls room module application layer.
+            In Stage 3: replace with HTTP client and remove this dep.
+        -->
+        <dependency>
+            <groupId>id.co.hospitops</groupId>
+            <artifactId>room</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>

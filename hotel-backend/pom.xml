@@ -1,0 +1,512 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>id.co.hospitops</groupId>
+    <artifactId>hotel-backend</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>HospitOps Management Backend</name>
+    <description>
+        Clean Architecture · Java 25 LTS · GraalVM Native Image · Spring Boot 4
+        Module-ready: monolith → Spring Modulith → Microservices
+    </description>
+
+    <modules>
+        <module>shared</module>
+        <module>identity</module>
+        <module>room</module>
+        <module>guest</module>
+        <module>reservation</module>
+        <module>housekeeping</module>
+        <module>billing</module>
+        <module>bootstrap</module>
+        <module>coverage-aggregate</module>
+    </modules>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.0.6</version>
+        <relativePath/>
+    </parent>
+
+    <properties>
+        <!-- ── Java 25 LTS ───────────────────────────────────── -->
+        <java.version>25</java.version>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- ── Dependency versions ──────────────────────────── -->
+        <mapstruct.version>1.6.3</mapstruct.version>
+        <lombok.version>1.18.38</lombok.version>
+        <auth0.java-jwt.version>4.4.0</auth0.java-jwt.version>
+        <itext.version>8.0.5</itext.version>
+        <testcontainers.version>1.20.4</testcontainers.version>
+        <native.maven.plugin.version>0.10.4</native.maven.plugin.version>
+
+        <!--
+            Change 3: hibernate-processor replaces the deprecated hibernate-jpamodelgen
+            in Hibernate ORM 7 (bundled with Spring Boot 4). It generates:
+              - Static metamodel classes (Room_, Guest_, Reservation_, etc.)
+              - AOT-compatible query metadata
+            Used as an annotation processor — generates code at compile time only,
+            not included in the final artifact.
+        -->
+        <hibernate.version>7.1.0.Final</hibernate.version>
+        <!--
+            Declared explicitly so ${spring-boot.version} resolves in child modules
+            even when IntelliJ cannot download spring-boot-starter-parent from
+            Maven Central (e.g. offline mode or BOM resolution failures).
+            Must be kept in sync with the spring-boot-starter-parent version above.
+        -->
+        <spring-boot.version>4.0.6</spring-boot.version>
+
+        <!-- ── Testing ──────────────────────────────────────────── -->
+        <!--
+            JaCoCo — minimum version compatible with the current Java LTS.
+            Generates coverage reports consumed by SonarQube.
+        -->
+        <jacoco.version>0.8.13</jacoco.version>
+
+        <!--
+            sonar-maven-plugin — latest stable.
+            Gotcha: the plugin may auto-provision an older JDK to run the scanner
+            even when your build agent already has the project's LTS JDK installed.
+            Fixed with sonar.scanner.skipJreProvisioning=true in the sonar profile.
+        -->
+        <sonar.maven.plugin.version>5.6.0.6792</sonar.maven.plugin.version>
+
+        <!-- ── SonarQube project properties ────────────────────── -->
+        <sonar.projectKey>hospitops-backend</sonar.projectKey>
+        <sonar.projectName>HospitOps Backend</sonar.projectName>
+        <sonar.java.source>25</sonar.java.source>
+        <!--
+            Points Sonar to the aggregated JaCoCo XML report
+            produced by the coverage-aggregate module.
+            Wildcard picks up the report from any build directory.
+        -->
+        <sonar.coverage.jacoco.xmlReportPaths>
+            ${maven.multiModuleProjectDirectory}/coverage-aggregate/target/site/jacoco-aggregate/jacoco.xml
+        </sonar.coverage.jacoco.xmlReportPaths>
+        <!--
+            Exclude infrastructure glue code and generated files from coverage.
+            These are either framework-driven or compile-time generated —
+            not meaningful to unit test directly.
+        -->
+        <sonar.exclusions>
+            **/infrastructure/persistence/entity/**,
+            **/adapter/web/request/**,
+            **/adapter/web/response/**,
+            **/*JpaEntity.java,
+            **/*Mapper.java,
+            **/HospitOpsApplication.java,
+            **/shared/event/**
+        </sonar.exclusions>
+        <sonar.coverage.exclusions>
+            **/infrastructure/persistence/entity/**,
+            **/*JpaEntity.java,
+            **/*Mapper.java,
+            **/HospitOpsApplication.java,
+            **/config/**,
+            **/shared/event/**
+        </sonar.coverage.exclusions>
+        <!-- Minimum thresholds enforced by Quality Gate -->
+        <sonar.qualitygate.wait>true</sonar.qualitygate.wait>
+    </properties>
+
+    <!-- ── Shared dependency management ────────────────────────── -->
+    <dependencyManagement>
+        <dependencies>
+            <!-- Internal modules -->
+            <dependency>
+                <groupId>id.co.hospitops</groupId>
+                <artifactId>shared</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>id.co.hospitops</groupId>
+                <artifactId>identity</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>id.co.hospitops</groupId>
+                <artifactId>room</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>id.co.hospitops</groupId>
+                <artifactId>guest</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>id.co.hospitops</groupId>
+                <artifactId>reservation</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>id.co.hospitops</groupId>
+                <artifactId>housekeeping</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>id.co.hospitops</groupId>
+                <artifactId>billing</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- JWT -->
+            <dependency>
+                <groupId>com.auth0</groupId>
+                <artifactId>java-jwt</artifactId>
+                <version>${auth0.java-jwt.version}</version>
+            </dependency>
+
+            <!-- iText 8 -->
+            <dependency>
+                <groupId>com.itextpdf</groupId>
+                <artifactId>itext-core</artifactId>
+                <version>${itext.version}</version>
+                <type>pom</type>
+            </dependency>
+
+            <!-- MapStruct -->
+            <dependency>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct</artifactId>
+                <version>${mapstruct.version}</version>
+            </dependency>
+
+            <!-- Testcontainers BOM -->
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!--
+                Security override: commons-compress 1.24.0 is pulled in transitively
+                and carries CVE-2024-25710 (infinite loop DoS) and CVE-2024-26308
+                (resource exhaustion). Override to 1.27.1 which fixes both.
+                Spring Boot does not yet manage this version in its BOM.
+            -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>1.27.1</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- ── Inherited by ALL modules ─────────────────────────────── -->
+    <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+
+                <!--
+                    Compiler plugin.
+                    IMPORTANT: Lombok must come before MapStruct in annotationProcessorPaths.
+                    lombok-mapstruct-binding ensures the two work together correctly.
+                -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <release>25</release>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok-mapstruct-binding</artifactId>
+                                <version>0.2.0</version>
+                            </path>
+                            <path>
+                                <groupId>org.mapstruct</groupId>
+                                <artifactId>mapstruct-processor</artifactId>
+                                <version>${mapstruct.version}</version>
+                            </path>
+                            <!--
+                                Change 3: hibernate-processor (renamed from hibernate-jpamodelgen in ORM 7).
+                                Generates static metamodel classes (_Room, _Guest, etc.) and
+                                AOT query metadata at compile time. Annotation processor only —
+                                not included in the runtime classpath.
+                                Order: after Lombok/MapStruct so entities are fully processed first.
+                            -->
+                            <path>
+                                <groupId>org.hibernate.orm</groupId>
+                                <artifactId>hibernate-processor</artifactId>
+                                <version>${hibernate.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
+                        <compilerArgs>
+                            <arg>-Amapstruct.defaultComponentModel=spring</arg>
+                            <arg>-Amapstruct.unmappedTargetPolicy=ERROR</arg>
+                        </compilerArgs>
+                    </configuration>
+                </plugin>
+
+                <!--
+                    GraalVM Native Maven Plugin.
+
+                    Spring Boot's AOT engine auto-generates:
+                      - reflect-config.json   (for reflection)
+                      - resource-config.json  (for resources)
+                      - proxy-config.json     (for dynamic proxies)
+                    so we don't write these manually.
+
+                    metadataRepository pulls community reachability metadata
+                    for third-party libs (JJWT, iText, etc.) that haven't
+                    been annotated for native yet.
+                -->
+                <plugin>
+                    <groupId>org.graalvm.buildtools</groupId>
+                    <artifactId>native-maven-plugin</artifactId>
+                    <version>${native.maven.plugin.version}</version>
+                    <configuration>
+                        <buildArgs>
+                            <!--
+                                No JVM fallback — fail fast if native isn't possible.
+                                Remove during initial development if you hit issues.
+                            -->
+                            <buildArg>--no-fallback</buildArg>
+                            <!--
+                                Portable binary: works on any x86-64 CPU.
+                                Change to -march=native for max performance on
+                                a known deployment target.
+                            -->
+                            <buildArg>-march=compatibility</buildArg>
+                            <!-- Better stack traces in native -->
+                            <buildArg>-H:+ReportExceptionStackTraces</buildArg>
+                            <!--
+                                Shift JDK init to build-time for faster startup.
+                                Spring Boot AOT handles Spring's own classes.
+                            -->
+                            <buildArg>--initialize-at-build-time=org.slf4j</buildArg>
+                        </buildArgs>
+                        <metadataRepository>
+                            <enabled>true</enabled>
+                        </metadataRepository>
+                    </configuration>
+                </plugin>
+
+                <!-- Open JDK modules for tests that need deep reflection -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <configuration>
+                        <argLine>
+                            --add-opens java.base/java.lang=ALL-UNNAMED
+                            --add-opens java.base/java.util=ALL-UNNAMED
+                            --add-opens java.base/java.time=ALL-UNNAMED
+                        </argLine>
+                    </configuration>
+                </plugin>
+
+                <!--
+                    JaCoCo — code coverage instrumentation.
+                    Declared here in pluginManagement so all modules inherit
+                    the version. Activated only under the 'coverage' profile
+                    (see profiles section below) so it doesn't slow down
+                    every normal build.
+                -->
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco.version}</version>
+                </plugin>
+
+                <!--
+                    SonarQube scanner — declared in pluginManagement for
+                    version control. Invoked explicitly via:
+                      mvn sonar:sonar -Psonar
+                -->
+                <plugin>
+                    <groupId>org.sonarsource.scanner.maven</groupId>
+                    <artifactId>sonar-maven-plugin</artifactId>
+                    <version>${sonar.maven.plugin.version}</version>
+                </plugin>
+
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <!-- ── Profiles ─────────────────────────────────────────────── -->
+    <profiles>
+
+        <!--
+            NATIVE PROFILE
+            ──────────────
+            Compile to GraalVM native executable:
+              mvn -Pnative native:compile -pl bootstrap
+
+            Build native Docker image (no local GraalVM needed):
+              mvn -Pnative spring-boot:build-image -pl bootstrap
+
+            Prerequisites (choose one — match the project's current Java LTS):
+              sdk install java <version>-nik   ← Liberica NIK (recommended)
+              sdk install java <version>-graalce ← GraalVM CE
+
+            What changes between JVM and native:
+              - Startup: seconds → milliseconds
+              - Memory:  ~300MB  → ~50–80MB
+              - Build:   30s     → 3–5 minutes
+              - Binary is platform-specific (Linux/macOS/Windows)
+        -->
+        <profile>
+            <id>native</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>add-reachability-metadata</id>
+                                <goals>
+                                    <goal>add-reachability-metadata</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Default dev profile -->
+        <profile>
+            <id>dev</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <spring.profiles.active>dev</spring.profiles.active>
+            </properties>
+        </profile>
+
+        <!--
+            COVERAGE PROFILE
+            ────────────────
+            Activates JaCoCo instrumentation on all modules.
+            Run before sonar to generate coverage data:
+
+              mvn clean verify -Pcoverage
+
+            What this does:
+              1. jacoco:prepare-agent  — instruments bytecode for coverage tracking
+              2. Tests run (surefire)  — coverage data collected in jacoco.exec
+              3. jacoco:report         — generates per-module XML/HTML report
+              4. coverage-aggregate    — merges all module reports into one XML
+
+            The aggregate XML is at:
+              coverage-aggregate/target/site/jacoco-aggregate/jacoco.xml
+        -->
+        <profile>
+            <id>coverage</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <executions>
+                            <!--
+                                Injects the JaCoCo agent into surefire's JVM args.
+                                Must run BEFORE tests (prepare-agent phase).
+                                Writes coverage data to target/jacoco.exec.
+                            -->
+                            <execution>
+                                <id>prepare-agent</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                            </execution>
+                            <!--
+                                Generates per-module report from jacoco.exec.
+                                Runs after tests (verify phase).
+                                Output: target/site/jacoco/jacoco.xml
+                            -->
+                            <execution>
+                                <id>report</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                                <configuration>
+                                    <formats>
+                                        <format>XML</format>
+                                        <format>HTML</format>
+                                    </formats>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!--
+            SONAR PROFILE
+            ─────────────
+            Run SonarQube analysis. Always run coverage profile first:
+
+              mvn clean verify -Pcoverage
+              mvn sonar:sonar -Psonar \
+                -Dsonar.host.url=http://localhost:9000 \
+                -Dsonar.token=$SONAR_TOKEN
+
+            Or both together:
+              mvn clean verify sonar:sonar -Pcoverage,sonar \
+                -Dsonar.host.url=http://localhost:9000 \
+                -Dsonar.token=$SONAR_TOKEN
+
+            Java 25 fix: sonar.scanner.skipJreProvisioning=true
+            Without this, plugin 5.x downloads JDK 17 to run the scanner
+            even though our build agents have JDK 25. Skipping provisioning
+            makes the scanner use the same JRE Maven is running on (JDK 25).
+            This does NOT affect analysis results — the scanner always
+            analyzes the compiled bytecode, not the JVM it runs on.
+        -->
+        <profile>
+            <id>sonar</id>
+            <properties>
+                <sonar.scanner.skipJreProvisioning>true</sonar.scanner.skipJreProvisioning>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonarsource.scanner.maven</groupId>
+                        <artifactId>sonar-maven-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+    </profiles>
+</project>

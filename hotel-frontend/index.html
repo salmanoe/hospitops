@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>HospitOps</title>
+    <!-- Redirect to dashboard if logged in, otherwise to login -->
+    <script src="/assets/js/core.js"></script>
+    <script>
+        window.location.href = Auth.isLoggedIn()
+            ? '/dashboard.html'
+            : '/login.html';
+    </script>
+</head>
+<body></body>
+</html>

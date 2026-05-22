@@ -1,0 +1,116 @@
+<!-- ═══════════════════════════════════════════════════════════════
+     components/sidebar.html
+     Injected into every page via JS loadSidebar()
+     ═══════════════════════════════════════════════════════════════ -->
+<a href="/dashboard.html" class="sidebar-brand">
+    <h1>HospitOps</h1>
+    <small>MANAGEMENT</small>
+</a>
+
+<nav class="nav flex-column py-2">
+
+    <div class="nav-section-label">Main</div>
+    <a href="/dashboard.html" class="nav-link" data-page="dashboard">
+        <span class="nav-icon">⊞</span> Dashboard
+    </a>
+
+    <div class="nav-section-label">Front Desk</div>
+    <a href="/reservations/list.html" class="nav-link" data-page="reservations"
+       data-roles="ADMIN,MANAGER,FRONT_DESK">
+        <span class="nav-icon">📋</span> Reservations
+    </a>
+    <a href="/reservations/new.html" class="nav-link" data-page="new-reservation"
+       data-roles="ADMIN,MANAGER,FRONT_DESK">
+        <span class="nav-icon">＋</span> New Booking
+    </a>
+    <a href="/guests/list.html" class="nav-link" data-page="guests"
+       data-roles="ADMIN,MANAGER,FRONT_DESK">
+        <span class="nav-icon">👤</span> Guests
+    </a>
+
+    <div class="nav-section-label">Operations</div>
+    <a href="/rooms/list.html" class="nav-link" data-page="rooms"
+       data-roles="ADMIN,MANAGER">
+        <span class="nav-icon">🏨</span> Rooms
+    </a>
+    <a href="/housekeeping/board.html" class="nav-link" data-page="housekeeping"
+       data-roles="ADMIN,MANAGER,HOUSEKEEPING">
+        <span class="nav-icon">🧹</span> Housekeeping
+    </a>
+
+    <div class="nav-section-label">Finance</div>
+    <a href="/billing/list.html" class="nav-link" data-page="billing"
+       data-roles="ADMIN,MANAGER,ACCOUNTANT,FRONT_DESK">
+        <span class="nav-icon">🧾</span> Invoices
+    </a>
+
+    <div class="nav-section-label" data-roles="ADMIN,MANAGER">Admin</div>
+    <a href="/staff/list.html" class="nav-link" data-page="staff"
+       data-roles="ADMIN,MANAGER">
+        <span class="nav-icon">👥</span> Staff
+    </a>
+
+</nav>
+
+<div class="sidebar-footer">
+    <strong id="sidebar-user-name">—</strong>
+    <small id="sidebar-user-role">—</small>
+    <div class="mt-2">
+        <a href="#" id="logout-btn" class="text-danger small">Sign out</a>
+    </div>
+</div>
+
+<script>
+// Sidebar init — called after injection
+(function initSidebar() {
+    const user = Auth.getUser();
+    if (user) {
+        document.getElementById('sidebar-user-name').textContent = user.name;
+        document.getElementById('sidebar-user-role').textContent = user.role.replace('_', ' ');
+    }
+
+    // Active link
+    const page = document.body.dataset.page;
+    document.querySelectorAll('#sidebar .nav-link[data-page]').forEach(link => {
+        if (link.dataset.page === page) link.classList.add('active');
+    });
+
+    // Role visibility
+    Auth.applyRoleVisibility();
+
+    // Logout
+    document.getElementById('logout-btn').addEventListener('click', async (e) => {
+        e.preventDefault();
+        try { await API.auth.logout(); } catch (_) {}
+        Auth.clear();
+        window.location.href = '/login.html';
+    });
+})();
+</script>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     assets/js/layout.js
+     Shared layout loader — injects sidebar into every page
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+// Paste this in a separate layout.js file:
+/*
+async function loadSidebar() {
+    Auth.requireAuth();
+    const res  = await fetch('/components/sidebar.html');
+    const html = await res.text();
+    document.getElementById('sidebar').innerHTML = html;
+
+    // Execute inline scripts in fetched HTML
+    document.getElementById('sidebar')
+        .querySelectorAll('script')
+        .forEach(s => {
+            const script = document.createElement('script');
+            script.textContent = s.textContent;
+            document.head.appendChild(script);
+        });
+}
+loadSidebar();
+*/
+</script>
