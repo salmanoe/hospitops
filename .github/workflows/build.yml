@@ -90,14 +90,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Run AOT processing first — generates reflect/proxy configs for native.
-      # Separate step so its output is clearly visible in the Actions UI.
-      - name: Run Spring AOT processing
-        working-directory: hotel-backend
-        run: |
-          mvn process-aot -pl bootstrap -am \
-            --batch-mode --no-transfer-progress
-
       # Build native Docker image using Paketo Buildpacks.
       # No local native-image binary needed — compilation happens inside
       # a build container pulled by the buildpack automatically.

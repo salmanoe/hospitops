@@ -44,6 +44,11 @@ jobs:
     name: "Backend — Test & Coverage"
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read        # checkout
+      checks: write         # EnricoMi/publish-unit-test-result-action → create check run
+      pull-requests: write  # EnricoMi/publish-unit-test-result-action → PR comment
+
     # Service container: PostgreSQL for integration tests.
     # Unit tests (domain + application + web slice) don't need this.
     # Only @Tag("integration") tests in bootstrap/ use it.
