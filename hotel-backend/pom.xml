@@ -44,11 +44,11 @@
 
         <!-- ── Dependency versions ──────────────────────────── -->
         <mapstruct.version>1.6.3</mapstruct.version>
-        <lombok.version>1.18.38</lombok.version>
+        <lombok.version>1.18.46</lombok.version>
         <auth0.java-jwt.version>4.4.0</auth0.java-jwt.version>
-        <itext.version>8.0.5</itext.version>
-        <testcontainers.version>1.20.4</testcontainers.version>
-        <native.maven.plugin.version>0.10.4</native.maven.plugin.version>
+        <itext.version>9.6.0</itext.version>
+        <testcontainers.version>2.0.5</testcontainers.version>
+        <native.maven.plugin.version>1.1.0</native.maven.plugin.version>
 
         <!--
             Change 3: hibernate-processor replaces the deprecated hibernate-jpamodelgen
@@ -58,7 +58,7 @@
             Used as an annotation processor — generates code at compile time only,
             not included in the final artifact.
         -->
-        <hibernate.version>7.1.0.Final</hibernate.version>
+        <hibernate.version>7.3.6.Final</hibernate.version>
         <!--
             Declared explicitly so ${spring-boot.version} resolves in child modules
             even when IntelliJ cannot download spring-boot-starter-parent from
