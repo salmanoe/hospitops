@@ -58,7 +58,7 @@
             Used as an annotation processor — generates code at compile time only,
             not included in the final artifact.
         -->
-        <hibernate.version>7.1.0.Final</hibernate.version>
+        <hibernate.version>7.3.6.Final</hibernate.version>
         <!--
             Declared explicitly so ${spring-boot.version} resolves in child modules
             even when IntelliJ cannot download spring-boot-starter-parent from
