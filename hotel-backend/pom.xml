@@ -47,7 +47,7 @@
         <lombok.version>1.18.38</lombok.version>
         <auth0.java-jwt.version>4.4.0</auth0.java-jwt.version>
         <itext.version>9.6.0</itext.version>
-        <testcontainers.version>1.20.4</testcontainers.version>
+        <testcontainers.version>2.0.5</testcontainers.version>
         <native.maven.plugin.version>0.10.4</native.maven.plugin.version>
 
         <!--
@@ -58,7 +58,7 @@
             Used as an annotation processor — generates code at compile time only,
             not included in the final artifact.
         -->
-        <hibernate.version>7.1.0.Final</hibernate.version>
+        <hibernate.version>7.3.6.Final</hibernate.version>
         <!--
             Declared explicitly so ${spring-boot.version} resolves in child modules
             even when IntelliJ cannot download spring-boot-starter-parent from
