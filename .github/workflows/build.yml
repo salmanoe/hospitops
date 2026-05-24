@@ -64,7 +64,7 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
 
       - name: Cache Maven packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ hashFiles('hotel-backend/**/pom.xml') }}

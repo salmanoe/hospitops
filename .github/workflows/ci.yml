@@ -77,7 +77,7 @@ jobs:
 
       # Cache Maven dependencies — dramatically speeds up subsequent runs
       - name: Cache Maven packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ hashFiles('hotel-backend/**/pom.xml') }}
@@ -136,7 +136,7 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
 
       - name: Cache Maven packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-${{ hashFiles('hotel-backend/**/pom.xml') }}
@@ -152,7 +152,7 @@ jobs:
 
       # Cache SonarQube scanner — avoids re-downloading on every run
       - name: Cache SonarQube scanner
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.sonar/cache
           key: sonar-${{ runner.os }}
