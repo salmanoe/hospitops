@@ -134,14 +134,24 @@
         </dependency>
 
         <!-- ── Test ─────────────────────────────────────────── -->
+        <!--
+            Versions are also managed by the testcontainers-bom import in the
+            root POM, but are declared explicitly here so Maven can resolve them
+            during the reactor scan phase before the BOM is fetched from the
+            remote repository (cold-cache CI runs would otherwise fail).
+            ${testcontainers.version} is the single source of truth — it is
+            declared once in the root POM's <properties>.
+        -->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>postgresql</artifactId>
+            <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
+            <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
