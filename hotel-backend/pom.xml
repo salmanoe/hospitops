@@ -46,7 +46,7 @@
         <mapstruct.version>1.6.3</mapstruct.version>
         <lombok.version>1.18.38</lombok.version>
         <auth0.java-jwt.version>4.4.0</auth0.java-jwt.version>
-        <itext.version>8.0.5</itext.version>
+        <itext.version>9.6.0</itext.version>
         <testcontainers.version>2.0.5</testcontainers.version>
         <native.maven.plugin.version>0.10.4</native.maven.plugin.version>
 
