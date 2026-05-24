@@ -1,4 +1,4 @@
-# Hotel Management Backend
+# HospitOps
 
 [![CI](https://github.com/salmanoe/hospitops/actions/workflows/ci.yml/badge.svg)](https://github.com/salmanoe/hospitops/actions/workflows/ci.yml)
 [![Build](https://github.com/salmanoe/hospitops/actions/workflows/build.yml/badge.svg)](https://github.com/salmanoe/hospitops/actions/workflows/build.yml)
@@ -9,29 +9,48 @@
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0-6DB33F?logo=springboot)](https://spring.io/projects/spring-boot)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
-**Stack:** Java 25 LTS · Spring Boot 4 · GraalVM Native Image · PostgreSQL 17 · Docker Compose (dev) · Kubernetes (prod)
+Hotel management system for a medium hotel (20–100 rooms). A clean-architecture Spring Boot backend served behind an Nginx frontend, designed to evolve from monolith → Spring Modulith → microservices without structural rewrites.
 
-A hotel management backend for a medium hotel (20–100 rooms), built as a clean architecture monolith designed to evolve
-into Spring Modulith and then microservices without structural rewrites.
+---
+
+## Repository Structure
+
+```
+hospitops/
+├── hotel-backend/          ← Java 25 · Spring Boot 4 · GraalVM Native Image
+│   ├── shared/             ← Typed IDs, Money, Domain Events, ApiResponse
+│   ├── identity/           ← Staff auth, JWT                      ✅ done
+│   ├── room/               ← Rooms, types, seasonal pricing       🔲 batch 2
+│   ├── guest/              ← Guest profiles, search               🔲 batch 2
+│   ├── reservation/        ← Booking, check-in, check-out         🔲 batch 3
+│   ├── housekeeping/       ← Room status board, tasks             🔲 batch 3
+│   ├── billing/            ← Invoices, payments, PDF export       🔲 batch 4
+│   ├── bootstrap/          ← App entry, Security, Flyway          ✅ done
+│   ├── coverage-aggregate/ ← JaCoCo multi-module report           ✅ done
+│   └── k8s/                ← Kubernetes manifests (prod)
+├── hotel-frontend/         ← Static HTML/CSS/JS · Nginx
+├── docker-compose.yml      ← Full local dev stack (run from here)
+└── .env.example            ← Environment variable template
+```
+
+**Stack:** Java 25 LTS · Spring Boot 4 · GraalVM Native Image · PostgreSQL 17 · Nginx · Docker Compose (dev) · Kubernetes (prod)
 
 ---
 
 ## Environments at a Glance
 
-| Environment | Tooling          | Command                         | Purpose                            |
-|-------------|------------------|---------------------------------|------------------------------------|
-| Development | Docker Compose   | `docker compose up`             | Full local stack, hot-reload ready |
-| CI          | GitHub Actions   | automatic on push               | Tests, coverage, quality gate      |
-| Staging     | Kubernetes       | auto-deploy after merge to main | Integration testing in-cluster     |
-| Production  | Kubernetes       | manual approval gate            | Live traffic                       |
+| Environment | Tooling        | Command                         | Purpose                            |
+|-------------|----------------|---------------------------------|------------------------------------|
+| Development | Docker Compose | `docker compose up`             | Full local stack, hot-reload ready |
+| CI          | GitHub Actions | automatic on push               | Tests, coverage, quality gate      |
+| Staging     | Kubernetes     | auto-deploy after merge to main | Integration testing in-cluster     |
+| Production  | Kubernetes     | manual approval gate            | Live traffic                       |
 
 ---
 
 ## Development — Docker Compose
 
-Docker Compose is the **only tool you need** to run the full stack locally.
-Run all commands from the **repo root** (`hospitops/`), not this directory.
-One command starts PostgreSQL, the Spring Boot app, and the Nginx frontend together.
+Docker Compose is the **only tool you need** to run the full stack locally. Run all commands from the **repo root** (`hospitops/`). One command starts PostgreSQL, the Spring Boot backend, and the Nginx frontend together.
 
 ### Prerequisites
 
@@ -39,7 +58,7 @@ One command starts PostgreSQL, the Spring Boot app, and the Nginx frontend toget
 # Docker Desktop 4.x+ or Docker Engine + Compose plugin
 docker compose version   # must be v2.x
 
-# Java + Maven (only needed if you want to run Maven commands directly)
+# Java + Maven (only needed to run Maven commands directly)
 sdk install java 25.r25-nik   # GraalVM 25 via SDKMAN (Liberica NIK)
 sdk install maven
 ```
@@ -48,79 +67,77 @@ sdk install maven
 
 ```bash
 # From repo root: hospitops/
-docker compose up          # starts postgres + app + frontend, streams logs
+docker compose up          # start postgres + backend + frontend, stream logs
 docker compose up -d       # detached (background)
-docker compose up --build  # rebuild the app image first
+docker compose up --build  # rebuild the backend image first
 ```
 
-The full app is at **http://localhost** (Nginx serves the frontend and proxies `/api/*` to Spring Boot).
+The app is at **http://localhost** — Nginx serves the frontend and proxies `/api/*` to Spring Boot.
 
 ### Compose services
 
 ```
 postgres    → PostgreSQL 17 (internal, data persisted in a named volume)
-app         → Spring Boot (internal, dev profile, connects to postgres)
+app         → Spring Boot backend (dev profile, connects to postgres)
 frontend    → Nginx serving hotel-frontend/, proxying /api/* → app:8080
 sonarqube   → SonarQube CE (port 9000, optional — see below)
 ```
 
+### Stop and clean up
+
+```bash
+docker compose down        # stop containers, keep DB data
+docker compose down -v     # stop containers AND delete all DB data
+```
+
+### Useful commands during development
+
+```bash
+docker compose logs -f app       # tail backend logs
+docker compose logs -f frontend  # tail nginx logs
+docker compose restart app       # reload backend after a code change
+
+# Open a psql shell in the running postgres container
+docker compose exec postgres psql -U hotel_user -d hotel_db
+
+# Run Maven commands directly (requires postgres already running via Compose)
+cd hotel-backend
+mvn test -pl bootstrap -am -Pdev
+mvn spring-boot:run -pl bootstrap -am -Pdev
+```
+
 ### SonarQube (optional)
 
-SonarQube is defined in the Compose file but not started by default.
-Start it only when you need to run a local quality analysis:
+SonarQube is defined in Compose but excluded from the default profile. Start it only when you need a local quality analysis:
 
 ```bash
 # From repo root
 docker compose --profile sonar up -d sonarqube
+
 # Then from hotel-backend/
 mvn sonar:sonar -Psonar \
   -Dsonar.host.url=http://localhost:9000 \
   -Dsonar.token=YOUR_LOCAL_TOKEN
 ```
 
-### Stop and clean up
+---
+
+## Environment Variables (`.env`)
+
+Compose reads `.env` from the repo root. The file is gitignored — copy the template to get started:
 
 ```bash
-# From repo root
-docker compose down          # stop containers, keep volumes
-docker compose down -v       # stop containers AND delete DB data
-```
-
-### Useful commands during development
-
-```bash
-# From repo root
-docker compose logs -f app       # tail backend logs
-docker compose logs -f frontend  # tail nginx logs
-docker compose restart app       # reload backend after a code change
-
-# Open a psql shell inside the running postgres container
-docker compose exec postgres psql -U hotel_user -d hotel_db
-
-# Run Maven tests directly (requires postgres already up via Compose)
-# From hotel-backend/
-mvn test -pl bootstrap -am -Pdev
-mvn spring-boot:run -pl bootstrap -am -Pdev
-```
-
-### Environment variables (`.env`)
-
-Compose reads `.env` from the **repo root**. The file is gitignored — copy
-the template to get started:
-
-```bash
-# From repo root
 cp .env.example .env
 ```
 
-| Variable              | Default        | Description                   |
-|-----------------------|----------------|-------------------------------|
-| `POSTGRES_DB`         | `hotel_db`     | Database name                 |
-| `POSTGRES_USER`       | `hotel_user`   | Database user                 |
-| `POSTGRES_PASSWORD`   | `yourpassword` | Database password             |
-| `JWT_SECRET`          | *(see .env.example)* | Min 32 chars            |
-| `JWT_EXPIRATION_MS`   | `28800000`     | Token TTL (8 hours)           |
-| `LOG_LEVEL`           | `DEBUG`        | Log level for dev profile     |
+| Variable            | Default              | Description              |
+|---------------------|----------------------|--------------------------|
+| `POSTGRES_DB`       | `hotel_db`           | Database name            |
+| `POSTGRES_USER`     | `hotel_user`         | Database user            |
+| `POSTGRES_PASSWORD` | `yourpassword`       | Database password        |
+| `JWT_SECRET`        | *(see .env.example)* | Min 32 chars             |
+| `JWT_EXPIRATION_MS` | `28800000`           | Token TTL (8 hours)      |
+| `LOG_LEVEL`         | `DEBUG`              | Log level for dev profile|
 
 ---
 
@@ -157,34 +174,10 @@ curl -X POST http://localhost/api/v1/auth/login \
 
 ---
 
-## Architecture
-
-See [`ARCHITECTURE.md`](ARCHITECTURE.md) — full tech stack, module boundaries,
-clean architecture layers, DB design, native image setup, API reference, evolution path.
-
-See [`INSTRUCTIONS.md`](INSTRUCTIONS.md) — step-by-step guide for building each module,
-code templates, naming conventions, what not to do.
-
-### Module Structure
-
-```
-hotel-backend/
-├── shared/              ← Typed IDs, Money, Domain Events, ApiResponse
-├── identity/            ← Staff auth, JWT                      ✅ done
-├── room/                ← Rooms, types, seasonal pricing       🔲 batch 2
-├── guest/               ← Guest profiles, search               🔲 batch 2
-├── reservation/         ← Booking, check-in, check-out         🔲 batch 3
-├── housekeeping/        ← Room status board, tasks             🔲 batch 3
-├── billing/             ← Invoices, payments, PDF export       🔲 batch 4
-├── bootstrap/           ← App entry, Security, Flyway          ✅ done
-└── coverage-aggregate/  ← JaCoCo multi-module report           ✅ done
-```
-
----
-
 ## Testing & Quality
 
 ```bash
+cd hotel-backend
 mvn test                          # unit tests (domain + app + web slice)
 mvn clean verify -Pcoverage       # tests + JaCoCo coverage report
 mvn sonar:sonar -Psonar \         # SonarQube analysis (requires running instance)
@@ -200,8 +193,9 @@ Coverage targets enforced by SonarQube Quality Gate:
 ## Build
 
 ```bash
-mvn package -pl bootstrap -am -DskipTests          # fat JAR
-mvn -Pnative native:compile -pl bootstrap -am      # native binary (~5 min)
+cd hotel-backend
+mvn package -pl bootstrap -am -DskipTests           # fat JAR
+mvn -Pnative native:compile -pl bootstrap -am       # native binary (~5 min)
 mvn -Pnative spring-boot:build-image -pl bootstrap -am  # native Docker image
 ```
 
@@ -233,7 +227,7 @@ mvn -Pnative spring-boot:build-image -pl bootstrap -am  # native Docker image
 
 ### GitHub Actions Secrets
 
-Go to Settings → Secrets and variables → Actions and add:
+Go to **Settings → Secrets and variables → Actions** and add:
 
 | Secret                   | Description                                 |
 |--------------------------|---------------------------------------------|
@@ -243,7 +237,7 @@ Go to Settings → Secrets and variables → Actions and add:
 | `KUBE_CONFIG_PRODUCTION` | `cat ~/.kube/config \| base64` (production) |
 | `REGISTRY_URL`           | Container registry URL                      |
 
-Go to Settings → Environments and create:
+Go to **Settings → Environments** and create:
 
 - `staging` — no restrictions (auto-deploy on every merge to `main`)
 - `production` — add **Required reviewers** for the manual approval gate
@@ -252,48 +246,39 @@ Go to Settings → Environments and create:
 
 ## Production — Kubernetes
 
-Kubernetes manifests live in `k8s/`. Apply them in order:
+Kubernetes manifests live in `hotel-backend/k8s/`. Apply them in order:
 
 ```bash
-# 1. Create the namespace
-kubectl apply -f k8s/namespace.yaml
+kubectl apply -f hotel-backend/k8s/namespace.yaml
+kubectl apply -f hotel-backend/k8s/postgres.yaml
+kubectl apply -f hotel-backend/k8s/app.yaml
+kubectl apply -f hotel-backend/k8s/ingress-and-netpol.yaml
 
-# 2. Database (PVC, Secret, ConfigMap, Deployment, Service)
-kubectl apply -f k8s/postgres.yaml
-
-# 3. Application (Secret, ConfigMap, Deployment, Service, HPA)
-kubectl apply -f k8s/app.yaml
-
-# 4. Ingress + NetworkPolicies
-kubectl apply -f k8s/ingress-and-netpol.yaml
-
-# 5. SonarQube (optional — only if you run a self-hosted instance in-cluster)
-kubectl apply -f k8s/sonarqube.yaml
+# Optional — only if running a self-hosted SonarQube in-cluster
+kubectl apply -f hotel-backend/k8s/sonarqube.yaml
 ```
 
 ### Before you deploy
 
-1. **Update the image tag** in `k8s/app.yaml` to your registry path:
+1. **Update the image tag** in `k8s/app.yaml`:
    ```
    image: your-registry.io/hotel-backend:1.0.0
    ```
 
-2. **Rotate all secrets** — the defaults in `k8s/postgres.yaml` and `k8s/app.yaml`
-   are base64-encoded placeholders. Never deploy them as-is. Encode real values with:
+2. **Rotate all secrets** — the defaults in `k8s/postgres.yaml` and `k8s/app.yaml` are base64-encoded placeholders. Never deploy them as-is:
    ```bash
    echo -n "your-real-password" | base64
    ```
-   In production, prefer [Sealed Secrets](https://github.com/bitnami-labs/sealed-secrets)
-   or [External Secrets Operator](https://external-secrets.io) over plain Kubernetes Secrets.
+   In production, prefer [Sealed Secrets](https://github.com/bitnami-labs/sealed-secrets) or [External Secrets Operator](https://external-secrets.io) over plain Kubernetes Secrets.
 
 3. **Update the domain** in `k8s/ingress-and-netpol.yaml`:
    ```yaml
    host: api.hotel.yourdomain.com
    ```
 
-4. **Install prerequisites** in the cluster (if not already present):
+4. **Install cluster prerequisites** (if not already present):
    ```bash
-   # Ingress controller (choose one)
+   # Ingress controller
    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
 
    # cert-manager for automatic TLS via Let's Encrypt
@@ -303,31 +288,23 @@ kubectl apply -f k8s/sonarqube.yaml
 ### Verify the deployment
 
 ```bash
-# Watch rollout
 kubectl rollout status deployment/hotel-backend -n hotel
-
-# Check all pods are Running
 kubectl get pods -n hotel
-
-# Check HPA state
 kubectl get hpa -n hotel
-
-# Tail application logs
 kubectl logs -f deployment/hotel-backend -n hotel
-
-# Tail database logs
 kubectl logs -f deployment/postgres -n hotel
 ```
 
 ### Production resource profile (native image)
 
-| Component    | CPU request | CPU limit | Memory request | Memory limit |
-|--------------|-------------|-----------|----------------|--------------|
-| hotel-backend| 100m        | 500m      | 64Mi           | 128Mi        |
-| postgres     | 250m        | 1000m     | 256Mi          | 512Mi        |
+| Component     | CPU request | CPU limit | Memory request | Memory limit |
+|---------------|-------------|-----------|----------------|--------------|
+| hotel-backend | 100m        | 500m      | 64Mi           | 128Mi        |
+| postgres      | 250m        | 1000m     | 256Mi          | 512Mi        |
 
-The HPA scales the app between 2 and 10 replicas on CPU > 70% or memory > 80%.
-Native image cold start < 100ms makes scale-out near-instant.
+The HPA scales the app between 2 and 10 replicas on CPU > 70% or memory > 80%. Native image cold start < 100ms makes scale-out near-instant.
+
+---
 
 ---
 

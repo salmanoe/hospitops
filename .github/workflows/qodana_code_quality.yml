@@ -32,7 +32,7 @@ jobs:
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
-          project-dir: hotel-backend     # qodana.yaml lives here
+          args: --project-dir hotel-backend   # project-dir input removed in v2026.1; pass as CLI arg
           pr-mode: false
           use-caches: true
           post-pr-comment: true
