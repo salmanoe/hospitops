@@ -104,7 +104,7 @@ jobs:
 
       # Upload coverage report for the SonarQube job to consume
       - name: Upload JaCoCo aggregate report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: jacoco-report
           path: hotel-backend/coverage-aggregate/target/site/jacoco-aggregate/
