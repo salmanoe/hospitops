@@ -183,7 +183,13 @@
                           -Dspring-boot.build-image.imageName=your-registry/hotel-backend:tag
                     -->
                     <image>
-                        <name>hospitops-backend:${project.version}</name>
+                        <!--
+                            Do NOT set <name> here. The image name is supplied
+                            at build time via:
+                              -Dspring-boot.build-image.imageName=ghcr.io/<owner>/hotel-backend:<sha>
+                            Hardcoding a name here would override the CLI property
+                            and break the CI push step (Run #18 regression).
+                        -->
                         <env>
                             <BP_NATIVE_IMAGE>true</BP_NATIVE_IMAGE>
                             <BP_JVM_VERSION>25</BP_JVM_VERSION>
