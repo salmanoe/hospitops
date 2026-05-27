@@ -90,7 +90,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build native Docker image using Paketo Buildpacks.
+      # Step 1 of 2: Install all reactor modules to the local Maven repository.
+      #
+      # WHY two steps are needed:
+      #   spring-boot:build-image forks the Maven lifecycle internally before
+      #   it checks <skip>. That fork resolves dependencies from the LOCAL
+      #   REPOSITORY, not from the reactor. If we run build-image with -am in
+      #   a single command, the fork for each library module (identity, room,
+      #   etc.) tries to find id.co.hospitops:shared:jar in ~/.m2 — but shared
+      #   was only built to target/, not installed. Dependency resolution fails.
+      #
+      #   Solution: install everything first (no image building, no native
+      #   profile, tests skipped for speed), then invoke build-image on
+      #   bootstrap ALONE (no -am). With no library modules in the reactor,
+      #   there are no forks to trigger and bootstrap resolves all deps from
+      #   the freshly populated local repository.
+      - name: Install reactor modules to local Maven repository
+        working-directory: hotel-backend
+        run: |
+          mvn install \
+            -pl bootstrap -am \
+            --batch-mode --no-transfer-progress \
+            -DskipTests
+
+      # Step 2 of 2: Build the native Docker image for bootstrap only.
       # No local native-image binary needed — compilation happens inside
       # a build container pulled by the buildpack automatically.
       # Expected build time: 5–15 minutes on a standard GitHub runner.
@@ -98,7 +121,7 @@ jobs:
         working-directory: hotel-backend
         run: |
           mvn -Pnative spring-boot:build-image \
-            -pl bootstrap -am \
+            -pl bootstrap \
             --batch-mode --no-transfer-progress \
             -Dspring-boot.build-image.imageName=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
