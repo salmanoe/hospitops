@@ -168,22 +168,37 @@ jobs:
         working-directory: hotel-backend
         run: mvn compile --batch-mode --no-transfer-progress
 
+      # Skip analysis entirely when SONAR_HOST_URL is not configured.
+      # This prevents a misleading "URI with undefined scheme" failure on
+      # forks or environments where SonarQube hasn't been set up yet.
       - name: Run SonarQube analysis
+        if: ${{ secrets.SONAR_HOST_URL != '' }}
         working-directory: hotel-backend
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Pull-request analysis: decorate the PR with inline findings.
+          # Branch analysis: track the branch over time (SonarQube Developer+
+          # or SonarCloud required for branch analysis; Community Edition only
+          # supports the main branch).
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            SONAR_EXTRA_ARGS="\
+              -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
+              -Dsonar.pullrequest.branch=${{ github.head_ref }} \
+              -Dsonar.pullrequest.base=${{ github.base_ref }}"
+          else
+            SONAR_EXTRA_ARGS="-Dsonar.branch.name=${{ github.ref_name }}"
+          fi
+
           mvn sonar:sonar -Psonar \
             --batch-mode \
             --no-transfer-progress \
             -Dsonar.host.url=$SONAR_HOST_URL \
             -Dsonar.token=$SONAR_TOKEN \
-            -Dsonar.pullrequest.key=${{ github.event.pull_request.number || '' }} \
-            -Dsonar.pullrequest.branch=${{ github.head_ref || github.ref_name }} \
-            -Dsonar.pullrequest.base=${{ github.base_ref || 'main' }} \
-            -Dsonar.scm.revision=${{ github.sha }}
+            -Dsonar.scm.revision=${{ github.sha }} \
+            $SONAR_EXTRA_ARGS
 
   # ─────────────────────────────────────────────────────────────
   # JOB 3: Frontend — nginx config validation
