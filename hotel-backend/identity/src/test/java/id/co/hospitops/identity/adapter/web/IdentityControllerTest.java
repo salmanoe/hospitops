@@ -1,16 +1,17 @@
 package id.co.hospitops.identity.adapter.web;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import id.co.hospitops.identity.application.command.LoginCommand;
 import id.co.hospitops.identity.application.response.LoginResponse;
 import id.co.hospitops.identity.domain.model.StaffRole;
 import id.co.hospitops.identity.domain.port.in.AuthUseCase;
 import id.co.hospitops.identity.domain.port.in.ManageStaffUseCase;
+import id.co.hospitops.identity.domain.port.out.StaffRepository;
+import id.co.hospitops.identity.domain.port.out.TokenBlacklist;
+import id.co.hospitops.identity.infrastructure.security.JwtUtil;
 import id.co.hospitops.shared.StaffId;
 import id.co.hospitops.shared.exception.BusinessRuleViolationException;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -26,12 +27,24 @@ class IdentityControllerTest {
 
     @Autowired
     MockMvc mockMvc;
-    @Autowired
-    ObjectMapper objectMapper;
+
+    // Spring Boot 4.0 uses Jackson 3.x (tools.jackson), so ObjectMapper from
+    // com.fasterxml.jackson is not available as a Spring bean in the test slice.
+    // Request bodies are provided as inline JSON strings instead.
+
     @MockitoBean
     AuthUseCase authUseCase;
     @MockitoBean
     ManageStaffUseCase staffUseCase;
+
+    // JwtAuthFilter (@Component Filter) is included in the @WebMvcTest slice;
+    // its dependencies must be mocked so the context loads.
+    @MockitoBean
+    JwtUtil jwtUtil;
+    @MockitoBean
+    TokenBlacklist tokenBlacklist;
+    @MockitoBean
+    StaffRepository staffRepository;
 
     @Nested
     @DisplayName("POST /api/v1/auth/login")
@@ -41,11 +54,11 @@ class IdentityControllerTest {
         void returns200ForValidCredentials() throws Exception {
             LoginResponse mockResponse = new LoginResponse("jwt-token", "Bearer", 28800L,
                     StaffId.generate(), "Test User", "testuser", StaffRole.FRONT_DESK);
-            given(authUseCase.login(any(LoginCommand.class))).willReturn(mockResponse);
+            given(authUseCase.login(any())).willReturn(mockResponse);
 
             mockMvc.perform(post("/api/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(new LoginCommand("testuser", "password123"))))
+                            .content("{\"username\":\"testuser\",\"password\":\"password123\"}"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.token").value("jwt-token"))
@@ -71,7 +84,7 @@ class IdentityControllerTest {
 
             mockMvc.perform(post("/api/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(new LoginCommand("bad", "wrong"))))
+                            .content("{\"username\":\"bad\",\"password\":\"wrong\"}"))
                     .andExpect(status().isUnprocessableEntity())
                     .andExpect(jsonPath("$.success").value(false))
                     .andExpect(jsonPath("$.message").value("Invalid username or password"));

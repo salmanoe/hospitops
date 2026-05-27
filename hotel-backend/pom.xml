@@ -47,7 +47,17 @@
         <lombok.version>1.18.46</lombok.version>
         <auth0.java-jwt.version>4.5.2</auth0.java-jwt.version>
         <itext.version>9.6.0</itext.version>
-        <testcontainers.version>2.0.5</testcontainers.version>
+        <!--
+            Spring Boot 4.0.6's BOM declares testcontainers.version=2.0.5, but
+            Testcontainers 2.x is NOT published to Maven Central — all 2.0.x
+            artifacts return 404 there. The 1.x line is the current public release
+            series; 1.21.4 is the latest GA available in Maven Central and is
+            fully compatible with Spring Boot 4.0's @ServiceConnection and
+            spring-boot-testcontainers integration. We override the BOM's property
+            here so both the testcontainers-bom import and the explicit version
+            pins in bootstrap/pom.xml resolve correctly.
+        -->
+        <testcontainers.version>1.21.4</testcontainers.version>
         <native.maven.plugin.version>1.1.0</native.maven.plugin.version>
 
         <!--

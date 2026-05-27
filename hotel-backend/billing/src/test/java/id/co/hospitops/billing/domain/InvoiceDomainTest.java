@@ -26,7 +26,8 @@ class InvoiceDomainTest {
      */
     private Invoice newInvoice() {
         return Invoice.create("INV-2025-00001", ReservationId.generate(),
-                3, Money.of(500_000L), "Deluxe");
+                "RES-2025-00001", "Budi Santoso",
+                3L, Money.of(500_000L), "Deluxe");
     }
 
     private StaffId cashier() {
@@ -94,7 +95,7 @@ class InvoiceDomainTest {
         void splitPaymentSetsPaid() {
             Invoice inv = newInvoice();
             inv.recordPayment(Money.of(1_000_000L), PaymentMethod.CASH, null, cashier());
-            inv.recordPayment(Money.of(665_000L), PaymentMethod.TRANSFER, "TRF-001", cashier());
+            inv.recordPayment(Money.of(665_000L), PaymentMethod.BANK_TRANSFER, "TRF-001", cashier());
             assertThat(inv.getPaymentStatus()).isEqualTo(PaymentStatus.PAID);
         }
     }
