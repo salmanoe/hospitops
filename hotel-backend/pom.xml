@@ -364,6 +364,23 @@
                     <version>${sonar.maven.plugin.version}</version>
                 </plugin>
 
+                <!--
+                    Spring Boot Maven plugin — skip by default for all modules.
+                    Only the bootstrap module (the single deployable artifact)
+                    overrides this with <skip>false</skip>. Without this, running
+                    `mvn spring-boot:build-image -pl bootstrap -am` would attempt
+                    to build an executable image for every reactor module (shared,
+                    identity, room, etc.) — all of which are libraries with no
+                    main class, causing an "Unable to find main class" error.
+                -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <configuration>
+                        <skip>true</skip>
+                    </configuration>
+                </plugin>
+
             </plugins>
         </pluginManagement>
     </build>

@@ -162,6 +162,12 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <!--
+                        Override the root POM's default <skip>true</skip>.
+                        bootstrap is the only deployable module and must produce
+                        a runnable Spring Boot artifact.
+                    -->
+                    <skip>false</skip>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>
