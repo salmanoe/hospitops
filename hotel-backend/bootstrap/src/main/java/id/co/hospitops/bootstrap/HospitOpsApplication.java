@@ -23,7 +23,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @EntityScan(basePackages = "id.co.hospitops")
 public class HospitOpsApplication {
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         SpringApplication.run(HospitOpsApplication.class, args);
     }
 }

@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 class IdentityExceptionHandler {
 
     @ExceptionHandler(BusinessRuleViolationException.class)
-    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_CONTENT)
     public ApiResponse<Void> handleBusinessRule(BusinessRuleViolationException ex) {
         return ApiResponse.error(ex.getMessage());
     }

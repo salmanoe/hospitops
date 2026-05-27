@@ -20,7 +20,7 @@ public class Reservation {
     private final Money ratePerNight;
     private final int adults;
     private final int children;
-    private String specialRequests;
+    private final String specialRequests;
     private final StaffId createdBy;
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;

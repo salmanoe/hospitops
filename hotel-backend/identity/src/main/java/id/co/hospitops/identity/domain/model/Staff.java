@@ -10,7 +10,7 @@ public class Staff {
 
     private final StaffId id;
     private String fullName;
-    private String username;
+    private final String username;
     private String passwordHash;
     private StaffRole role;
     private boolean active;

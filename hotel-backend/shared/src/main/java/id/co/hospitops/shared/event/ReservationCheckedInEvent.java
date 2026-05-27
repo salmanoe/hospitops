@@ -1,7 +1,9 @@
 package id.co.hospitops.shared.event;
 
 import id.co.hospitops.shared.*;
+import lombok.Getter;
 
+@Getter
 public class ReservationCheckedInEvent extends DomainEvent {
     private final ReservationId reservationId;
     private final RoomId roomId;
@@ -13,17 +15,5 @@ public class ReservationCheckedInEvent extends DomainEvent {
         this.reservationId = reservationId;
         this.roomId = roomId;
         this.guestId = guestId;
-    }
-
-    public ReservationId getReservationId() {
-        return reservationId;
-    }
-
-    public RoomId getRoomId() {
-        return roomId;
-    }
-
-    public GuestId getGuestId() {
-        return guestId;
     }
 }

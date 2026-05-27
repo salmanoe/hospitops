@@ -61,6 +61,7 @@ public class BillingController {
     }
 
     @PostMapping("/{id}/payments")
+    @SuppressWarnings({"JvmTaintAnalysis", "SpringElInspection"}) // @Valid + Bean Validation; UUID path var is type-safe; JSON response; SpEL 'id' resolves at runtime on the Staff principal
     public ResponseEntity<ApiResponse<InvoiceResponse>> recordPayment(
             @PathVariable UUID id,
             @Valid @RequestBody RecordPaymentRequest req,

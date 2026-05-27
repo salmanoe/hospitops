@@ -1,6 +1,7 @@
 package id.co.hospitops.room.infrastructure.persistence;
 
 import id.co.hospitops.room.infrastructure.persistence.entity.RoomTypeJpaEntity;
+import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,5 +12,5 @@ public interface RoomTypeJpaRepository extends JpaRepository<RoomTypeJpaEntity, 
 
     boolean existsByName(String name);
 
-    Page<RoomTypeJpaEntity> findAll(Pageable pageable);
+    @NonNull Page<RoomTypeJpaEntity> findAll(@NonNull Pageable pageable);
 }

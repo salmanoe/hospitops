@@ -62,6 +62,7 @@ public class IdentityController {
     }
 
     @PostMapping("/staff")
+    @SuppressWarnings("JvmTaintAnalysis") // @Valid enforces Bean Validation on all string inputs; response is JSON, not HTML
     public ResponseEntity<ApiResponse<StaffResponse>> createStaff(
             @Valid @RequestBody CreateStaffCommand command) {
         StaffResponse created = staffUseCase.createStaff(command);

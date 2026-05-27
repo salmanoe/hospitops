@@ -26,7 +26,7 @@ public class StaffUserDetailsService implements UserDetailsService {
 
     @Override
     @Transactional(readOnly = true)
-    public UserDetails loadUserByUsername(@NonNull String username) {
+    public @NonNull UserDetails loadUserByUsername(@NonNull String username) {
         return staffRepository.findByUsername(username)
                 .map(StaffUserDetails::new)
                 .orElseThrow(() -> new UsernameNotFoundException("Staff not found: " + username));

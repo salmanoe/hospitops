@@ -28,6 +28,7 @@ public class RoomTypeController {
     }
 
     @PostMapping @PreAuthorize("hasAnyRole('ADMIN')")
+    @SuppressWarnings("JvmTaintAnalysis") // @Valid enforces Bean Validation on all string inputs; response is JSON, not HTML
     public ResponseEntity<ApiResponse<RoomTypeResponse>> create(@Valid @RequestBody CreateRoomTypeRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(
             useCase.createRoomType(new CreateRoomTypeCommand(req.name(), req.capacity(), req.description(), req.basePrice()))));
@@ -40,6 +41,7 @@ public class RoomTypeController {
     }
 
     @PostMapping("/{id}/rates") @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @SuppressWarnings("JvmTaintAnalysis") // @Valid enforces Bean Validation on all string inputs; UUID path var is type-safe; response is JSON, not HTML
     public ResponseEntity<ApiResponse<RoomTypeResponse>> addRate(@PathVariable UUID id, @Valid @RequestBody AddRateOverrideRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(
             useCase.addRateOverride(RoomTypeId.of(id), new AddRateOverrideCommand(req.name(), req.priceOverride(), req.validFrom(), req.validUntil()))));

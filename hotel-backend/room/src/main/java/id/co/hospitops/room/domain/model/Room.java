@@ -13,7 +13,7 @@ import java.util.List;
 public class Room {
 
     private final RoomId     id;
-    private String           roomNumber;
+    private final String     roomNumber;
     private int              floor;
     private RoomStatus       status;
     private final RoomTypeId roomTypeId;

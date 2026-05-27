@@ -10,7 +10,7 @@ public class Guest {
 
     private final GuestId id;
     private String fullName;
-    private String idNumber;
+    private final String idNumber;
     private String nationality;
     private String phone;
     private String email;

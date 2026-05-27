@@ -1,6 +1,7 @@
 package id.co.hospitops.identity.infrastructure.security;
 
 import id.co.hospitops.identity.domain.model.Staff;
+import org.jspecify.annotations.NonNull;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,7 +20,7 @@ import java.util.List;
 public record StaffUserDetails(Staff staff) implements UserDetails {
 
     @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
+    public @NonNull Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + staff.getRole().name()));
     }
 
@@ -29,7 +30,7 @@ public record StaffUserDetails(Staff staff) implements UserDetails {
     }
 
     @Override
-    public String getUsername() {
+    public @NonNull String getUsername() {
         return staff.getUsername();
     }
 

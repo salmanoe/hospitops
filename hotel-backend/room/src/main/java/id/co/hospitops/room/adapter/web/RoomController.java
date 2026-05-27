@@ -39,6 +39,7 @@ public class RoomController {
     }
 
     @PostMapping @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @SuppressWarnings("JvmTaintAnalysis") // @Valid enforces Bean Validation on all string inputs; response is JSON, not HTML
     public ResponseEntity<ApiResponse<RoomResponse>> create(@Valid @RequestBody CreateRoomRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(
             manageUseCase.createRoom(new CreateRoomCommand(req.roomNumber(), req.floor(), RoomTypeId.of(req.roomTypeId()), req.notes()))));
