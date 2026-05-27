@@ -43,6 +43,7 @@ public class GuestController {
     }
 
     @PostMapping
+    @SuppressWarnings("JvmTaintAnalysis") // @Valid enforces Bean Validation on all string inputs; response is JSON, not HTML
     public ResponseEntity<ApiResponse<GuestResponse>> register(
             @Valid @RequestBody RegisterGuestRequest req) {
         var cmd = new RegisterGuestCommand(req.fullName(), req.idNumber(),

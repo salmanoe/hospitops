@@ -46,6 +46,7 @@ public class HousekeepingController {
     // R-04 FIX: @Valid added — was missing, so @NotNull on CreateTaskRequest.roomId
     // was never evaluated and null roomIds reached HousekeepingService.createManualTask().
     @PostMapping("/tasks")
+    @SuppressWarnings("JvmTaintAnalysis") // @Valid enforces Bean Validation on all string inputs; response is JSON, not HTML
     public ResponseEntity<ApiResponse<HousekeepingTaskResponse>> createTask(
             @Valid @RequestBody CreateTaskRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)

@@ -1,9 +1,11 @@
 package id.co.hospitops.shared.event;
 
 import id.co.hospitops.shared.*;
+import lombok.Getter;
 
 import java.time.LocalDate;
 
+@Getter
 public class ReservationCreatedEvent extends DomainEvent {
     private final ReservationId reservationId;
     private final RoomId roomId;
@@ -20,25 +22,5 @@ public class ReservationCreatedEvent extends DomainEvent {
         this.guestId = guestId;
         this.checkInDate = checkInDate;
         this.checkOutDate = checkOutDate;
-    }
-
-    public ReservationId getReservationId() {
-        return reservationId;
-    }
-
-    public RoomId getRoomId() {
-        return roomId;
-    }
-
-    public GuestId getGuestId() {
-        return guestId;
-    }
-
-    public LocalDate getCheckInDate() {
-        return checkInDate;
-    }
-
-    public LocalDate getCheckOutDate() {
-        return checkOutDate;
     }
 }

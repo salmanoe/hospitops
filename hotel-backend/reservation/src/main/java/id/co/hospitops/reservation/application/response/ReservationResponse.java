@@ -15,9 +15,9 @@ public record ReservationResponse(
         String reservationNumber,
         GuestId guestId,
         RoomId roomId,
-        /** Display name fetched from the guest module — null if not enriched */
+        // Display name fetched from the guest module — null if not enriched
         String guestFullName,
-        /** Room number fetched from the room module — null if not enriched */
+        // Room number fetched from the room module — null if not enriched
         String roomNumber,
         LocalDate checkInDate,
         LocalDate checkOutDate,

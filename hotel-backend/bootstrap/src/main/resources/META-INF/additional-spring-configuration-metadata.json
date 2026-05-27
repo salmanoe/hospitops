@@ -1,0 +1,19 @@
+{
+  "properties": [
+    {
+      "name": "hospitops.cors.allowed-origins",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Allowed CORS origins for the API. Injected into SecurityConfig. Defaults to http://localhost:5500 for local development; override via FRONTEND_URL env var in production."
+    },
+    {
+      "name": "hospitops.jwt.secret",
+      "type": "java.lang.String",
+      "description": "HMAC secret for JWT signing. Must be at least 32 characters. Set via JWT_SECRET env var in production."
+    },
+    {
+      "name": "hospitops.jwt.expiration-ms",
+      "type": "java.lang.Long",
+      "description": "JWT token validity in milliseconds. Defaults to 28800000 (8 hours). Set via JWT_EXPIRATION_MS env var."
+    }
+  ]
+}

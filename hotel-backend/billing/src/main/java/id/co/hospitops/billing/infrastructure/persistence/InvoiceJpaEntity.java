@@ -23,7 +23,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-class InvoiceJpaEntity {
+public class InvoiceJpaEntity {
 
     @Id
     @Column(columnDefinition = "uuid")
@@ -38,7 +38,7 @@ class InvoiceJpaEntity {
     @Column(nullable = false, length = 20)
     private String reservationNumber;
 
-    @Column(length = 255)
+    @Column
     private String guestName;
 
     @Column(nullable = false, precision = 15, scale = 2)
