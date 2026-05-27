@@ -86,22 +86,11 @@ spring:
     # then Hibernate validates an empty schema and throws a confusing error.
     fail-on-missing-locations: true
 
-  # ── Change 6: AOT Repositories ────────────────────────────────
+  # ── AOT Repositories ──────────────────────────────────────────
   # Spring Data 2025.1 (bundled with Spring Boot 4) generates concrete
   # implementations of all repository query methods at BUILD TIME.
   # Replaces runtime proxy/reflection with actual compiled source code.
-  #
-  # Benefits:
-  #   - Native image: no reflection needed for query method dispatch
-  #   - JVM mode:     faster startup, debuggable in IDE (IntelliJ 2025.3+)
-  #   - Both:         query validation at build time, not first request
-  #
-  # Enabled by default in Spring Data 2025.1. Explicit here for clarity.
-  # To disable: set spring.aot.jpa.repositories.enabled=false
-  aot:
-    jpa:
-      repositories:
-        enabled: true
+  # Enabled by default — no explicit configuration required.
 
   jackson:
     default-property-inclusion: non_null
