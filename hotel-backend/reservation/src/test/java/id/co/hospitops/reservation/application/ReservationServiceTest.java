@@ -5,6 +5,8 @@ import id.co.hospitops.reservation.application.response.ReservationResponse;
 import id.co.hospitops.reservation.domain.model.Reservation;
 import id.co.hospitops.reservation.domain.model.ReservationStatus;
 import id.co.hospitops.reservation.domain.port.out.*;
+import id.co.hospitops.reservation.domain.port.out.DisplayEnrichmentPort.GuestDisplay;
+import id.co.hospitops.reservation.domain.port.out.DisplayEnrichmentPort.RoomDisplay;
 import id.co.hospitops.shared.*;
 import id.co.hospitops.shared.event.*;
 import id.co.hospitops.shared.exception.*;
@@ -49,8 +51,15 @@ class ReservationServiceTest {
     @Mock GuestValidationPort        guestValidation;
     @Mock ReservationNumberGenerator numberGenerator;
     @Mock ApplicationEventPublisher  eventPublisher;
+    @Mock DisplayEnrichmentPort      displayEnrichment;
 
     @InjectMocks ReservationService service;
+
+    /** Minimal display stubs used by all tests that reach enrich() and return a ReservationResponse. */
+    private void stubEnrichment() {
+        when(displayEnrichment.findGuestDisplay(any())).thenReturn(new GuestDisplay("Test Guest", "1234567890"));
+        when(displayEnrichment.findRoomDisplay(any())).thenReturn(new RoomDisplay("101", "Deluxe"));
+    }
 
     // ── helpers ────────────────────────────────────────────────────
 
@@ -122,6 +131,7 @@ class ReservationServiceTest {
             when(roomAvailability.resolveRate(eq(roomId), any())).thenReturn(RATE);
             when(numberGenerator.generate()).thenReturn("RES-001");
             when(reservationRepo.save(any(Reservation.class))).thenReturn(saved);
+            stubEnrichment();
 
             ReservationResponse result = service.create(stubCommand(guestId, roomId));
 
@@ -181,6 +191,7 @@ class ReservationServiceTest {
             Reservation   confirmed = stubConfirmed();
             when(reservationRepo.findById(id)).thenReturn(Optional.of(confirmed));
             when(reservationRepo.save(confirmed)).thenReturn(confirmed);
+            stubEnrichment();
 
             ReservationResponse result = service.checkIn(id);
 
@@ -226,6 +237,7 @@ class ReservationServiceTest {
             Reservation   ready = stubCheckedIn(); // CHECK_OUT - CHECK_IN = 2 nights
             when(reservationRepo.findById(id)).thenReturn(Optional.of(ready));
             when(reservationRepo.save(ready)).thenReturn(ready);
+            stubEnrichment();
 
             service.checkOut(id);
 
@@ -272,6 +284,7 @@ class ReservationServiceTest {
             Reservation   confirmed = stubConfirmed();
             when(reservationRepo.findById(id)).thenReturn(Optional.of(confirmed));
             when(reservationRepo.save(confirmed)).thenReturn(confirmed);
+            stubEnrichment();
 
             service.cancel(id);
 
@@ -291,6 +304,7 @@ class ReservationServiceTest {
                     LocalDateTime.now(), LocalDateTime.now());
             when(reservationRepo.findById(id)).thenReturn(Optional.of(pending));
             when(reservationRepo.save(pending)).thenReturn(pending);
+            stubEnrichment();
 
             assertThatNoException().isThrownBy(() -> service.cancel(id));
             verify(eventPublisher).publishEvent(any(ReservationCancelledEvent.class));

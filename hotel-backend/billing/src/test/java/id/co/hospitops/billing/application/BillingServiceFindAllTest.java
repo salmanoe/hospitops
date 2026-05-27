@@ -1,6 +1,5 @@
 package id.co.hospitops.billing.application;
 
-import id.co.hospitops.billing.domain.model.Invoice;
 import id.co.hospitops.billing.domain.model.PaymentStatus;
 import id.co.hospitops.billing.domain.port.out.InvoiceNumberGenerator;
 import id.co.hospitops.billing.domain.port.out.InvoiceRepository;
@@ -15,7 +14,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -84,8 +84,7 @@ class BillingServiceFindAllTest {
         @Test
         @DisplayName("null statusFilter returns all invoices")
         void nullFilterReturnsAll() {
-            Page<Invoice> emptyPage = new PageImpl<>(List.of());
-            when(invoiceRepo.findAll(page)).thenReturn(emptyPage);
+            when(invoiceRepo.findAll(page)).thenReturn(List.of());
             when(invoiceRepo.count()).thenReturn(0L);
 
             var result = service.findAll(null, page);
@@ -98,8 +97,7 @@ class BillingServiceFindAllTest {
         @Test
         @DisplayName("blank statusFilter also returns all invoices")
         void blankFilterReturnsAll() {
-            Page<Invoice> emptyPage = new PageImpl<>(List.of());
-            when(invoiceRepo.findAll(page)).thenReturn(emptyPage);
+            when(invoiceRepo.findAll(page)).thenReturn(List.of());
             when(invoiceRepo.count()).thenReturn(0L);
 
             var result = service.findAll("   ", page);
@@ -120,8 +118,7 @@ class BillingServiceFindAllTest {
         @ValueSource(strings = {"UNPAID", "PAID", "PARTIAL"})
         @DisplayName("delegates to findByStatus() for known values")
         void delegatesToFindByStatus(String validStatus) {
-            Page<Invoice> emptyPage = new PageImpl<>(List.of());
-            when(invoiceRepo.findByStatus(any(), eq(page))).thenReturn(emptyPage);
+            when(invoiceRepo.findByStatus(any(), eq(page))).thenReturn(List.of());
             when(invoiceRepo.count()).thenReturn(0L);
 
             var result = service.findAll(validStatus, page);
@@ -134,8 +131,7 @@ class BillingServiceFindAllTest {
         @Test
         @DisplayName("status filter is case-insensitive (lowercase input)")
         void caseInsensitiveFilter() {
-            Page<Invoice> emptyPage = new PageImpl<>(List.of());
-            when(invoiceRepo.findByStatus(eq(PaymentStatus.PAID), eq(page))).thenReturn(emptyPage);
+            when(invoiceRepo.findByStatus(eq(PaymentStatus.PAID), eq(page))).thenReturn(List.of());
             when(invoiceRepo.count()).thenReturn(0L);
 
             assertThatNoException().isThrownBy(() -> service.findAll("paid", page));

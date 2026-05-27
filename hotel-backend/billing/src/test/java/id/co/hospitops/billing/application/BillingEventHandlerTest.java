@@ -93,6 +93,8 @@ class BillingEventHandlerTest {
 
             handler.onCheckout(event);
 
+            // Verify the one expected call, then assert nothing else was invoked.
+            verify(billingUseCase).createInvoiceForCheckout(any(), anyLong());
             verifyNoMoreInteractions(billingUseCase);
         }
     }
