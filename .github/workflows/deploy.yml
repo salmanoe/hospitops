@@ -1,9 +1,8 @@
 # ═══════════════════════════════════════════════════════════════
-# deploy.yml — Kubernetes Rollout
+# deploy.yml — VPS Rollout
 # Runs on: successful build workflow OR manual trigger
 #
-# Environments:
-#   staging     → auto-deploy after build
+# Environment:
 #   production  → requires manual approval in GitHub UI
 #
 # Setup required in GitHub:
@@ -12,126 +11,36 @@
 #   This creates a manual gate before production deploys.
 #
 # Secrets required:
-#   KUBE_CONFIG_STAGING    → kubeconfig for staging cluster (base64)
 #   KUBE_CONFIG_PRODUCTION → kubeconfig for production cluster (base64)
 #   REGISTRY_URL           → container registry URL (e.g. ghcr.io/<owner>)
 # ═══════════════════════════════════════════════════════════════
 name: Deploy
 
 on:
-  # Triggered automatically after a successful build on main
+  # Triggered automatically after a successful build on main —
+  # still requires manual approval via the production environment gate.
   workflow_run:
     workflows: [ "Build" ]
     types: [ completed ]
     branches: [ main ]
 
-  # Manual trigger — deploy a specific image tag to a chosen environment
+  # Manual trigger — deploy a specific image tag to production
   workflow_dispatch:
     inputs:
       image-tag:
         description: "Image tag (git SHA) to deploy"
         required: true
-      environment:
-        description: "Target environment"
-        required: true
-        default: "staging"
-        type: choice
-        options: [ staging, production ]
 
 jobs:
   # ─────────────────────────────────────────────────────────────
-  # JOB 1: Deploy to Staging (auto after successful build)
-  # ─────────────────────────────────────────────────────────────
-  deploy-staging:
-    name: "Deploy → Staging"
-    runs-on: ubuntu-latest
-    # Only run if the triggering build workflow succeeded
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
-
-    environment:
-      name: staging
-      url: https://staging-api.hotel.yourdomain.com
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      # Resolve image tag — from build workflow or manual input
-      - name: Resolve image tag
-        id: tag
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ github.event.inputs.image-tag }}" >> $GITHUB_OUTPUT
-          else
-            # Extract the HEAD SHA of the completed build run
-            echo "tag=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v5
-
-      - name: Configure kubeconfig (staging)
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-
-      - name: Verify cluster connection
-        run: kubectl cluster-info --context=staging
-
-      # Rolling update — only the image tag changes.
-      # K8s performs a rolling update: spins up new pods before killing old ones.
-      # maxUnavailable: 0 (set in k8s/app.yaml) ensures zero downtime.
-      - name: Roll out new image
-        env:
-          IMAGE: ${{ secrets.REGISTRY_URL }}/hotel-backend:${{ steps.tag.outputs.tag }}
-        run: |
-          kubectl set image deployment/hotel-backend \
-            hotel-backend=$IMAGE \
-            --namespace=hotel
-
-      # Wait up to 3 minutes for the rollout to complete
-      - name: Wait for rollout
-        run: |
-          kubectl rollout status deployment/hotel-backend \
-            --namespace=hotel \
-            --timeout=180s
-
-      # Verify readiness after rollout via a temporary pod
-      - name: Health check
-        run: |
-          kubectl run health-check \
-            --image=curlimages/curl:latest \
-            --restart=Never \
-            --rm \
-            -it \
-            --namespace=hotel \
-            -- curl -sf http://hotel-backend-service/actuator/health/readiness
-
-      - name: Write deployment summary
-        run: |
-          echo "## 🚀 Staging Deployment Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| Environment | Staging |" >> $GITHUB_STEP_SUMMARY
-          echo "| Image Tag | \`${{ steps.tag.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Deployed At | $(date -u '+%Y-%m-%d %H:%M UTC') |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Readiness probe passed. Ready for production approval." >> $GITHUB_STEP_SUMMARY
-
-  # ─────────────────────────────────────────────────────────────
-  # JOB 2: Deploy to Production (manual approval required)
+  # Deploy to Production (manual approval required)
   # ─────────────────────────────────────────────────────────────
   deploy-production:
     name: "Deploy → Production"
     runs-on: ubuntu-latest
-    needs: deploy-staging
     if: |
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
-      || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
 
     # GitHub UI shows an "Approve" button before this job runs.
     # Configure in: Settings → Environments → production → Required reviewers
