@@ -9,7 +9,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0-6DB33F?logo=springboot)](https://spring.io/projects/spring-boot)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
-Hotel management system for a medium hotel (20–100 rooms). A clean-architecture Spring Boot backend served behind an Nginx frontend, designed to evolve from monolith → Spring Modulith → microservices without structural rewrites.
+Hotel management system for medium hotels (20–100 rooms). A full-stack platform covering staff identity, room management, guest profiles, reservations, housekeeping, and billing — built as a clean-architecture Spring Boot monolith designed to evolve into Spring Modulith and then microservices without structural rewrites.
 
 ---
 
@@ -17,23 +17,23 @@ Hotel management system for a medium hotel (20–100 rooms). A clean-architectur
 
 ```
 hospitops/
-├── hotel-backend/          ← Java 25 · Spring Boot 4 · GraalVM Native Image
-│   ├── shared/             ← Typed IDs, Money, Domain Events, ApiResponse
-│   ├── identity/           ← Staff auth, JWT                      ✅ done
-│   ├── room/               ← Rooms, types, seasonal pricing       🔲 batch 2
-│   ├── guest/              ← Guest profiles, search               🔲 batch 2
-│   ├── reservation/        ← Booking, check-in, check-out         🔲 batch 3
-│   ├── housekeeping/       ← Room status board, tasks             🔲 batch 3
-│   ├── billing/            ← Invoices, payments, PDF export       🔲 batch 4
-│   ├── bootstrap/          ← App entry, Security, Flyway          ✅ done
-│   ├── coverage-aggregate/ ← JaCoCo multi-module report           ✅ done
-│   └── k8s/                ← Kubernetes manifests (prod)
-├── hotel-frontend/         ← Static HTML/CSS/JS · Nginx
+├── hotel-backend/          ← Java 25 · Spring Boot 4.0.6 · GraalVM Native Image
+│   ├── shared/             ← Typed IDs, Money, TaxPolicy, Guard, Domain Events, API wrappers
+│   ├── identity/           ← Staff auth, JWT access tokens, refresh tokens
+│   ├── room/               ← Rooms, room types, seasonal rate overrides
+│   ├── guest/              ← Guest profiles, search
+│   ├── reservation/        ← Booking, check-in, check-out, cancellation
+│   ├── housekeeping/       ← Room status board, task management
+│   ├── billing/            ← Invoices, payments, PDF export (iText 9)
+│   ├── bootstrap/          ← App entry point, Security, Flyway migrations, Redis config
+│   ├── coverage-aggregate/ ← JaCoCo multi-module aggregate report
+│   └── k8s/                ← Kubernetes manifests (production)
+├── hotel-frontend/         ← Static HTML/CSS/JS · Nginx config
 ├── docker-compose.yml      ← Full local dev stack (run from here)
 └── .env.example            ← Environment variable template
 ```
 
-**Stack:** Java 25 LTS · Spring Boot 4 · GraalVM Native Image · PostgreSQL 17 · Nginx · Docker Compose (dev) · Kubernetes (prod)
+**Stack:** Java 25 LTS · Spring Boot 4.0.6 · GraalVM Native Image (Liberica NIK) · PostgreSQL 17 · Redis 7 · Nginx · Docker Compose (dev) · Kubernetes (prod) · GHCR (container registry)
 
 ---
 
@@ -42,7 +42,7 @@ hospitops/
 | Environment | Tooling        | Command                         | Purpose                            |
 |-------------|----------------|---------------------------------|------------------------------------|
 | Development | Docker Compose | `docker compose up`             | Full local stack, hot-reload ready |
-| CI          | GitHub Actions | automatic on push               | Tests, coverage, quality gate      |
+| CI          | GitHub Actions | automatic on push               | Tests, coverage, quality gate, nginx validation |
 | Staging     | Kubernetes     | auto-deploy after merge to main | Integration testing in-cluster     |
 | Production  | Kubernetes     | manual approval gate            | Live traffic                       |
 
@@ -50,15 +50,15 @@ hospitops/
 
 ## Development — Docker Compose
 
-Docker Compose is the **only tool you need** to run the full stack locally. Run all commands from the **repo root** (`hospitops/`). One command starts PostgreSQL, the Spring Boot backend, and the Nginx frontend together.
+Docker Compose is the **only tool you need** to run the full stack locally. Run all commands from the **repo root** (`hospitops/`). One command starts PostgreSQL, Redis, the Spring Boot backend, and the Nginx frontend together.
 
 ### Prerequisites
 
 ```bash
-# Docker Desktop 4.x+ or Docker Engine + Compose plugin
+# Docker Desktop 4.x+ or Docker Engine + Compose plugin v2.x
 docker compose version   # must be v2.x
 
-# Java + Maven (only needed to run Maven commands directly)
+# Java + Maven (only needed to run Maven commands directly outside Docker)
 sdk install java 25.r25-nik   # GraalVM 25 via SDKMAN (Liberica NIK)
 sdk install maven
 ```
@@ -67,27 +67,28 @@ sdk install maven
 
 ```bash
 # From repo root: hospitops/
-docker compose up          # start postgres + backend + frontend, stream logs
+docker compose up          # start all services, stream logs
 docker compose up -d       # detached (background)
 docker compose up --build  # rebuild the backend image first
 ```
 
-The app is at **http://localhost** — Nginx serves the frontend and proxies `/api/*` to Spring Boot.
+The app is at **http://localhost** — Nginx serves the frontend and proxies `/api/*` to Spring Boot. First run takes ~90 seconds while Flyway applies all migrations.
 
 ### Compose services
 
-```
-postgres    → PostgreSQL 17 (internal, data persisted in a named volume)
-app         → Spring Boot backend (dev profile, connects to postgres)
-frontend    → Nginx serving hotel-frontend/, proxying /api/* → app:8080
-sonarqube   → SonarQube CE (port 9000, optional — see below)
-```
+| Service      | Description                                    | Exposed            |
+|--------------|------------------------------------------------|--------------------|
+| `postgres`   | PostgreSQL 17 (data in named volume)           | Port 5432 (IDE)    |
+| `redis`      | Redis 7 (token blacklist + refresh token store)| Internal only      |
+| `app`        | Spring Boot backend (dev profile)              | Internal (via Nginx)|
+| `frontend`   | Nginx serving hotel-frontend/, proxying /api/* | http://localhost   |
+| `sonarqube`  | SonarQube CE (optional — see below)            | Port 9000          |
 
 ### Stop and clean up
 
 ```bash
-docker compose down        # stop containers, keep DB data
-docker compose down -v     # stop containers AND delete all DB data
+docker compose down        # stop containers, keep DB/Redis data
+docker compose down -v     # stop containers AND delete all data volumes
 ```
 
 ### Useful commands during development
@@ -100,7 +101,7 @@ docker compose restart app       # reload backend after a code change
 # Open a psql shell in the running postgres container
 docker compose exec postgres psql -U hotel_user -d hotel_db
 
-# Run Maven commands directly (requires postgres already running via Compose)
+# Run Maven commands directly (requires postgres running via Compose)
 cd hotel-backend
 mvn test -pl bootstrap -am -Pdev
 mvn spring-boot:run -pl bootstrap -am -Pdev
@@ -114,7 +115,8 @@ SonarQube is defined in Compose but excluded from the default profile. Start it 
 # From repo root
 docker compose --profile sonar up -d sonarqube
 
-# Then from hotel-backend/
+# First login: admin / admin (SonarQube will prompt to change it)
+# Then generate a token under My Account → Security, and run from hotel-backend/:
 mvn sonar:sonar -Psonar \
   -Dsonar.host.url=http://localhost:9000 \
   -Dsonar.token=YOUR_LOCAL_TOKEN
@@ -130,14 +132,23 @@ Compose reads `.env` from the repo root. The file is gitignored — copy the tem
 cp .env.example .env
 ```
 
-| Variable            | Default              | Description              |
-|---------------------|----------------------|--------------------------|
-| `POSTGRES_DB`       | `hotel_db`           | Database name            |
-| `POSTGRES_USER`     | `hotel_user`         | Database user            |
-| `POSTGRES_PASSWORD` | `yourpassword`       | Database password        |
-| `JWT_SECRET`        | *(see .env.example)* | Min 32 chars             |
-| `JWT_EXPIRATION_MS` | `28800000`           | Token TTL (8 hours)      |
-| `LOG_LEVEL`         | `DEBUG`              | Log level for dev profile|
+| Variable                        | Default                | Description                                      |
+|---------------------------------|------------------------|--------------------------------------------------|
+| `POSTGRES_DB`                   | `hotel_db`             | Database name                                    |
+| `POSTGRES_USER`                 | `hotel_user`           | Database user                                    |
+| `POSTGRES_PASSWORD`             | `yourpassword`         | Database password                                |
+| `JWT_SECRET`                    | *(see .env.example)*   | Min 32 chars. App refuses to start if too short. |
+| `JWT_EXPIRATION_MS`             | `28800000`             | Access token TTL (8 hours)                       |
+| `REFRESH_TOKEN_EXPIRATION_SECONDS` | `604800`            | Refresh token TTL (7 days)                       |
+| `REDIS_ENABLED`                 | `false`                | `true` → Redis-backed token blacklist            |
+| `REDIS_HOST`                    | `localhost`            | Redis host (Compose service name: `redis`)       |
+| `REDIS_PORT`                    | `6379`                 | Redis port                                       |
+| `REDIS_PASSWORD`                | *(empty)*              | Redis password (empty for local dev)             |
+| `FRONTEND_URL`                  | `http://localhost:5500`| Allowed CORS origin                              |
+| `LOG_LEVEL`                     | `DEBUG`                | Log level for `id.co.hospitops` packages         |
+| `DB_POOL_MAX`                   | `15`                   | HikariCP maximum pool size                       |
+
+> ⚠️ `JWT_SECRET` must be overridden in every deployed environment. Generate with: `openssl rand -base64 48`
 
 ---
 
@@ -146,13 +157,13 @@ cp .env.example .env
 After `docker compose up`, verify the stack is live:
 
 ```bash
-# Frontend
-open http://localhost          # login page
+# Frontend — should open the login page
+open http://localhost
 
-# Health check (proxied through nginx)
+# Backend health (proxied through Nginx)
 curl http://localhost/actuator/health
 
-# Login
+# Login — returns an access token and a refresh token
 curl -X POST http://localhost/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"admin123"}'
@@ -162,13 +173,13 @@ curl -X POST http://localhost/api/v1/auth/login \
 
 ## Default Credentials
 
-| Username      | Password       | Role         |
-|---------------|----------------|--------------|
-| `admin`       | `admin123`     | Admin        |
-| `manager`     | `manager123`   | Manager      |
-| `frontdesk1`  | `frontdesk123` | Front Desk   |
-| `housekeeper` | `hk123456`     | Housekeeping |
-| `accountant`  | `acc12345`     | Accountant   |
+| Username      | Password        | Role         |
+|---------------|-----------------|--------------|
+| `admin`       | `admin123`      | Admin        |
+| `manager`     | `manager123`    | Manager      |
+| `frontdesk1`  | `frontdesk123`  | Front Desk   |
+| `housekeeper` | `hk123456`      | Housekeeping |
+| `accountant`  | `acc12345`      | Accountant   |
 
 > ⚠️ Change all passwords before deploying to any shared environment: `PATCH /api/v1/staff/{id}/password`
 
@@ -178,7 +189,8 @@ curl -X POST http://localhost/api/v1/auth/login \
 
 ```bash
 cd hotel-backend
-mvn test                          # unit tests (domain + app + web slice)
+
+mvn test                          # unit tests (domain + application + web slice)
 mvn clean verify -Pcoverage       # tests + JaCoCo coverage report
 mvn sonar:sonar -Psonar \         # SonarQube analysis (requires running instance)
   -Dsonar.host.url=... \
@@ -194,48 +206,52 @@ Coverage targets enforced by SonarQube Quality Gate:
 
 ```bash
 cd hotel-backend
-mvn package -pl bootstrap -am -DskipTests           # fat JAR
-mvn -Pnative native:compile -pl bootstrap -am       # native binary (~5 min)
-mvn -Pnative spring-boot:build-image -pl bootstrap -am  # native Docker image
+
+mvn package -pl bootstrap -am -DskipTests                   # fat JAR
+mvn -Pnative native:compile -pl bootstrap -am              # native binary (~5–15 min)
+mvn -Pnative spring-boot:build-image -pl bootstrap -am \   # native Docker image
+  -Dspring-boot.build-image.imageName=ghcr.io/<owner>/hotel-backend:<tag>
 ```
 
-| Mode                  | Startup | Memory | Throughput      |
-|-----------------------|---------|--------|-----------------|
-| JVM + virtual threads | ~4s     | ~300MB | Baseline        |
-| GraalVM native        | ~80ms   | ~70MB  | ~15% lower peak |
+| Mode                  | Startup  | Memory  | Notes                     |
+|-----------------------|----------|---------|---------------------------|
+| JVM + virtual threads | ~4s      | ~300 MB | Default for local dev      |
+| GraalVM native        | ~80ms    | ~70 MB  | ~15% lower peak throughput |
 
 ---
 
 ## CI/CD Pipeline
 
 ```
-┌─────────────┐   ┌─────────────────────┐   ┌──────────────────────┐   ┌───────────────────────┐
-│  Code Push  │──▶│  CI  (ci.yml)       │──▶│  Build (build.yml)   │──▶│  Deploy (deploy.yml)  │
-│  or PR      │   │                     │   │                      │   │                       │
-└─────────────┘   │  ✓ Compile          │   │  ✓ Spring AOT        │   │  → Staging (auto)     │
-                  │  ✓ Unit tests       │   │  ✓ Native image      │   │                       │
-                  │  ✓ JaCoCo coverage  │   │  ✓ Docker push       │   │  → Production         │
-                  │  ✓ SonarQube gate   │   │  ✓ Smoke test        │   │    (manual approval)  │
-                  └─────────────────────┘   └──────────────────────┘   └───────────────────────┘
+┌─────────────┐   ┌──────────────────────────┐   ┌──────────────────────┐   ┌───────────────────────┐
+│  Code Push  │──▶│  CI  (ci.yml)            │──▶│  Build (build.yml)   │──▶│  Deploy (deploy.yml)  │
+│  or PR      │   │                          │   │                      │   │                       │
+└─────────────┘   │  ✓ Compile               │   │  ✓ Install modules   │   │  → Staging (auto)     │
+                  │  ✓ Unit tests            │   │  ✓ Native image      │   │                       │
+                  │  ✓ JaCoCo coverage       │   │  ✓ Push to GHCR      │   │  → Production         │
+                  │  ✓ SonarQube gate        │   │  ✓ Smoke test        │   │    (manual approval)  │
+                  │  ✓ Nginx config check    │   │                      │   │                       │
+                  └──────────────────────────┘   └──────────────────────┘   └───────────────────────┘
 ```
 
-| Workflow     | Trigger         | Purpose                                        |
-|--------------|-----------------|------------------------------------------------|
-| `ci.yml`     | Every push + PR | Tests, coverage, SonarQube quality gate        |
-| `build.yml`  | Merge to `main` | GraalVM native image → container registry      |
-| `deploy.yml` | After build     | K8s rolling update, manual gate for production |
+| Workflow     | Trigger                    | Purpose                                              |
+|--------------|----------------------------|------------------------------------------------------|
+| `ci.yml`     | Every push + PR            | Tests, coverage, SonarQube gate, nginx validation    |
+| `build.yml`  | Merge to `main` (or manual)| Native image build → GHCR (`ghcr.io/<owner>/hotel-backend`) |
+| `deploy.yml` | After build                | K8s rolling update; manual gate for production       |
 
 ### GitHub Actions Secrets
 
 Go to **Settings → Secrets and variables → Actions** and add:
 
-| Secret                   | Description                                 |
-|--------------------------|---------------------------------------------|
-| `SONAR_TOKEN`            | SonarQube → Account → Security → Token      |
-| `SONAR_HOST_URL`         | SonarQube server URL                        |
-| `KUBE_CONFIG_STAGING`    | `cat ~/.kube/config \| base64` (staging)    |
-| `KUBE_CONFIG_PRODUCTION` | `cat ~/.kube/config \| base64` (production) |
-| `REGISTRY_URL`           | Container registry URL                      |
+| Secret                   | Description                                             |
+|--------------------------|---------------------------------------------------------|
+| `SONAR_TOKEN`            | SonarQube → Account → Security → Token                 |
+| `SONAR_HOST_URL`         | SonarQube server URL (analysis is skipped if not set)   |
+| `KUBE_CONFIG_STAGING`    | `cat ~/.kube/config \| base64` (staging cluster)        |
+| `KUBE_CONFIG_PRODUCTION` | `cat ~/.kube/config \| base64` (production cluster)     |
+
+> `GITHUB_TOKEN` is automatically available — no setup needed for GHCR image pushes.
 
 Go to **Settings → Environments** and create:
 
@@ -254,18 +270,18 @@ kubectl apply -f hotel-backend/k8s/postgres.yaml
 kubectl apply -f hotel-backend/k8s/app.yaml
 kubectl apply -f hotel-backend/k8s/ingress-and-netpol.yaml
 
-# Optional — only if running a self-hosted SonarQube in-cluster
+# Optional — only if running self-hosted SonarQube in-cluster
 kubectl apply -f hotel-backend/k8s/sonarqube.yaml
 ```
 
 ### Before you deploy
 
 1. **Update the image tag** in `k8s/app.yaml`:
-   ```
-   image: your-registry.io/hotel-backend:1.0.0
+   ```yaml
+   image: ghcr.io/salmanoe/hotel-backend:<sha>
    ```
 
-2. **Rotate all secrets** — the defaults in `k8s/postgres.yaml` and `k8s/app.yaml` are base64-encoded placeholders. Never deploy them as-is:
+2. **Rotate all secrets** — the defaults in the manifests are base64-encoded placeholders. Never deploy them as-is:
    ```bash
    echo -n "your-real-password" | base64
    ```
@@ -273,7 +289,7 @@ kubectl apply -f hotel-backend/k8s/sonarqube.yaml
 
 3. **Update the domain** in `k8s/ingress-and-netpol.yaml`:
    ```yaml
-   host: api.hotel.yourdomain.com
+   host: hotel.yourdomain.com
    ```
 
 4. **Install cluster prerequisites** (if not already present):
@@ -292,7 +308,6 @@ kubectl rollout status deployment/hotel-backend -n hotel
 kubectl get pods -n hotel
 kubectl get hpa -n hotel
 kubectl logs -f deployment/hotel-backend -n hotel
-kubectl logs -f deployment/postgres -n hotel
 ```
 
 ### Production resource profile (native image)
@@ -302,9 +317,7 @@ kubectl logs -f deployment/postgres -n hotel
 | hotel-backend | 100m        | 500m      | 64Mi           | 128Mi        |
 | postgres      | 250m        | 1000m     | 256Mi          | 512Mi        |
 
-The HPA scales the app between 2 and 10 replicas on CPU > 70% or memory > 80%. Native image cold start < 100ms makes scale-out near-instant.
-
----
+The HPA scales the app between 2 and 10 replicas on CPU > 70% or memory > 80%. Native image cold start < 100ms makes scale-out near-instant. Pod anti-affinity ensures the two baseline replicas land on separate nodes.
 
 ---
 

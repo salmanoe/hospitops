@@ -2,8 +2,6 @@ package id.co.hospitops.identity.adapter.web;
 
 import id.co.hospitops.identity.application.command.*;
 import id.co.hospitops.identity.application.response.*;
-import id.co.hospitops.identity.application.command.LogoutCommand;
-import id.co.hospitops.identity.application.command.RefreshCommand;
 import id.co.hospitops.identity.domain.model.Staff;
 import id.co.hospitops.identity.domain.port.in.*;
 import id.co.hospitops.shared.StaffId;

@@ -1,6 +1,7 @@
 package id.co.hospitops.shared.event;
 
 import java.time.Instant;
+import lombok.Getter;
 
 /**
  * R-07 FIX: Base class for all domain events.
@@ -13,15 +14,12 @@ import java.time.Instant;
  * <p>Each event records the instant it occurred so consumers can reason about
  * ordering without relying on wall-clock time at the point of handling.
  */
+@Getter
 public abstract class DomainEvent {
 
     private final Instant occurredOn;
 
     protected DomainEvent() {
         this.occurredOn = Instant.now();
-    }
-
-    public Instant getOccurredOn() {
-        return occurredOn;
     }
 }

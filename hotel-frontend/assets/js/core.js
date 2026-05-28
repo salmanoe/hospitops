@@ -161,19 +161,16 @@ const API = (() => {
         return body.data !== undefined ? body.data : body;
     };
 
-    // Executes a fetch with the current access token.  On 401 it attempts one
-    // silent refresh and retries before clearing the session and redirecting.
-    const _request = async (url, fetchOptions) => {
-        const withAuth = () => fetch(url, { ...fetchOptions, headers: authHeaders() });
-
+    // Executes `withAuth` with one silent-refresh retry on 401, then redirects to
+    // login on a persistent 401.  Returns the final Response for the caller to
+    // inspect (callers decide whether to parse JSON or return a Blob).
+    const _fetchWithRetry = async (withAuth) => {
         let res = await withAuth();
 
         if (res.status === 401 && Auth.getRefreshToken()) {
             const refreshed = await _refreshSession();
-            if (refreshed) {
-                // Retry with the newly rotated access token.
-                res = await withAuth();
-            }
+            // Retry with the newly rotated access token.
+            if (refreshed) res = await withAuth();
         }
 
         if (res.status === 401) {
@@ -182,7 +179,14 @@ const API = (() => {
             throw new Error('Unauthorized');
         }
 
-        return handle(res);
+        return res;
+    };
+
+    // Executes a fetch with the current access token.  On 401 it attempts one
+    // silent refresh and retries before clearing the session and redirecting.
+    const _request = async (url, fetchOptions) => {
+        const withAuth = () => fetch(url, { ...fetchOptions, headers: authHeaders() });
+        return handle(await _fetchWithRetry(withAuth));
     };
 
     const get = (path, params = {}) => {
@@ -211,23 +215,10 @@ const API = (() => {
     const del = (path) =>
         _request(`${BASE}${path}`, { method: 'DELETE' });
 
-    // PDF download — returns a Blob; needs the same 401-retry logic.
+    // PDF download — returns a Blob; reuses _fetchWithRetry for 401-retry logic.
     const getPdf = async (path) => {
         const withAuth = () => fetch(`${BASE}${path}`, { headers: authHeaders() });
-
-        let res = await withAuth();
-
-        if (res.status === 401 && Auth.getRefreshToken()) {
-            const refreshed = await _refreshSession();
-            if (refreshed) res = await withAuth();
-        }
-
-        if (res.status === 401) {
-            Auth.clear();
-            window.location.href = '/login.html';
-            throw new Error('Unauthorized');
-        }
-
+        const res = await _fetchWithRetry(withAuth);
         if (!res.ok) throw new Error('PDF download failed');
         return res.blob();
     };
