@@ -14,6 +14,11 @@
       "name": "hospitops.jwt.expiration-ms",
       "type": "java.lang.Long",
       "description": "JWT token validity in milliseconds. Defaults to 28800000 (8 hours). Set via JWT_EXPIRATION_MS env var."
+    },
+    {
+      "name": "hospitops.redis.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Activates the Redis-backed token blacklist (RedisConfig + RedisTokenBlacklist). When false (default) the in-memory blacklist is used — safe for local dev and single-replica environments. Set via REDIS_ENABLED env var."
     }
   ]
 }
