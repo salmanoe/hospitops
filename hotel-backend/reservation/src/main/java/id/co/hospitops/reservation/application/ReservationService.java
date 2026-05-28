@@ -12,6 +12,7 @@ import id.co.hospitops.shared.web.PageResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,9 +48,19 @@ public class ReservationService implements ReservationUseCase {
                 cmd.checkIn(), cmd.checkOut(), rate, cmd.adults(), cmd.children(),
                 cmd.specialRequests(), cmd.createdBy());
 
-        Reservation saved = reservationRepo.save(reservation);
+        // R-03 FIX: The GIST exclusion constraint (V8 migration) is the authoritative
+        // guard against concurrent double-bookings. If two requests race past the
+        // availability check above, the DB will reject the second insert. We translate
+        // the constraint violation into a business-level ConflictException so the API
+        // returns HTTP 409 rather than an unhandled 500.
+        Reservation saved;
+        try {
+            saved = reservationRepo.save(reservation);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ConflictException("Room is no longer available for the selected dates");
+        }
 
-        eventPublisher.publishEvent(new ReservationCreatedEvent(this,
+        eventPublisher.publishEvent(new ReservationCreatedEvent(
                 saved.getId(), saved.getRoomId(), saved.getGuestId(),
                 saved.getCheckInDate(), saved.getCheckOutDate()));
 
@@ -65,7 +76,7 @@ public class ReservationService implements ReservationUseCase {
         res.checkIn();
         Reservation saved = reservationRepo.save(res);
         eventPublisher.publishEvent(new ReservationCheckedInEvent(
-                this, saved.getId(), saved.getRoomId(), saved.getGuestId()));
+                saved.getId(), saved.getRoomId(), saved.getGuestId()));
         log.info("Reservation {} checked in", saved.getReservationNumber());
         return enrich(saved);
     }
@@ -76,7 +87,7 @@ public class ReservationService implements ReservationUseCase {
         res.checkOut();
         Reservation saved = reservationRepo.save(res);
         eventPublisher.publishEvent(new ReservationCheckedOutEvent(
-                this, saved.getId(), saved.getRoomId(), saved.getGuestId(),
+                saved.getId(), saved.getRoomId(), saved.getGuestId(),
                 saved.getNights()));
         log.info("Reservation {} checked out", saved.getReservationNumber());
         return enrich(saved);
@@ -88,7 +99,7 @@ public class ReservationService implements ReservationUseCase {
         res.cancel();
         Reservation saved = reservationRepo.save(res);
         eventPublisher.publishEvent(new ReservationCancelledEvent(
-                this, saved.getId(), saved.getRoomId()));
+                saved.getId(), saved.getRoomId()));
         return enrich(saved);
     }
 

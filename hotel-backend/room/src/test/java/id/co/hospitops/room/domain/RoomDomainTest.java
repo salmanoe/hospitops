@@ -64,6 +64,17 @@ class RoomDomainTest {
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("MAINTENANCE");
         }
+
+        @Test
+        @DisplayName("SERVICE_REQUESTED -> markOccupied throws (use markServiceComplete instead)")
+        void serviceRequestedToMarkOccupiedThrows() {
+            Room room = available();
+            room.markOccupied();
+            room.requestService();
+            assertThatThrownBy(room::markOccupied)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("SERVICE_REQUESTED");
+        }
     }
 
     // ── markDirty ────────────────────────────────────────────────────────
@@ -179,11 +190,102 @@ class RoomDomainTest {
         }
 
         @Test
+        @DisplayName("SERVICE_REQUESTED -> MAINTENANCE throws (guest still present)")
+        void serviceRequestedToMaintenance() {
+            Room room = available();
+            room.markOccupied();
+            room.requestService();
+            assertThatThrownBy(() -> room.markMaintenance("pipe burst"))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("SERVICE_REQUESTED");
+        }
+
+        @Test
         @DisplayName("maintenance reason is stored in notes")
         void reasonStoredInNotes() {
             Room room = available();
             room.markMaintenance("broken AC");
             assertThat(room.getNotes()).isEqualTo("broken AC");
+        }
+    }
+
+    // ── requestService ───────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("requestService()")
+    class RequestService {
+
+        @Test
+        @DisplayName("OCCUPIED -> SERVICE_REQUESTED succeeds")
+        void occupiedToServiceRequested() {
+            Room room = available();
+            room.markOccupied();
+            room.requestService();
+            assertThat(room.getStatus()).isEqualTo(RoomStatus.SERVICE_REQUESTED);
+        }
+
+        @Test
+        @DisplayName("AVAILABLE -> SERVICE_REQUESTED throws")
+        void availableToServiceRequested() {
+            assertThatThrownBy(available()::requestService)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("AVAILABLE");
+        }
+
+        @Test
+        @DisplayName("DIRTY -> SERVICE_REQUESTED throws")
+        void dirtyToServiceRequested() {
+            Room room = available();
+            room.markOccupied();
+            room.markDirty();
+            assertThatThrownBy(room::requestService)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("DIRTY");
+        }
+
+        @Test
+        @DisplayName("MAINTENANCE -> SERVICE_REQUESTED throws")
+        void maintenanceToServiceRequested() {
+            Room room = available();
+            room.markMaintenance("repairs");
+            assertThatThrownBy(room::requestService)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("MAINTENANCE");
+        }
+    }
+
+    // ── markServiceComplete ──────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("markServiceComplete()")
+    class MarkServiceComplete {
+
+        @Test
+        @DisplayName("SERVICE_REQUESTED -> OCCUPIED succeeds (guest still in room)")
+        void serviceRequestedToOccupied() {
+            Room room = available();
+            room.markOccupied();
+            room.requestService();
+            room.markServiceComplete();
+            assertThat(room.getStatus()).isEqualTo(RoomStatus.OCCUPIED);
+        }
+
+        @Test
+        @DisplayName("OCCUPIED -> markServiceComplete throws (no pending service request)")
+        void occupiedToMarkServiceCompleteThrows() {
+            Room room = available();
+            room.markOccupied();
+            assertThatThrownBy(room::markServiceComplete)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("OCCUPIED");
+        }
+
+        @Test
+        @DisplayName("AVAILABLE -> markServiceComplete throws")
+        void availableToMarkServiceCompleteThrows() {
+            assertThatThrownBy(available()::markServiceComplete)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("AVAILABLE");
         }
     }
 

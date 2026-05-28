@@ -1,0 +1,19 @@
+# ═══════════════════════════════════════════════════════════════
+# k8s/namespace.yaml
+#
+# R-12 FIX: Extracted from postgres.yaml so the Namespace can be
+# applied independently — required before any other k8s/ resource.
+#
+# Apply order:
+#   kubectl apply -f k8s/namespace.yaml
+#   kubectl apply -f k8s/postgres.yaml
+#   kubectl apply -f k8s/app.yaml
+#   kubectl apply -f k8s/ingress-and-netpol.yaml
+# ═══════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hotel
+  labels:
+    app.kubernetes.io/managed-by: kubectl
+    environment: production

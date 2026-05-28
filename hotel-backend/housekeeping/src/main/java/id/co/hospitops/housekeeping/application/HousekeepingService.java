@@ -79,7 +79,13 @@ public class HousekeepingService implements HousekeepingUseCase {
 
     @Override
     public void updateRoomStatus(UUID roomId, String status, String notes) {
-        roomStatusPort.updateRoomStatus(RoomId.of(roomId), status, notes);
+        RoomId rid = RoomId.of(roomId);
+        roomStatusPort.updateRoomStatus(rid, status, notes);
+        if ("SERVICE_REQUESTED".equalsIgnoreCase(status)) {
+            String taskNotes = (notes != null && !notes.isBlank()) ? notes : "Guest requested cleaning service";
+            HousekeepingTask task = HousekeepingTask.createManual(rid, taskNotes);
+            taskRepo.save(task);
+        }
     }
 
     /**

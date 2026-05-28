@@ -9,9 +9,9 @@ public class ReservationCheckedInEvent extends DomainEvent {
     private final RoomId roomId;
     private final GuestId guestId;
 
-    public ReservationCheckedInEvent(Object source, ReservationId reservationId,
+    public ReservationCheckedInEvent(ReservationId reservationId,
                                      RoomId roomId, GuestId guestId) {
-        super(source);
+        super();
         this.reservationId = reservationId;
         this.roomId = roomId;
         this.guestId = guestId;

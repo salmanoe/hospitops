@@ -325,6 +325,62 @@ class HousekeepingServiceTest {
     }
 
     // ══════════════════════════════════════════════════════════════
+    // updateRoomStatus() — SERVICE_REQUESTED auto-task
+    // ══════════════════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("updateRoomStatus()")
+    class UpdateRoomStatus {
+
+        @Test
+        @DisplayName("SERVICE_REQUESTED: delegates to port AND auto-creates a housekeeping task")
+        void serviceRequestedCreatesTask() {
+            UUID roomId = UUID.randomUUID();
+            when(taskRepo.save(any(HousekeepingTask.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+
+            service.updateRoomStatus(roomId, "SERVICE_REQUESTED", "handuk baru");
+
+            verify(roomStatusPort).updateRoomStatus(
+                    argThat(r -> r.value().equals(roomId)), eq("SERVICE_REQUESTED"), eq("handuk baru"));
+            ArgumentCaptor<HousekeepingTask> captor = ArgumentCaptor.forClass(HousekeepingTask.class);
+            verify(taskRepo).save(captor.capture());
+            assertThat(captor.getValue().getNotes()).isEqualTo("handuk baru");
+            assertThat(captor.getValue().isCompleted()).isFalse();
+        }
+
+        @Test
+        @DisplayName("SERVICE_REQUESTED with blank notes uses default task description")
+        void serviceRequestedUsesDefaultNoteWhenBlank() {
+            UUID roomId = UUID.randomUUID();
+            when(taskRepo.save(any(HousekeepingTask.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+
+            service.updateRoomStatus(roomId, "SERVICE_REQUESTED", null);
+
+            ArgumentCaptor<HousekeepingTask> captor = ArgumentCaptor.forClass(HousekeepingTask.class);
+            verify(taskRepo).save(captor.capture());
+            assertThat(captor.getValue().getNotes()).isEqualTo("Guest requested cleaning service");
+        }
+
+        @Test
+        @DisplayName("AVAILABLE: delegates to port and does NOT create a task")
+        void availableDoesNotCreateTask() {
+            service.updateRoomStatus(UUID.randomUUID(), "AVAILABLE", null);
+
+            verify(taskRepo, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("OCCUPIED (service complete): delegates to port and does NOT create a task")
+        void occupiedDoesNotCreateTask() {
+            service.updateRoomStatus(UUID.randomUUID(), "OCCUPIED", null);
+
+            verify(taskRepo, never()).save(any());
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
     // getBoardByFloor()
     // ══════════════════════════════════════════════════════════════
 

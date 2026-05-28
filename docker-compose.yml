@@ -4,6 +4,7 @@
 #
 # Services:
 #   postgres   PostgreSQL 17          → internal only
+#   redis      Redis 7 (token BL)     → internal only
 #   app        Spring Boot backend    → internal (via nginx)
 #   frontend   Nginx + static HTML    → http://localhost
 #
@@ -43,6 +44,23 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # ── Redis 7 — Token blacklist ────────────────────────────────
+  # R-02 FIX: Shared token blacklist for multi-replica deployments.
+  # Internal only — not accessible outside the Compose network.
+  # The backend activates the RedisTokenBlacklist when REDIS_ENABLED=true.
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
   # ── Spring Boot Application ──────────────────────────────────
   # Internal only — reached by the browser through the nginx proxy,
   # not exposed directly. Backend listens on port 8080 inside the network.
@@ -66,12 +84,20 @@ services:
       # CORS — the browser origin is http://localhost (nginx, port 80)
       FRONTEND_URL: http://localhost
 
+      # Redis token blacklist — "redis" is the Compose service hostname
+      REDIS_ENABLED:   "true"
+      REDIS_HOST:      redis
+      REDIS_PORT:      "6379"
+      REDIS_PASSWORD:  ""
+
       # Logging
       LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
 
       PROMETHEUS_ENABLED: "false"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       # Polls the Spring Boot readiness probe — UP only after Flyway migrations
@@ -127,6 +153,7 @@ services:
 # ── Named volumes ─────────────────────────────────────────────
 volumes:
   postgres-data:
+  redis-data:
   sonarqube-data:
   sonarqube-logs:
   sonarqube-extensions:

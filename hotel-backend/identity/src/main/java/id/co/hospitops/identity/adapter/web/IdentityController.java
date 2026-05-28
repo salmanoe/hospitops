@@ -2,6 +2,8 @@ package id.co.hospitops.identity.adapter.web;
 
 import id.co.hospitops.identity.application.command.*;
 import id.co.hospitops.identity.application.response.*;
+import id.co.hospitops.identity.application.command.LogoutCommand;
+import id.co.hospitops.identity.application.command.RefreshCommand;
 import id.co.hospitops.identity.domain.model.Staff;
 import id.co.hospitops.identity.domain.port.in.*;
 import id.co.hospitops.shared.StaffId;
@@ -31,15 +33,23 @@ public class IdentityController {
 
     @PostMapping("/auth/logout")
     public ResponseEntity<ApiResponse<Void>> logout(
-            @RequestHeader("Authorization") String authHeader) {
-        // R3-01 FIX: Use substring(7) to strip only the "Bearer " prefix.
-        // String.replace() replaces ALL occurrences of the pattern — if a JWT
-        // payload ever contained "Bearer " as a substring the token passed to
-        // the blacklist would differ from the stored value, allowing reuse.
-        // TokenService.extractFromHeader() applies the same safe logic.
-        String token = authHeader.substring(7);
-        authUseCase.logout(token);
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody(required = false) LogoutCommand command) {
+        // R3-01 FIX: substring(7) strips only the "Bearer " prefix — safe.
+        String accessToken  = authHeader.substring(7);
+        String refreshToken = command != null ? command.refreshToken() : null;
+        authUseCase.logout(accessToken, refreshToken);
         return ResponseEntity.ok(ApiResponse.ok("Logged out successfully", null));
+    }
+
+    /**
+     * Issues a new access + refresh token pair, rotating the supplied refresh token.
+     * The old refresh token is immediately revoked (single-use enforcement).
+     */
+    @PostMapping("/auth/refresh")
+    public ResponseEntity<ApiResponse<LoginResponse>> refresh(
+            @Valid @RequestBody RefreshCommand command) {
+        return ResponseEntity.ok(ApiResponse.ok(authUseCase.refresh(command.refreshToken())));
     }
 
     @GetMapping("/auth/me")

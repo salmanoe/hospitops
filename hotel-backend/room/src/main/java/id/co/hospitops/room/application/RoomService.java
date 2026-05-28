@@ -155,8 +155,10 @@ public class RoomService implements ManageRoomUseCase, RoomAvailabilityUseCase {
     public void changeRoomStatus(RoomId id, RoomStatus newStatus, String notes) {
         Room room = findRoom(id);
         switch (newStatus) {
-            case AVAILABLE    -> room.markAvailable();
-            case MAINTENANCE  -> room.markMaintenance(notes != null ? notes : "");
+            case AVAILABLE         -> room.markAvailable();
+            case MAINTENANCE       -> room.markMaintenance(notes != null ? notes : "");
+            case SERVICE_REQUESTED -> room.requestService();
+            case OCCUPIED          -> room.markServiceComplete();
             default -> throw new BusinessRuleViolationException(
                     "Status transition to " + newStatus + " is not permitted via housekeeping endpoint");
         }

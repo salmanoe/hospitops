@@ -16,6 +16,7 @@
             <span class="badge bg-warning text-dark">● Occupied</span>
             <span class="badge bg-secondary">● Dirty</span>
             <span class="badge bg-danger">● Maintenance</span>
+            <span class="badge bg-info">● Service Req.</span>
         </div>
     </div>
     <div class="page-body" id="board-container">
@@ -37,9 +38,7 @@
                 <div class="mb-3">
                     <label class="form-label">New Status</label>
                     <select id="modal-status" class="form-select">
-                        <option value="AVAILABLE">Available (Clean)</option>
-                        <option value="DIRTY">Dirty</option>
-                        <option value="MAINTENANCE">Maintenance</option>
+                        <!-- populated dynamically by openModal() based on current room status -->
                     </select>
                 </div>
                 <div class="mb-3">
@@ -65,6 +64,17 @@ Auth.requireAuth();
 let selectedRoomId = null;
 const modal = new bootstrap.Modal(document.getElementById('statusModal'));
 
+// Valid target statuses for each source state, matching backend transition rules.
+const TRANSITIONS = {
+    AVAILABLE:         [{ value: 'MAINTENANCE',       label: 'Maintenance' }],
+    OCCUPIED:          [{ value: 'SERVICE_REQUESTED', label: 'Service Requested (Guest Cleaning)' },
+                        { value: 'MAINTENANCE',       label: 'Maintenance' }],
+    DIRTY:             [{ value: 'AVAILABLE',         label: 'Available (Clean)' },
+                        { value: 'MAINTENANCE',       label: 'Maintenance' }],
+    MAINTENANCE:       [{ value: 'AVAILABLE',         label: 'Available (Clean)' }],
+    SERVICE_REQUESTED: [{ value: 'OCCUPIED',          label: 'Service Complete (Back to Occupied)' }],
+};
+
 async function load() {
     const floors = await API.housekeeping.board();
     document.getElementById('board-container').innerHTML = floors.map(f => `
@@ -87,7 +97,14 @@ async function load() {
 function openModal(roomId, roomNumber, currentStatus) {
     selectedRoomId = roomId;
     document.getElementById('modal-room-no').textContent = roomNumber;
-    document.getElementById('modal-status').value = currentStatus;
+
+    const options = TRANSITIONS[currentStatus] || [];
+    const select  = document.getElementById('modal-status');
+    select.innerHTML = options
+        .map(o => `<option value="${o.value}">${o.label}</option>`)
+        .join('');
+    document.getElementById('modal-save-btn').disabled = options.length === 0;
+
     document.getElementById('modal-notes').value = '';
     modal.show();
 }

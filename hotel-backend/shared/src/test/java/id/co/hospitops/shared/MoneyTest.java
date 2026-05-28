@@ -3,6 +3,7 @@ package id.co.hospitops.shared;
 import org.junit.jupiter.api.*;
 
 import java.math.BigDecimal;
+import java.util.Currency;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -64,6 +65,16 @@ class MoneyTest {
             assertThat(m.add(Money.zero()).amount())
                     .isEqualByComparingTo(m.amount());
         }
+
+        @Test
+        @DisplayName("throws when currencies differ")
+        void throwsOnCurrencyMismatch() {
+            Money idr = Money.of(100_000L);
+            Money usd = new Money(BigDecimal.valueOf(10), Currency.getInstance("USD"));
+            assertThatIllegalArgumentException()
+                    .isThrownBy(() -> idr.add(usd))
+                    .withMessageContaining("Currency mismatch");
+        }
     }
 
     // ── subtract ─────────────────────────────────────────────────────────
@@ -92,6 +103,16 @@ class MoneyTest {
         void resultCanBeNegative() {
             assertThat(Money.of(100_000L).subtract(Money.of(200_000L)).amount())
                     .isEqualByComparingTo(BigDecimal.valueOf(-100_000));
+        }
+
+        @Test
+        @DisplayName("throws when currencies differ")
+        void throwsOnCurrencyMismatch() {
+            Money idr = Money.of(500_000L);
+            Money usd = new Money(BigDecimal.valueOf(50), Currency.getInstance("USD"));
+            assertThatIllegalArgumentException()
+                    .isThrownBy(() -> idr.subtract(usd))
+                    .withMessageContaining("Currency mismatch");
         }
     }
 

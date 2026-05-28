@@ -42,7 +42,6 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@org.springframework.scheduling.annotation.EnableScheduling
 public class SecurityConfig {
 
     private static final String ADMIN = "ADMIN";
@@ -76,6 +75,8 @@ public class SecurityConfig {
 
                         // ── Public endpoints ─────────────────────────────────────
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                        // Refresh does not carry a valid access token — must be public
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
 
                         // K8s liveness & readiness probes
                         .requestMatchers("/actuator/health/**").permitAll()
