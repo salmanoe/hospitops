@@ -10,8 +10,8 @@ public class HousekeepingTaskCreatedEvent extends DomainEvent {
     private final UUID taskId;
     private final RoomId roomId;
 
-    public HousekeepingTaskCreatedEvent(Object source, UUID taskId, RoomId roomId) {
-        super(source);
+    public HousekeepingTaskCreatedEvent(UUID taskId, RoomId roomId) {
+        super();
         this.taskId = taskId;
         this.roomId = roomId;
     }

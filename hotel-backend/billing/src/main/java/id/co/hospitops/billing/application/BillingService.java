@@ -110,7 +110,7 @@ public class BillingService implements BillingUseCase {
         Invoice saved = invoiceRepo.save(invoice);
 
         boolean fullyPaid = saved.getPaymentStatus() == PaymentStatus.PAID;
-        eventPublisher.publishEvent(new PaymentReceivedEvent(this,
+        eventPublisher.publishEvent(new PaymentReceivedEvent(
                 saved.getId(), saved.getReservationId(),
                 Money.of(cmd.amount()), fullyPaid));
 

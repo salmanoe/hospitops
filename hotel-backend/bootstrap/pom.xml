@@ -95,6 +95,16 @@
             <artifactId>aspectjweaver</artifactId>
         </dependency>
 
+        <!--
+            R-02 FIX: Redis-backed token blacklist for multi-replica deployments.
+            Activated when hospitops.redis.enabled=true; falls back to the
+            InMemoryTokenBlacklist when Redis is absent (local/test).
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
         <!-- Database -->
         <dependency>
             <groupId>org.postgresql</groupId>

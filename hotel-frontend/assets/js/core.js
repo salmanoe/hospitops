@@ -20,8 +20,9 @@
 // ═══════════════════════════════════════════════════════════════
 
 const Auth = (() => {
-    const TOKEN_KEY = 'hospitops_token';
-    const USER_KEY  = 'hospitops_user';
+    const TOKEN_KEY         = 'hospitops_token';
+    const USER_KEY          = 'hospitops_user';
+    const REFRESH_TOKEN_KEY = 'hospitops_refresh_token';
 
     const save = (loginResponse) => {
         localStorage.setItem(TOKEN_KEY, loginResponse.token);
@@ -31,14 +32,22 @@ const Auth = (() => {
             username: loginResponse.username,
             role:     loginResponse.role,
         }));
+        // Persist refresh token only when the server supplies one.
+        // On a token-rotation response the server always provides a new value;
+        // this guard prevents accidentally wiping an existing token on a partial update.
+        if (loginResponse.refreshToken) {
+            localStorage.setItem(REFRESH_TOKEN_KEY, loginResponse.refreshToken);
+        }
     };
 
     const clear = () => {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
     };
 
-    const getToken = () => localStorage.getItem(TOKEN_KEY);
+    const getToken        = () => localStorage.getItem(TOKEN_KEY);
+    const getRefreshToken = () => localStorage.getItem(REFRESH_TOKEN_KEY);
 
     const getUser = () => {
         const raw = localStorage.getItem(USER_KEY);
@@ -89,7 +98,7 @@ const Auth = (() => {
         });
     };
 
-    return { save, clear, getToken, getUser, isLoggedIn,
+    return { save, clear, getToken, getRefreshToken, getUser, isLoggedIn,
              hasRole, requireAuth, requireRole,    // R21: isAtLeast removed
              applyRoleVisibility };
 })();
@@ -103,18 +112,48 @@ const Auth = (() => {
 const API = (() => {
     const BASE = '/api/v1';   // same origin — nginx proxies to backend
 
-    const headers = (extra = {}) => ({
+    const authHeaders = () => ({
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${Auth.getToken() || ''}`,
-        ...extra,
     });
 
+    // ── Silent token refresh ─────────────────────────────────
+    // A single shared promise prevents multiple concurrent 401s from each
+    // spawning their own refresh call. All callers awaiting a refresh share
+    // the same result.
+    let _refreshPromise = null;
+
+    const _refreshSession = () => {
+        if (_refreshPromise) return _refreshPromise;
+
+        _refreshPromise = (async () => {
+            try {
+                const refreshToken = Auth.getRefreshToken();
+                if (!refreshToken) return false;
+
+                const res = await fetch(`${BASE}/auth/refresh`, {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({ refreshToken }),
+                });
+                if (!res.ok) return false;
+
+                const body = await res.json();
+                Auth.save(body.data);
+                return true;
+            } catch {
+                return false;
+            } finally {
+                _refreshPromise = null;
+            }
+        })();
+
+        return _refreshPromise;
+    };
+
+    // Deserialises the response; throws ApiError for non-2xx.
+    // 401 is NOT handled here — _request handles it with retry logic.
     const handle = async (response) => {
-        if (response.status === 401) {
-            Auth.clear();
-            window.location.href = '/login.html';
-            throw new Error('Unauthorized');
-        }
         const body = await response.json().catch(() => ({}));
         if (!response.ok) {
             throw new ApiError(response.status, body.message || 'Request failed', body.error);
@@ -122,51 +161,87 @@ const API = (() => {
         return body.data !== undefined ? body.data : body;
     };
 
+    // Executes a fetch with the current access token.  On 401 it attempts one
+    // silent refresh and retries before clearing the session and redirecting.
+    const _request = async (url, fetchOptions) => {
+        const withAuth = () => fetch(url, { ...fetchOptions, headers: authHeaders() });
+
+        let res = await withAuth();
+
+        if (res.status === 401 && Auth.getRefreshToken()) {
+            const refreshed = await _refreshSession();
+            if (refreshed) {
+                // Retry with the newly rotated access token.
+                res = await withAuth();
+            }
+        }
+
+        if (res.status === 401) {
+            Auth.clear();
+            window.location.href = '/login.html';
+            throw new Error('Unauthorized');
+        }
+
+        return handle(res);
+    };
+
     const get = (path, params = {}) => {
         const qs = new URLSearchParams(params).toString();
-        return fetch(`${BASE}${path}${qs ? '?' + qs : ''}`, { headers: headers() })
-            .then(handle);
+        return _request(`${BASE}${path}${qs ? '?' + qs : ''}`, { method: 'GET' });
     };
 
     const post = (path, body) =>
-        fetch(`${BASE}${path}`, {
+        _request(`${BASE}${path}`, {
             method: 'POST',
-            headers: headers(),
-            body: JSON.stringify(body),
-        }).then(handle);
+            body:   JSON.stringify(body),
+        });
 
     const put = (path, body) =>
-        fetch(`${BASE}${path}`, {
+        _request(`${BASE}${path}`, {
             method: 'PUT',
-            headers: headers(),
-            body: JSON.stringify(body),
-        }).then(handle);
+            body:   JSON.stringify(body),
+        });
 
     const patch = (path, body = {}) =>
-        fetch(`${BASE}${path}`, {
+        _request(`${BASE}${path}`, {
             method: 'PATCH',
-            headers: headers(),
-            body: JSON.stringify(body),
-        }).then(handle);
+            body:   JSON.stringify(body),
+        });
 
     const del = (path) =>
-        fetch(`${BASE}${path}`, { method: 'DELETE', headers: headers() })
-            .then(handle);
+        _request(`${BASE}${path}`, { method: 'DELETE' });
 
-    // PDF download — returns blob
+    // PDF download — returns a Blob; needs the same 401-retry logic.
     const getPdf = async (path) => {
-        const response = await fetch(`${BASE}${path}`, { headers: headers() });
-        if (!response.ok) throw new Error('PDF download failed');
-        return response.blob();
+        const withAuth = () => fetch(`${BASE}${path}`, { headers: authHeaders() });
+
+        let res = await withAuth();
+
+        if (res.status === 401 && Auth.getRefreshToken()) {
+            const refreshed = await _refreshSession();
+            if (refreshed) res = await withAuth();
+        }
+
+        if (res.status === 401) {
+            Auth.clear();
+            window.location.href = '/login.html';
+            throw new Error('Unauthorized');
+        }
+
+        if (!res.ok) throw new Error('PDF download failed');
+        return res.blob();
     };
 
     // ── Domain-specific API calls ────────────────────────────
     return {
         // Auth
         auth: {
-            login:  (username, password) => post('/auth/login', { username, password }),
-            logout: () => post('/auth/logout', {}),
-            me:     () => get('/auth/me'),
+            login:   (username, password) => post('/auth/login', { username, password }),
+            // Sends the refresh token in the body so the server can revoke it server-side.
+            logout:  () => post('/auth/logout', { refreshToken: Auth.getRefreshToken() }),
+            // Explicitly rotate tokens (called on tab restore when access token may be stale).
+            refresh: () => post('/auth/refresh', { refreshToken: Auth.getRefreshToken() }),
+            me:      () => get('/auth/me'),
         },
 
         // Rooms
@@ -290,8 +365,9 @@ const Utils = (() => {
 
     const statusBadge = (status) => {
         const map = {
-            AVAILABLE:   'success',  OCCUPIED:    'warning',
-            DIRTY:       'secondary',MAINTENANCE: 'danger',
+            AVAILABLE:         'success',  OCCUPIED:          'warning',
+            DIRTY:             'secondary',MAINTENANCE:       'danger',
+            SERVICE_REQUESTED: 'info',
             CONFIRMED:   'info',     CHECKED_IN:  'warning',
             CHECKED_OUT: 'success',  CANCELLED:   'danger',
             PENDING:     'secondary',

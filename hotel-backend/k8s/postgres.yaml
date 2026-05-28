@@ -1,16 +1,10 @@
 # ═══════════════════════════════════════════════════════════════
-# k8s/namespace.yaml
+# k8s/postgres.yaml
+#
+# Requires: kubectl apply -f k8s/namespace.yaml first.
 # ═══════════════════════════════════════════════════════════════
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: hotel
-  labels:
-    app.kubernetes.io/managed-by: kubectl
-    environment: production
 
----
-# ═══════════════════════════════════════════════════════════════
+# ─────────────────────────────────────────────────────────────
 # k8s/postgres/secret.yaml
 #
 # IMPORTANT: Never commit real secrets to Git.

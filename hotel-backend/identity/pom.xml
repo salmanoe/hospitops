@@ -51,6 +51,17 @@
         </dependency>
 
         <!--
+            Redis — required by RedisTokenBlacklist and RedisRefreshTokenStore.
+            These beans are @ConditionalOnProperty(redis.enabled=true) so they are
+            never instantiated in local dev (no Redis needed), but the types must
+            be resolvable at compile time regardless of the active profile.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!--
             Spring Boot 4.0 relocated @WebMvcTest (and MockMvc autoconfigure)
             into the new spring-boot-webmvc-test artifact under the package
             org.springframework.boot.webmvc.test.autoconfigure.

@@ -21,12 +21,32 @@ public record Money(BigDecimal amount, Currency currency) {
         return new Money(BigDecimal.ZERO, IDR);
     }
 
+    /**
+     * Adds {@code other} to this amount.
+     *
+     * @throws IllegalArgumentException if the currencies differ
+     */
     public Money add(Money other) {
+        requireSameCurrency(other);
         return new Money(this.amount.add(other.amount), this.currency);
     }
 
+    /**
+     * Subtracts {@code other} from this amount.
+     *
+     * @throws IllegalArgumentException if the currencies differ
+     */
     public Money subtract(Money other) {
+        requireSameCurrency(other);
         return new Money(this.amount.subtract(other.amount), this.currency);
+    }
+
+    private void requireSameCurrency(Money other) {
+        if (!this.currency.equals(other.currency)) {
+            throw new IllegalArgumentException(
+                    "Currency mismatch: cannot operate on " + this.currency +
+                    " and " + other.currency);
+        }
     }
 
     public Money multiply(int factor) {

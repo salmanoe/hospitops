@@ -280,10 +280,11 @@ a:hover { color: var(--hospitops-gold-dim); }
 .hk-room-card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,.12); }
 .hk-room-card .room-num { font-family: 'Playfair Display', serif; font-size: 20px; }
 
-.hk-room-card.status-AVAILABLE  { border-color: rgba(25,135,84,.5); }
-.hk-room-card.status-OCCUPIED   { border-color: rgba(255,193,7,.5); }
-.hk-room-card.status-DIRTY      { border-color: rgba(108,117,125,.4); }
-.hk-room-card.status-MAINTENANCE{ border-color: rgba(220,53,69,.5); }
+.hk-room-card.status-AVAILABLE         { border-color: rgba(25,135,84,.5); }
+.hk-room-card.status-OCCUPIED          { border-color: rgba(255,193,7,.5); }
+.hk-room-card.status-DIRTY             { border-color: rgba(108,117,125,.4); }
+.hk-room-card.status-MAINTENANCE       { border-color: rgba(220,53,69,.5); }
+.hk-room-card.status-SERVICE_REQUESTED { border-color: rgba(13,202,240,.6); }
 
 /* ── Topbar title — always takes remaining flex space ───────────── */
 .topbar .page-title {

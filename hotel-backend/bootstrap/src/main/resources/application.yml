@@ -76,6 +76,16 @@ spring:
         # when enhanced bytecode is used.
         # (Applied per-entity via @ConcreteProxy annotation — see JPA entities)
 
+  # ── Redis connection (only used when hospitops.redis.enabled=true) ──
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      # SSL required in production; disabled locally
+      ssl:
+        enabled: ${REDIS_SSL:false}
+
   flyway:
     enabled: true
     locations: classpath:db/migration
@@ -106,7 +116,7 @@ spring:
 server:
   port: ${PORT:8080}
   # Graceful shutdown: finish in-flight requests before pod terminates.
-  # K8s sends SIGTERM, Spring waits up to shutdown.grace-period.
+  # K8s sends SIGTERM, Spring waits up to shut-down.grace-period.
   shutdown: graceful
   servlet:
     context-path: /
@@ -126,9 +136,22 @@ hospitops:
     secret: ${JWT_SECRET:hotelux-super-secret-key-change-in-production-min-32-chars}
     expiration-ms: ${JWT_EXPIRATION_MS:28800000}   # 8 hours
 
+  # R-02 extension: Refresh token lifetime (opaque UUID, stored in Redis/memory).
+  # Clients call POST /api/v1/auth/refresh before expiry to silently renew sessions.
+  # Each refresh rotates the token — the old one is immediately revoked.
+  refresh-token:
+    expiration-seconds: ${REFRESH_TOKEN_EXPIRATION_SECONDS:604800}  # 7 days
+
   cors:
     allowed-origins:
       - ${FRONTEND_URL:http://localhost:5500}
+
+  # ── R-02 FIX: Redis token blacklist ──────────────────────────────
+  # Set hospitops.redis.enabled=true to activate the RedisTokenBlacklist.
+  # When false (default) the single-node InMemoryTokenBlacklist is used —
+  # safe for local development and single-replica staging environments.
+  redis:
+    enabled: ${REDIS_ENABLED:false}
 
 # ── Actuator — K8s liveness & readiness probes ───────────────────
 management:

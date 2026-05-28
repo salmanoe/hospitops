@@ -10,7 +10,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.lang.reflect.Method;
+
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -29,6 +34,29 @@ class BillingEventHandlerTest {
     @Mock  BillingUseCase billingUseCase;
     @InjectMocks BillingEventHandler handler;
 
+    // ── annotation metadata ───────────────────────────────────────
+
+    @Nested
+    @DisplayName("annotation contract")
+    class AnnotationContract {
+
+        @Test
+        @DisplayName("onCheckout() carries @TransactionalEventListener(AFTER_COMMIT) — R-01 fix")
+        void onCheckoutAnnotatedWithAfterCommit() throws NoSuchMethodException {
+            Method method = BillingEventHandler.class.getMethod(
+                    "onCheckout", ReservationCheckedOutEvent.class);
+            TransactionalEventListener annotation =
+                    method.getAnnotation(TransactionalEventListener.class);
+
+            assertThat(annotation)
+                    .as("@TransactionalEventListener must be present on onCheckout()")
+                    .isNotNull();
+            assertThat(annotation.phase())
+                    .as("phase must be AFTER_COMMIT so invoice creation never rolls back checkout")
+                    .isEqualTo(TransactionPhase.AFTER_COMMIT);
+        }
+    }
+
     // ── onCheckout ────────────────────────────────────────────────
 
     @Nested
@@ -41,7 +69,7 @@ class BillingEventHandlerTest {
             ReservationId reservationId = ReservationId.generate();
             long nights = 3L;
             ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(
-                    this, reservationId, RoomId.generate(), GuestId.generate(), nights);
+                    reservationId, RoomId.generate(), GuestId.generate(), nights);
 
             handler.onCheckout(event);
 
@@ -53,7 +81,7 @@ class BillingEventHandlerTest {
         void passesOneNightStay() {
             ReservationId reservationId = ReservationId.generate();
             ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(
-                    this, reservationId, RoomId.generate(), GuestId.generate(), 1L);
+                    reservationId, RoomId.generate(), GuestId.generate(), 1L);
 
             handler.onCheckout(event);
 
@@ -65,7 +93,7 @@ class BillingEventHandlerTest {
         void passesLongStay() {
             ReservationId reservationId = ReservationId.generate();
             ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(
-                    this, reservationId, RoomId.generate(), GuestId.generate(), 30L);
+                    reservationId, RoomId.generate(), GuestId.generate(), 30L);
 
             handler.onCheckout(event);
 
@@ -76,7 +104,7 @@ class BillingEventHandlerTest {
         @DisplayName("calls createInvoiceForCheckout() exactly once per event")
         void callsServiceExactlyOnce() {
             ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(
-                    this, ReservationId.generate(), RoomId.generate(), GuestId.generate(), 2L);
+                    ReservationId.generate(), RoomId.generate(), GuestId.generate(), 2L);
 
             handler.onCheckout(event);
 
@@ -89,7 +117,7 @@ class BillingEventHandlerTest {
         @DisplayName("does NOT call any other BillingUseCase method")
         void doesNotCallOtherMethods() {
             ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(
-                    this, ReservationId.generate(), RoomId.generate(), GuestId.generate(), 2L);
+                    ReservationId.generate(), RoomId.generate(), GuestId.generate(), 2L);
 
             handler.onCheckout(event);
 

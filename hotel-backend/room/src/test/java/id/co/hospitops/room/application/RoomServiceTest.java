@@ -285,4 +285,55 @@ class RoomServiceTest {
             verify(roomRepo).save(room);
         }
     }
+
+    // ── changeRoomStatus (housekeeping endpoint) ─────────────────────────
+
+    @Nested
+    @DisplayName("changeRoomStatus() — housekeeping endpoint")
+    class ChangeRoomStatus {
+
+        @Test
+        @DisplayName("SERVICE_REQUESTED transitions OCCUPIED room and saves")
+        void serviceRequested() {
+            RoomType rt   = stubRoomType();
+            Room     room = stubRoom(rt.getId());
+            room.markOccupied(); // AVAILABLE → OCCUPIED
+            when(roomRepo.findById(room.getId())).thenReturn(Optional.of(room));
+
+            service.changeRoomStatus(room.getId(), RoomStatus.SERVICE_REQUESTED, "fresh towels");
+
+            assertThat(room.getStatus()).isEqualTo(RoomStatus.SERVICE_REQUESTED);
+            verify(roomRepo).save(room);
+        }
+
+        @Test
+        @DisplayName("OCCUPIED (via changeRoomStatus) completes service and restores OCCUPIED")
+        void serviceComplete() {
+            RoomType rt   = stubRoomType();
+            Room     room = stubRoom(rt.getId());
+            room.markOccupied();
+            room.requestService(); // OCCUPIED → SERVICE_REQUESTED
+            when(roomRepo.findById(room.getId())).thenReturn(Optional.of(room));
+
+            service.changeRoomStatus(room.getId(), RoomStatus.OCCUPIED, null);
+
+            assertThat(room.getStatus()).isEqualTo(RoomStatus.OCCUPIED);
+            verify(roomRepo).save(room);
+        }
+
+        @Test
+        @DisplayName("DIRTY is still rejected (only set via checkout event)")
+        void dirtyRejected() {
+            RoomType rt   = stubRoomType();
+            Room     room = stubRoom(rt.getId());
+            room.markOccupied();
+            when(roomRepo.findById(room.getId())).thenReturn(Optional.of(room));
+
+            assertThatThrownBy(() -> service.changeRoomStatus(room.getId(), RoomStatus.DIRTY, null))
+                    .isInstanceOf(BusinessRuleViolationException.class)
+                    .hasMessageContaining("DIRTY");
+
+            verify(roomRepo, never()).save(any());
+        }
+    }
 }

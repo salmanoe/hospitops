@@ -10,10 +10,10 @@ public class PaymentReceivedEvent extends DomainEvent {
     private final Money amount;
     private final boolean fullyPaid;
 
-    public PaymentReceivedEvent(Object source, InvoiceId invoiceId,
+    public PaymentReceivedEvent(InvoiceId invoiceId,
                                 ReservationId reservationId,
                                 Money amount, boolean fullyPaid) {
-        super(source);
+        super();
         this.invoiceId = invoiceId;
         this.reservationId = reservationId;
         this.amount = amount;

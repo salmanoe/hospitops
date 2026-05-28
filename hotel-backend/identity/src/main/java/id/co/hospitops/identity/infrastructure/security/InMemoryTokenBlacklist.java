@@ -4,6 +4,7 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 import id.co.hospitops.identity.domain.port.out.TokenBlacklist;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -21,12 +22,14 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <h3>Production note</h3>
  * This implementation is intentionally single-node. For a clustered deployment
- * replace with a Redis-backed {@link TokenBlacklist} that uses key TTL to get
- * the same automatic expiry without any in-process scheduled task.
+ * use the {@link RedisTokenBlacklist} by setting {@code hospitops.redis.enabled=true}.
+ * This bean is active when {@code hospitops.redis.enabled} is {@code false} or absent.
+ * {@link RedisTokenBlacklist} takes over when the property is set to {@code true}.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "hospitops.redis.enabled", havingValue = "false", matchIfMissing = true)
 public class InMemoryTokenBlacklist implements TokenBlacklist {
 
     /** token → UTC instant at which the JWT itself expires */

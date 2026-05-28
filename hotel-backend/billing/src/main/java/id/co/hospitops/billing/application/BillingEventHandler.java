@@ -15,9 +15,9 @@ import id.co.hospitops.billing.domain.port.in.BillingUseCase;
 import id.co.hospitops.shared.event.ReservationCheckedOutEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 @Slf4j
 @Component
@@ -29,11 +29,11 @@ public class BillingEventHandler {
     /**
      * Triggers invoice generation when a reservation is checked out.
      *
-     * <p>Delegates entirely to {@link BillingUseCase#createInvoiceForCheckout}
-     * — no business logic lives here.
+     * <p>R-01 FIX: Runs AFTER the checkout transaction commits so invoice creation
+     * never rolls back the checkout itself. Delegates entirely to
+     * {@link BillingUseCase#createInvoiceForCheckout} — no business logic here.
      */
-    @EventListener
-    @Transactional
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onCheckout(ReservationCheckedOutEvent event) {
         log.debug("BillingEventHandler received checkout event for reservation {}",
                 event.getReservationId());

@@ -8,9 +8,9 @@ public class ReservationCancelledEvent extends DomainEvent {
     private final ReservationId reservationId;
     private final RoomId roomId;
 
-    public ReservationCancelledEvent(Object source, ReservationId reservationId,
+    public ReservationCancelledEvent(ReservationId reservationId,
                                      RoomId roomId) {
-        super(source);
+        super();
         this.reservationId = reservationId;
         this.roomId = roomId;
     }

@@ -13,10 +13,10 @@ public class ReservationCreatedEvent extends DomainEvent {
     private final LocalDate checkInDate;
     private final LocalDate checkOutDate;
 
-    public ReservationCreatedEvent(Object source, ReservationId reservationId,
+    public ReservationCreatedEvent(ReservationId reservationId,
                                    RoomId roomId, GuestId guestId,
                                    LocalDate checkInDate, LocalDate checkOutDate) {
-        super(source);
+        super();
         this.reservationId = reservationId;
         this.roomId = roomId;
         this.guestId = guestId;

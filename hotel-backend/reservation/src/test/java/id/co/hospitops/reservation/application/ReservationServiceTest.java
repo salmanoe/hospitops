@@ -18,6 +18,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.*;
 
 import java.math.BigDecimal;
@@ -152,6 +153,29 @@ class ReservationServiceTest {
                     .isInstanceOf(BusinessRuleViolationException.class);
 
             verifyNoInteractions(reservationRepo);
+        }
+
+        @Test
+        @DisplayName("translates DataIntegrityViolationException to ConflictException (R-03: DB exclusion constraint race)")
+        void translatesConstraintViolationToConflict() {
+            // Simulates the TOCTOU scenario: availability check passes for two concurrent
+            // requests, but the DB exclusion constraint (V8 migration) rejects the second
+            // insert. The service must surface a ConflictException (HTTP 409) rather than
+            // letting a raw DataIntegrityViolationException propagate as HTTP 500.
+            GuestId guestId = GuestId.generate();
+            RoomId  roomId  = RoomId.generate();
+            when(guestValidation.exists(guestId)).thenReturn(true);
+            when(roomAvailability.isAvailable(roomId, CHECK_IN, CHECK_OUT)).thenReturn(true);
+            when(roomAvailability.resolveRate(eq(roomId), any())).thenReturn(RATE);
+            when(numberGenerator.generate()).thenReturn("RES-999");
+            when(reservationRepo.save(any(Reservation.class)))
+                    .thenThrow(new DataIntegrityViolationException("uq_room_no_overlap"));
+
+            assertThatThrownBy(() -> service.create(stubCommand(guestId, roomId)))
+                    .isInstanceOf(ConflictException.class)
+                    .hasMessageContaining("no longer available");
+
+            verifyNoInteractions(eventPublisher);
         }
     }
 

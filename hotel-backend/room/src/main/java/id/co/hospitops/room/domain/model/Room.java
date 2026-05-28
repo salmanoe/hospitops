@@ -84,13 +84,39 @@ public class Room {
         this.updatedAt = LocalDateTime.now();
     }
 
-    /** Maintenance: any non-OCCUPIED room may be taken out of service. */
+    /** Maintenance: any room without an active guest may be taken out of service. */
     public void markMaintenance(String reason) {
-        if (this.status == RoomStatus.OCCUPIED)
+        if (this.status == RoomStatus.OCCUPIED || this.status == RoomStatus.SERVICE_REQUESTED)
             throw new IllegalStateException(
-                "Room " + roomNumber + " cannot be placed in maintenance while OCCUPIED");
+                "Room " + roomNumber + " cannot be placed in maintenance while " + status);
         this.status    = RoomStatus.MAINTENANCE;
         this.notes     = reason;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * Mid-stay cleaning request: only an OCCUPIED room can request service.
+     * The guest remains in the room — status returns to OCCUPIED after cleaning.
+     */
+    public void requestService() {
+        if (this.status != RoomStatus.OCCUPIED)
+            throw new IllegalStateException(
+                "Room " + roomNumber + " cannot request service from state " + status +
+                " (must be OCCUPIED)");
+        this.status    = RoomStatus.SERVICE_REQUESTED;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * Housekeeping completed mid-stay service: room returns to OCCUPIED.
+     * Only valid from SERVICE_REQUESTED — the guest is still in residence.
+     */
+    public void markServiceComplete() {
+        if (this.status != RoomStatus.SERVICE_REQUESTED)
+            throw new IllegalStateException(
+                "Room " + roomNumber + " cannot complete service from state " + status +
+                " (must be SERVICE_REQUESTED)");
+        this.status    = RoomStatus.OCCUPIED;
         this.updatedAt = LocalDateTime.now();
     }
 
