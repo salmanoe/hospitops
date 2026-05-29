@@ -25,7 +25,7 @@ Thumbs.db
 # Environment — never commit secrets
 .env
 *.env.local
-/*.md
+*.md
 !README.md
 /*.docx
 

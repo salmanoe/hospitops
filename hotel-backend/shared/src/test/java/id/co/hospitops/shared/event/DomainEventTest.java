@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
+
 import static org.assertj.core.api.Assertions.*;
 
 /**
@@ -196,6 +197,89 @@ class DomainEventTest {
                     Money.of(100_000L), false);
 
             assertThat(event.isFullyPaid()).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("HotelCreatedEvent")
+    class HotelCreatedEventTests {
+
+        @Test
+        @DisplayName("stores hotelId and groupId")
+        void storesAllFields() {
+            HotelId hotelId = HotelId.generate();
+            GroupId groupId = GroupId.generate();
+
+            HotelCreatedEvent event = new HotelCreatedEvent(hotelId, groupId);
+
+            assertThat(event.getHotelId()).isEqualTo(hotelId);
+            assertThat(event.getGroupId()).isEqualTo(groupId);
+        }
+
+        @Test
+        @DisplayName("occurredOn is populated")
+        void occurredOnIsPopulated() {
+            Instant before = Instant.now();
+            HotelCreatedEvent event = new HotelCreatedEvent(HotelId.generate(), GroupId.generate());
+            Instant after = Instant.now();
+
+            assertThat(event.getOccurredOn())
+                    .isAfterOrEqualTo(before)
+                    .isBeforeOrEqualTo(after);
+        }
+    }
+
+    @Nested
+    @DisplayName("HotelActivatedEvent")
+    class HotelActivatedEventTests {
+
+        @Test
+        @DisplayName("stores hotelId")
+        void storesAllFields() {
+            HotelId hotelId = HotelId.generate();
+
+            HotelActivatedEvent event = new HotelActivatedEvent(hotelId);
+
+            assertThat(event.getHotelId()).isEqualTo(hotelId);
+        }
+
+        @Test
+        @DisplayName("occurredOn is populated")
+        void occurredOnIsPopulated() {
+            Instant before = Instant.now();
+            HotelActivatedEvent event = new HotelActivatedEvent(HotelId.generate());
+            Instant after = Instant.now();
+
+            assertThat(event.getOccurredOn())
+                    .isAfterOrEqualTo(before)
+                    .isBeforeOrEqualTo(after);
+        }
+    }
+
+    @Nested
+    @DisplayName("HotelSuspendedEvent")
+    class HotelSuspendedEventTests {
+
+        @Test
+        @DisplayName("stores hotelId")
+        void storesAllFields() {
+            HotelId hotelId = HotelId.generate();
+
+            HotelSuspendedEvent event = new HotelSuspendedEvent(hotelId);
+
+            assertThat(event.getHotelId()).isEqualTo(hotelId);
+        }
+
+        @Test
+        @DisplayName("occurredOn is populated")
+        void occurredOnIsPopulated() {
+            Instant before = Instant.now();
+            HotelSuspendedEvent event = new HotelSuspendedEvent(HotelId.generate());
+            Instant after = Instant.now();
+
+            assertThat(event.getOccurredOn())
+                    .isAfterOrEqualTo(before)
+                    .isBeforeOrEqualTo(after);
         }
     }
 
