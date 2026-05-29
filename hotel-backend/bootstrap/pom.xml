@@ -33,6 +33,14 @@
         </dependency>
         <dependency>
             <groupId>id.co.hospitops</groupId>
+            <artifactId>group</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>id.co.hospitops</groupId>
+            <artifactId>hotel</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>id.co.hospitops</groupId>
             <artifactId>identity</artifactId>
         </dependency>
         <dependency>

@@ -17,6 +17,8 @@
 
     <modules>
         <module>shared</module>
+        <module>group</module>
+        <module>hotel</module>
         <module>identity</module>
         <module>room</module>
         <module>guest</module>
@@ -137,6 +139,16 @@
             <dependency>
                 <groupId>id.co.hospitops</groupId>
                 <artifactId>shared</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>id.co.hospitops</groupId>
+                <artifactId>group</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>id.co.hospitops</groupId>
+                <artifactId>hotel</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

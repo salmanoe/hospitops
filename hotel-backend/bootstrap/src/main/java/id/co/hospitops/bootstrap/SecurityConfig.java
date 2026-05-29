@@ -44,6 +44,7 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private static final String GROUP_ADMIN = "GROUP_ADMIN";
     private static final String ADMIN = "ADMIN";
     private static final String MANAGER = "MANAGER";
     private static final String FRONT_DESK = "FRONT_DESK";
@@ -77,6 +78,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                         // Refresh does not carry a valid access token — must be public
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
+                        // Group self-service signup — no auth required
+                        .requestMatchers(HttpMethod.POST, "/api/v1/group/auth/signup").permitAll()
+
+                        // ── Group admin — cross-hotel operations ─────────────────
+                        // Phase 6 will add the GROUP_ADMIN login and /enter endpoints.
+                        // Routes are secured here so they are ready once JWT issuance lands.
+                        .requestMatchers("/api/v1/group/**").hasRole(GROUP_ADMIN)
 
                         // K8s liveness & readiness probes
                         .requestMatchers("/actuator/health/**").permitAll()
