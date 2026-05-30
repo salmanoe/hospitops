@@ -75,15 +75,19 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         // ── Public endpoints ─────────────────────────────────────
+                        // Legacy unscoped login (kept for backward compatibility)
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                        // Hotel-aware staff login — hotelId is in the URL path
+                        .requestMatchers(HttpMethod.POST, "/api/v1/hotels/*/auth/login").permitAll()
                         // Refresh does not carry a valid access token — must be public
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
-                        // Group self-service signup — no auth required
+                        // Group self-service signup and login — no auth required
                         .requestMatchers(HttpMethod.POST, "/api/v1/group/auth/signup").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/group/auth/login").permitAll()
 
                         // ── Group admin — cross-hotel operations ─────────────────
-                        // Phase 6 will add the GROUP_ADMIN login and /enter endpoints.
-                        // Routes are secured here so they are ready once JWT issuance lands.
+                        // /enter exchanges a group token for a hotel-scoped token — GROUP_ADMIN only
+                        .requestMatchers(HttpMethod.POST, "/api/v1/group/hotels/*/enter").hasRole(GROUP_ADMIN)
                         .requestMatchers("/api/v1/group/**").hasRole(GROUP_ADMIN)
 
                         // K8s liveness & readiness probes

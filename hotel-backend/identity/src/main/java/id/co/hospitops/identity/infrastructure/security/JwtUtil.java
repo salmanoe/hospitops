@@ -7,7 +7,11 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import id.co.hospitops.identity.domain.model.Staff;
 import id.co.hospitops.identity.domain.port.out.TokenService;
+import id.co.hospitops.shared.GroupAdminId;
+import id.co.hospitops.shared.GroupId;
+import id.co.hospitops.shared.HotelId;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -65,6 +69,38 @@ public class JwtUtil implements TokenService {
         // Embed hotelId so JwtAuthFilter can bind HotelContext without a DB lookup
         if (staff.getHotelId() != null) {
             builder = builder.withClaim("hotelId", staff.getHotelId().value().toString());
+        }
+
+        return builder.sign(algorithm);
+    }
+
+    /**
+     * Issues a GROUP_ADMIN token.
+     *
+     * <p>When {@code hotelId} is {@code null} the token is group-scoped (issued at group login).
+     * When {@code hotelId} is non-null the token is hotel-scoped (issued by the {@code /enter}
+     * endpoint). In both cases the role claim is {@code GROUP_ADMIN}.
+     *
+     * <p>When {@code expiresAt} is {@code null} the configured default TTL is applied.
+     * Pass the originating group token's expiry to honor the same-TTL rule for hotel tokens.
+     */
+    public String generateGroupAdminToken(GroupAdminId adminId, GroupId groupId, String email,
+                                          @Nullable HotelId hotelId,
+                                          @Nullable Instant expiresAt) {
+        Instant now = Instant.now();
+        Instant expiry = (expiresAt != null) ? expiresAt : now.plusMillis(expirationMs);
+
+        var builder = JWT.create()
+                .withJWTId(UUID.randomUUID().toString())
+                .withSubject(adminId.value().toString())
+                .withClaim("email", email)
+                .withClaim("role", "GROUP_ADMIN")
+                .withClaim("groupId", groupId.value().toString())
+                .withIssuedAt(now)
+                .withExpiresAt(expiry);
+
+        if (hotelId != null) {
+            builder = builder.withClaim("hotelId", hotelId.value().toString());
         }
 
         return builder.sign(algorithm);

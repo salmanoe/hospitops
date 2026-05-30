@@ -1,6 +1,7 @@
 package id.co.hospitops.identity.domain.port.out;
 
 import id.co.hospitops.identity.domain.model.Staff;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.StaffId;
 import org.springframework.data.domain.Pageable;
 
@@ -24,6 +25,13 @@ public interface StaffRepository {
     Optional<Staff> findByIdInCurrentHotel(StaffId id);
 
     Optional<Staff> findByUsername(String username);
+
+    /**
+     * Hotel-scoped credential lookup for the hotel-aware login endpoint.
+     * Does NOT require {@code HotelContext} to be bound — the hotelId comes
+     * from the URL path parameter, not from {@code HotelContext}.
+     */
+    Optional<Staff> findByUsernameAndHotelId(String username, HotelId hotelId);
 
     boolean existsByUsername(String username);
 

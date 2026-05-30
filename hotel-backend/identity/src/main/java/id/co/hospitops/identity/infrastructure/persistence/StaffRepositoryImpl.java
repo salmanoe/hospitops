@@ -3,6 +3,7 @@ package id.co.hospitops.identity.infrastructure.persistence;
 import id.co.hospitops.identity.domain.model.Staff;
 import id.co.hospitops.identity.domain.port.out.StaffRepository;
 import id.co.hospitops.shared.HotelContext;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.StaffId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -38,6 +39,11 @@ public class StaffRepositoryImpl implements StaffRepository {
     @Override
     public Optional<Staff> findByUsername(String u) {
         return jpaRepo.findByUsername(u).map(mapper::toDomain);
+    }
+
+    @Override
+    public Optional<Staff> findByUsernameAndHotelId(String username, HotelId hotelId) {
+        return jpaRepo.findByUsernameAndHotelId(username, hotelId.value()).map(mapper::toDomain);
     }
 
     @Override

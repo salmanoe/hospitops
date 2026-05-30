@@ -16,6 +16,9 @@ public interface StaffJpaRepository extends JpaRepository<StaffJpaEntity, UUID> 
     // Hotel-scoped lookup — use for management operations where HotelContext is bound
     Optional<StaffJpaEntity> findByIdAndHotelId(UUID id, UUID hotelId);
 
+    // Hotel-scoped login — used by HotelAuthService (hotelId comes from path param, not HotelContext)
+    Optional<StaffJpaEntity> findByUsernameAndHotelId(String username, UUID hotelId);
+
     // Hotel-scoped uniqueness check (used when creating a staff member)
     boolean existsByUsernameAndHotelId(String username, UUID hotelId);
 
