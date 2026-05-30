@@ -22,10 +22,11 @@ public class Reservation {
     private final int children;
     private final String specialRequests;
     private final StaffId createdBy;
+    private final HotelId hotelId;
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public static Reservation create(String reservationNumber, GuestId guestId,
+    public static Reservation create(HotelId hotelId, String reservationNumber, GuestId guestId,
                                      RoomId roomId, LocalDate checkIn, LocalDate checkOut,
                                      Money ratePerNight, int adults, int children,
                                      String specialRequests, StaffId createdBy) {
@@ -36,7 +37,7 @@ public class Reservation {
 
         return new Reservation(ReservationId.generate(), reservationNumber,
                 guestId, roomId, checkIn, checkOut, ReservationStatus.CONFIRMED,
-                ratePerNight, adults, children, specialRequests, createdBy,
+                ratePerNight, adults, children, specialRequests, createdBy, hotelId,
                 LocalDateTime.now(), LocalDateTime.now());
     }
 
@@ -45,18 +46,18 @@ public class Reservation {
                                            LocalDate checkIn, LocalDate checkOut,
                                            ReservationStatus status, Money ratePerNight,
                                            int adults, int children, String specialRequests,
-                                           StaffId createdBy, LocalDateTime createdAt,
-                                           LocalDateTime updatedAt) {
+                                           StaffId createdBy, HotelId hotelId,
+                                           LocalDateTime createdAt, LocalDateTime updatedAt) {
         return new Reservation(id, number, guestId, roomId, checkIn, checkOut,
                 status, ratePerNight, adults, children, specialRequests,
-                createdBy, createdAt, updatedAt);
+                createdBy, hotelId, createdAt, updatedAt);
     }
 
     private Reservation(ReservationId id, String reservationNumber, GuestId guestId,
                         RoomId roomId, LocalDate checkIn, LocalDate checkOut,
                         ReservationStatus status, Money ratePerNight, int adults,
                         int children, String specialRequests, StaffId createdBy,
-                        LocalDateTime createdAt, LocalDateTime updatedAt) {
+                        HotelId hotelId, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.reservationNumber = reservationNumber;
         this.guestId = guestId;
@@ -69,6 +70,7 @@ public class Reservation {
         this.children = children;
         this.specialRequests = specialRequests;
         this.createdBy = createdBy;
+        this.hotelId = hotelId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }

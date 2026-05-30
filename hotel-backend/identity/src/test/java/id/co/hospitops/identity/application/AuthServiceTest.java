@@ -4,6 +4,7 @@ import id.co.hospitops.identity.application.command.LoginCommand;
 import id.co.hospitops.identity.application.response.LoginResponse;
 import id.co.hospitops.identity.domain.model.Staff;
 import id.co.hospitops.identity.domain.model.StaffRole;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.identity.domain.port.out.RefreshTokenStore;
 import id.co.hospitops.identity.domain.port.out.StaffRepository;
 import id.co.hospitops.identity.domain.port.out.TokenBlacklist;
@@ -32,14 +33,22 @@ import static org.mockito.BDDMockito.*;
 @DisplayName("AuthService")
 class AuthServiceTest {
 
-    @Mock AuthenticationManager authenticationManager;
-    @Mock TokenService          tokenService;
-    @Mock TokenBlacklist        tokenBlacklist;
-    @Mock RefreshTokenStore     refreshTokenStore;
-    @Mock StaffRepository       staffRepository;
-    @Mock Authentication        authentication;
+    @Mock
+    AuthenticationManager authenticationManager;
+    @Mock
+    TokenService tokenService;
+    @Mock
+    TokenBlacklist tokenBlacklist;
+    @Mock
+    RefreshTokenStore refreshTokenStore;
+    @Mock
+    StaffRepository staffRepository;
+    @Mock
+    Authentication authentication;
 
-    /** Use constructor injection so we can supply the refresh TTL directly. */
+    /**
+     * Use constructor injection so we can supply the refresh TTL directly.
+     */
     AuthService authService;
 
     private static final long REFRESH_TTL_SECONDS = 604_800L; // 7 days
@@ -53,12 +62,14 @@ class AuthServiceTest {
 
     private Staff activeStaff() {
         return Staff.reconstitute(StaffId.generate(), "Test User", "testuser",
-                "hashed", StaffRole.FRONT_DESK, true, LocalDateTime.now(), LocalDateTime.now());
+                "hashed", StaffRole.FRONT_DESK, true, HotelId.generate(),
+                LocalDateTime.now(), LocalDateTime.now());
     }
 
     private Staff inactiveStaff() {
         return Staff.reconstitute(StaffId.generate(), "Inactive", "inactive",
-                "hashed", StaffRole.FRONT_DESK, false, LocalDateTime.now(), LocalDateTime.now());
+                "hashed", StaffRole.FRONT_DESK, false, HotelId.generate(),
+                LocalDateTime.now(), LocalDateTime.now());
     }
 
     // ══════════════════════════════════════════════════════════════

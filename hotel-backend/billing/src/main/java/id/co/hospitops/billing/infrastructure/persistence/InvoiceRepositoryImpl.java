@@ -13,9 +13,9 @@ import java.util.*;
 @RequiredArgsConstructor
 public class InvoiceRepositoryImpl implements InvoiceRepository {
 
-    private final InvoiceJpaRepository     jpa;
+    private final InvoiceJpaRepository jpa;
     private final InvoiceItemJpaRepository itemJpa;
-    private final PaymentJpaRepository     paymentJpa;
+    private final PaymentJpaRepository paymentJpa;
 
     @Override
     public Invoice save(Invoice invoice) {
@@ -28,23 +28,25 @@ public class InvoiceRepositoryImpl implements InvoiceRepository {
 
     @Override
     public Optional<Invoice> findById(InvoiceId id) {
-        return jpa.findById(id.value()).map(this::toDomain);
+        return jpa.findByIdAndHotelId(id.value(), HotelContext.current().value())
+                .map(this::toDomain);
     }
 
     @Override
     public List<Invoice> findAll(Pageable pageable) {
-        return jpa.findAll(pageable).map(this::toDomain).getContent();
+        return jpa.findByHotelId(HotelContext.current().value(), pageable)
+                .map(this::toDomain).getContent();
     }
 
     @Override
     public List<Invoice> findByStatus(PaymentStatus status, Pageable pageable) {
-        return jpa.findByPaymentStatus(status, pageable)
+        return jpa.findByHotelIdAndPaymentStatus(HotelContext.current().value(), status, pageable)
                 .stream().map(this::toDomain).toList();
     }
 
     @Override
     public long count() {
-        return jpa.count();
+        return jpa.countByHotelId(HotelContext.current().value());
     }
 
     // ── Mappers ────────────────────────────────────────────────────
@@ -63,6 +65,7 @@ public class InvoiceRepositoryImpl implements InvoiceRepository {
                 .paymentStatus(inv.getPaymentStatus())
                 .dueDate(inv.getDueDate())
                 .notes(inv.getNotes())
+                .hotelId(inv.getHotelId().value())
                 .build();
     }
 
@@ -80,6 +83,7 @@ public class InvoiceRepositoryImpl implements InvoiceRepository {
     }
 
     private List<PaymentJpaEntity> paymentsToJpa(Invoice inv) {
+        UUID hotelId = inv.getHotelId().value();
         return inv.getPayments().stream()
                 .map(p -> PaymentJpaEntity.builder()
                         .id(p.id())
@@ -89,6 +93,7 @@ public class InvoiceRepositoryImpl implements InvoiceRepository {
                         .referenceNo(p.referenceNo())
                         .paidAt(p.paidAt())
                         .receivedBy(p.receivedBy() != null ? p.receivedBy().value() : null)
+                        .hotelId(hotelId)
                         .build())
                 .toList();
     }
@@ -113,6 +118,7 @@ public class InvoiceRepositoryImpl implements InvoiceRepository {
 
         return Invoice.reconstitute(
                 InvoiceId.of(e.getId()),
+                HotelId.of(e.getHotelId()),
                 e.getInvoiceNumber(),
                 ReservationId.of(e.getReservationId()),
                 e.getReservationNumber(),

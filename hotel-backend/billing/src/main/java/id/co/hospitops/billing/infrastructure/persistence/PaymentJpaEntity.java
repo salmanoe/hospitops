@@ -13,8 +13,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "payment", indexes = {
         @Index(name = "idx_payment_invoice_id", columnList = "invoice_id"),
-        @Index(name = "idx_payment_paid_at",    columnList = "paid_at"),
-        @Index(name = "idx_payment_method",     columnList = "method")
+        @Index(name = "idx_payment_paid_at", columnList = "paid_at"),
+        @Index(name = "idx_payment_method", columnList = "method")
 })
 @Getter
 @NoArgsConstructor
@@ -47,4 +47,7 @@ class PaymentJpaEntity {
 
     @Column(name = "received_by", columnDefinition = "uuid")
     private UUID receivedBy;
+
+    @Column(nullable = false, columnDefinition = "uuid")
+    private UUID hotelId;
 }

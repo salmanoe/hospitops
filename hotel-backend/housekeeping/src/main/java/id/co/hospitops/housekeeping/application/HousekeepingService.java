@@ -7,6 +7,7 @@ import id.co.hospitops.housekeeping.domain.model.HousekeepingTask;
 import id.co.hospitops.housekeeping.domain.port.in.HousekeepingUseCase;
 import id.co.hospitops.housekeeping.domain.port.out.HousekeepingTaskRepository;
 import id.co.hospitops.housekeeping.domain.port.out.RoomStatusPort;
+import id.co.hospitops.shared.HotelContext;
 import id.co.hospitops.shared.ReservationId;
 import id.co.hospitops.shared.RoomId;
 import id.co.hospitops.shared.StaffId;
@@ -73,7 +74,7 @@ public class HousekeepingService implements HousekeepingUseCase {
 
     @Override
     public HousekeepingTaskResponse createManualTask(RoomId roomId, String notes) {
-        HousekeepingTask task = HousekeepingTask.createManual(roomId, notes);
+        HousekeepingTask task = HousekeepingTask.createManual(HotelContext.current(), roomId, notes);
         return HousekeepingTaskResponse.from(taskRepo.save(task));
     }
 
@@ -83,7 +84,7 @@ public class HousekeepingService implements HousekeepingUseCase {
         roomStatusPort.updateRoomStatus(rid, status, notes);
         if ("SERVICE_REQUESTED".equalsIgnoreCase(status)) {
             String taskNotes = (notes != null && !notes.isBlank()) ? notes : "Guest requested cleaning service";
-            HousekeepingTask task = HousekeepingTask.createManual(rid, taskNotes);
+            HousekeepingTask task = HousekeepingTask.createManual(HotelContext.current(), rid, taskNotes);
             taskRepo.save(task);
         }
     }
@@ -93,7 +94,7 @@ public class HousekeepingService implements HousekeepingUseCase {
      */
     @Transactional
     public HousekeepingTask createCheckoutTask(RoomId roomId, ReservationId reservationId) {
-        HousekeepingTask task = HousekeepingTask.createForCheckout(roomId, reservationId);
+        HousekeepingTask task = HousekeepingTask.createForCheckout(HotelContext.current(), roomId, reservationId);
         return taskRepo.save(task);
     }
 

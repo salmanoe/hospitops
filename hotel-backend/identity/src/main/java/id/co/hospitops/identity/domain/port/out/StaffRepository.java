@@ -10,7 +10,18 @@ import java.util.Optional;
 public interface StaffRepository {
     Staff save(Staff staff);
 
+    /**
+     * Unscoped lookup — for use by the auth filter only (HotelContext is not yet bound).
+     * Management operations must use {@link #findByIdInCurrentHotel(StaffId)} instead.
+     */
     Optional<Staff> findById(StaffId id);
+
+    /**
+     * Hotel-scoped lookup — returns empty if the staff member does not belong to
+     * the hotel currently bound in {@code HotelContext}. Use for all management
+     * operations (update, password change, toggle) where HotelContext is bound.
+     */
+    Optional<Staff> findByIdInCurrentHotel(StaffId id);
 
     Optional<Staff> findByUsername(String username);
 

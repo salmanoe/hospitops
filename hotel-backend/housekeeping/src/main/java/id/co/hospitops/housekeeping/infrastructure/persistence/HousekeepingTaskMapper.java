@@ -7,6 +7,7 @@ import org.mapstruct.*;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface HousekeepingTaskMapper {
+    @Mapping(target = "hotelId", expression = "java(t.getHotelId().value())")
     @Mapping(target = "roomId", expression = "java(t.getRoomId().value())")
     @Mapping(target = "reservationId", expression = "java(t.getReservationId() != null ? t.getReservationId().value() : null)")
     @Mapping(target = "assignedTo", expression = "java(t.getAssignedTo() != null ? t.getAssignedTo().value() : null)")
@@ -18,9 +19,10 @@ public interface HousekeepingTaskMapper {
     default HousekeepingTask toDomain(HousekeepingTaskJpaEntity e) {
         return HousekeepingTask.reconstitute(
                 e.getId(),
+                HotelId.of(e.getHotelId()),
                 RoomId.of(e.getRoomId()),
                 e.getReservationId() != null ? ReservationId.of(e.getReservationId()) : null,
-                e.getAssignedTo()    != null ? StaffId.of(e.getAssignedTo())           : null,
+                e.getAssignedTo() != null ? StaffId.of(e.getAssignedTo()) : null,
                 e.getNotes(),
                 e.isCompleted(),
                 e.getCompletedAt(),

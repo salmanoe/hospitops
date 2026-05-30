@@ -35,9 +35,9 @@ public class JwtUtil implements TokenService {
         if (keyBytes.length < MIN_SECRET_BYTES) {
             throw new IllegalArgumentException(
                     "JWT secret is too short: " + keyBytes.length + " bytes. " +
-                    "Minimum is " + MIN_SECRET_BYTES + " bytes. " +
-                    "Set the JWT_SECRET environment variable to a cryptographically " +
-                    "random string of at least " + MIN_SECRET_BYTES + " characters.");
+                            "Minimum is " + MIN_SECRET_BYTES + " bytes. " +
+                            "Set the JWT_SECRET environment variable to a cryptographically " +
+                            "random string of at least " + MIN_SECRET_BYTES + " characters.");
         }
         if (secret.equals(DEFAULT_DEV_SECRET)) {
             log.warn("*** SECURITY WARNING: Default JWT secret is in use. " +
@@ -53,15 +53,21 @@ public class JwtUtil implements TokenService {
         Instant now = Instant.now();
         Instant expiry = now.plusMillis(expirationMs);
 
-        return JWT.create()
+        var builder = JWT.create()
                 .withJWTId(UUID.randomUUID().toString())
                 .withSubject(staff.getId().value().toString())
                 .withClaim("username", staff.getUsername())
                 .withClaim("role", staff.getRole().name())
                 .withClaim("fullName", staff.getFullName())
                 .withIssuedAt(now)
-                .withExpiresAt(expiry)
-                .sign(algorithm);
+                .withExpiresAt(expiry);
+
+        // Embed hotelId so JwtAuthFilter can bind HotelContext without a DB lookup
+        if (staff.getHotelId() != null) {
+            builder = builder.withClaim("hotelId", staff.getHotelId().value().toString());
+        }
+
+        return builder.sign(algorithm);
     }
 
     /**

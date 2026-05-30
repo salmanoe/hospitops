@@ -3,6 +3,7 @@ package id.co.hospitops.identity.infrastructure.persistence;
 import id.co.hospitops.identity.domain.model.Staff;
 import id.co.hospitops.identity.domain.model.StaffRole;
 import id.co.hospitops.identity.infrastructure.persistence.entity.StaffJpaEntity;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.StaffId;
 import org.junit.jupiter.api.*;
 
@@ -14,7 +15,7 @@ import static org.assertj.core.api.Assertions.*;
 /**
  * Unit tests for StaffMapper — hand-written @Component (not MapStruct).
  * Instantiated directly; no Spring context needed.
- *
+ * <p>
  * Covers:
  * - toJpa()  : all fields, active/inactive, every role
  * - toDomain(): all fields, preserves timestamps
@@ -34,7 +35,7 @@ class StaffMapperTest {
         @Test
         @DisplayName("maps id correctly")
         void mapsId() {
-            Staff staff = Staff.create("Alice Admin", "aalice", "$2a$hash", StaffRole.ADMIN);
+            Staff staff = Staff.create(HotelId.generate(), "Alice Admin", "aalice", "$2a$hash", StaffRole.ADMIN);
             StaffJpaEntity entity = mapper.toJpa(staff);
             assertThat(entity.getId()).isEqualTo(staff.getId().value());
         }
@@ -42,21 +43,21 @@ class StaffMapperTest {
         @Test
         @DisplayName("maps fullName correctly")
         void mapsFullName() {
-            Staff staff = Staff.create("Bob Manager", "bmanager", "$2a$hash", StaffRole.MANAGER);
+            Staff staff = Staff.create(HotelId.generate(), "Bob Manager", "bmanager", "$2a$hash", StaffRole.MANAGER);
             assertThat(mapper.toJpa(staff).getFullName()).isEqualTo("Bob Manager");
         }
 
         @Test
         @DisplayName("maps username correctly")
         void mapsUsername() {
-            Staff staff = Staff.create("Name", "uniqueuser", "$h", StaffRole.FRONT_DESK);
+            Staff staff = Staff.create(HotelId.generate(), "Name", "uniqueuser", "$h", StaffRole.FRONT_DESK);
             assertThat(mapper.toJpa(staff).getUsername()).isEqualTo("uniqueuser");
         }
 
         @Test
         @DisplayName("maps passwordHash correctly")
         void mapsPasswordHash() {
-            Staff staff = Staff.create("Name", "user", "$2a$12$secrethash", StaffRole.ACCOUNTANT);
+            Staff staff = Staff.create(HotelId.generate(), "Name", "user", "$2a$12$secrethash", StaffRole.ACCOUNTANT);
             assertThat(mapper.toJpa(staff).getPasswordHash()).isEqualTo("$2a$12$secrethash");
         }
 
@@ -64,7 +65,7 @@ class StaffMapperTest {
         @DisplayName("maps role correctly for every StaffRole value")
         void mapsRoleForEveryValue() {
             for (StaffRole role : StaffRole.values()) {
-                Staff staff = Staff.create("N", "u" + role.name(), "$h", role);
+                Staff staff = Staff.create(HotelId.generate(), "N", "u" + role.name(), "$h", role);
                 assertThat(mapper.toJpa(staff).getRole()).isEqualTo(role);
             }
         }
@@ -72,7 +73,7 @@ class StaffMapperTest {
         @Test
         @DisplayName("maps active = true for a new staff member")
         void mapsActiveTrue() {
-            Staff staff = Staff.create("N", "u", "$h", StaffRole.FRONT_DESK);
+            Staff staff = Staff.create(HotelId.generate(), "N", "u", "$h", StaffRole.FRONT_DESK);
             assertThat(mapper.toJpa(staff).isActive()).isTrue();
         }
 
@@ -81,7 +82,7 @@ class StaffMapperTest {
         void mapsActiveFalse() {
             StaffId id = StaffId.generate();
             Staff staff = Staff.reconstitute(id, "N", "u", "$h", StaffRole.FRONT_DESK,
-                    false, LocalDateTime.now(), LocalDateTime.now());
+                    false, HotelId.generate(), LocalDateTime.now(), LocalDateTime.now());
             assertThat(mapper.toJpa(staff).isActive()).isFalse();
         }
     }
@@ -95,7 +96,7 @@ class StaffMapperTest {
         @Test
         @DisplayName("maps all fields from StaffJpaEntity to Staff")
         void mapsAllFields() {
-            UUID id  = UUID.randomUUID();
+            UUID id = UUID.randomUUID();
             LocalDateTime now = LocalDateTime.now();
 
             StaffJpaEntity entity = StaffJpaEntity.builder()
@@ -105,6 +106,7 @@ class StaffMapperTest {
                     .passwordHash("$2a$12$ahash")
                     .role(StaffRole.ACCOUNTANT)
                     .active(true)
+                    .hotelId(UUID.randomUUID())
                     .createdAt(now)
                     .updatedAt(now)
                     .build();
@@ -131,6 +133,7 @@ class StaffMapperTest {
                     .passwordHash("$h")
                     .role(StaffRole.HOUSEKEEPING)
                     .active(false)
+                    .hotelId(UUID.randomUUID())
                     .createdAt(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
                     .build();
@@ -148,11 +151,12 @@ class StaffMapperTest {
         @Test
         @DisplayName("all fields survive a full round-trip")
         void allFieldsSurviveRoundTrip() {
-            StaffId       id  = StaffId.generate();
-            LocalDateTime ts  = LocalDateTime.of(2025, 3, 10, 9, 0);
+            StaffId id = StaffId.generate();
+            LocalDateTime ts = LocalDateTime.of(2025, 3, 10, 9, 0);
 
+            HotelId hotelId = HotelId.generate();
             Staff original = Staff.reconstitute(id, "Dedi Front", "dedi",
-                    "$2a$12$testhash", StaffRole.FRONT_DESK, true, ts, ts);
+                    "$2a$12$testhash", StaffRole.FRONT_DESK, true, hotelId, ts, ts);
 
             Staff restored = mapper.toDomain(mapper.toJpa(original));
 

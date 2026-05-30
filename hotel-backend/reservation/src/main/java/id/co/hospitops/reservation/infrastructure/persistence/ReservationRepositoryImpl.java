@@ -27,47 +27,54 @@ public class ReservationRepositoryImpl implements ReservationRepository {
 
     @Override
     public Optional<Reservation> findById(ReservationId id) {
-        return jpa.findById(id.value()).map(this::toDomain);
+        return jpa.findByIdAndHotelId(id.value(), HotelContext.current().value())
+                .map(this::toDomain);
     }
 
     @Override
     public Optional<Reservation> findByReservationNumber(String number) {
-        return jpa.findByReservationNumber(number).map(this::toDomain);
+        return jpa.findByReservationNumberAndHotelId(number, HotelContext.current().value())
+                .map(this::toDomain);
     }
 
     @Override
     public List<Reservation> findAll(Pageable pageable) {
-        return jpa.findAll(pageable).stream().map(this::toDomain).toList();
+        return jpa.findByHotelId(HotelContext.current().value(), pageable)
+                .stream().map(this::toDomain).toList();
     }
 
     @Override
     public List<Reservation> findByGuestId(GuestId guestId, Pageable pageable) {
-        return jpa.findByGuestId(guestId.value(), pageable).stream().map(this::toDomain).toList();
+        return jpa.findByHotelIdAndGuestId(HotelContext.current().value(),
+                guestId.value(), pageable).stream().map(this::toDomain).toList();
     }
 
     @Override
     public long countByGuestId(GuestId guestId) {
-        return jpa.countByGuestId(guestId.value());
+        return jpa.countByHotelIdAndGuestId(HotelContext.current().value(), guestId.value());
     }
 
     @Override
     public List<Reservation> findByStatus(ReservationStatus status, Pageable pageable) {
-        return jpa.findByStatus(status, pageable).stream().map(this::toDomain).toList();
+        return jpa.findByHotelIdAndStatus(HotelContext.current().value(), status, pageable)
+                .stream().map(this::toDomain).toList();
     }
 
     @Override
     public List<Reservation> findTodayArrivals(LocalDate date) {
-        return jpa.findTodayArrivals(date, ReservationStatus.CONFIRMED).stream().map(this::toDomain).toList();
+        return jpa.findTodayArrivals(HotelContext.current().value(), date,
+                ReservationStatus.CONFIRMED).stream().map(this::toDomain).toList();
     }
 
     @Override
     public List<Reservation> findTodayDepartures(LocalDate date) {
-        return jpa.findTodayDepartures(date, ReservationStatus.CHECKED_IN).stream().map(this::toDomain).toList();
+        return jpa.findTodayDepartures(HotelContext.current().value(), date,
+                ReservationStatus.CHECKED_IN).stream().map(this::toDomain).toList();
     }
 
     @Override
     public long count() {
-        return jpa.count();
+        return jpa.countByHotelId(HotelContext.current().value());
     }
 
     private ReservationJpaEntity toJpa(Reservation r) {
@@ -84,6 +91,7 @@ public class ReservationRepositoryImpl implements ReservationRepository {
                 .adults(r.getAdults())
                 .children(r.getChildren())
                 .specialRequests(r.getSpecialRequests())
+                .hotelId(r.getHotelId().value())
                 .build();
     }
 
@@ -99,6 +107,7 @@ public class ReservationRepositoryImpl implements ReservationRepository {
                 e.getAdults(), e.getChildren(),
                 e.getSpecialRequests(),
                 e.getCreatedBy() != null ? StaffId.of(e.getCreatedBy()) : null,
+                HotelId.of(e.getHotelId()),
                 e.getCreatedAt(), e.getUpdatedAt()
         );
     }

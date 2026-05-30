@@ -12,6 +12,7 @@ import id.co.hospitops.shared.InvoiceId;
 import id.co.hospitops.shared.StaffId;
 import id.co.hospitops.shared.web.ApiResponse;
 import id.co.hospitops.shared.web.PageResult;
+import id.co.hospitops.shared.web.RequiresHotelContext;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.util.UUID;
 
+@RequiresHotelContext
 @RestController
 @RequestMapping("/api/v1/invoices")
 @RequiredArgsConstructor
@@ -61,7 +63,8 @@ public class BillingController {
     }
 
     @PostMapping("/{id}/payments")
-    @SuppressWarnings({"JvmTaintAnalysis", "SpringElInspection"}) // @Valid + Bean Validation; UUID path var is type-safe; JSON response; SpEL 'id' resolves at runtime on the Staff principal
+    @SuppressWarnings({"JvmTaintAnalysis", "SpringElInspection"})
+    // @Valid + Bean Validation; UUID path var is type-safe; JSON response; SpEL 'id' resolves at runtime on the Staff principal
     public ResponseEntity<ApiResponse<InvoiceResponse>> recordPayment(
             @PathVariable UUID id,
             @Valid @RequestBody RecordPaymentRequest req,

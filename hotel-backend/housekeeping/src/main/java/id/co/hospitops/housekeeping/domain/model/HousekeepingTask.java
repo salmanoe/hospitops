@@ -1,5 +1,6 @@
 package id.co.hospitops.housekeeping.domain.model;
 
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.ReservationId;
 import id.co.hospitops.shared.RoomId;
 import id.co.hospitops.shared.StaffId;
@@ -12,6 +13,7 @@ import java.util.UUID;
 public class HousekeepingTask {
 
     private final UUID id;
+    private final HotelId hotelId;
     private final RoomId roomId;
     private final ReservationId reservationId;  // nullable — task trigger
     private StaffId assignedTo;
@@ -24,9 +26,9 @@ public class HousekeepingTask {
     /**
      * Created automatically on checkout.
      */
-    public static HousekeepingTask createForCheckout(RoomId roomId,
+    public static HousekeepingTask createForCheckout(HotelId hotelId, RoomId roomId,
                                                      ReservationId reservationId) {
-        return new HousekeepingTask(UUID.randomUUID(), roomId, reservationId,
+        return new HousekeepingTask(UUID.randomUUID(), hotelId, roomId, reservationId,
                 null, "Room requires cleaning after checkout",
                 false, null, LocalDateTime.now(), LocalDateTime.now());
     }
@@ -34,26 +36,28 @@ public class HousekeepingTask {
     /**
      * Created manually by manager / housekeeping staff.
      */
-    public static HousekeepingTask createManual(RoomId roomId, String notes) {
-        return new HousekeepingTask(UUID.randomUUID(), roomId, null,
+    public static HousekeepingTask createManual(HotelId hotelId, RoomId roomId, String notes) {
+        return new HousekeepingTask(UUID.randomUUID(), hotelId, roomId, null,
                 null, notes, false, null,
                 LocalDateTime.now(), LocalDateTime.now());
     }
 
-    public static HousekeepingTask reconstitute(UUID id, RoomId roomId,
+    public static HousekeepingTask reconstitute(UUID id, HotelId hotelId, RoomId roomId,
                                                 ReservationId reservationId,
                                                 StaffId assignedTo, String notes,
                                                 boolean completed, LocalDateTime completedAt,
                                                 LocalDateTime createdAt, LocalDateTime updatedAt) {
-        return new HousekeepingTask(id, roomId, reservationId, assignedTo,
+        return new HousekeepingTask(id, hotelId, roomId, reservationId, assignedTo,
                 notes, completed, completedAt, createdAt, updatedAt);
     }
 
-    private HousekeepingTask(UUID id, RoomId roomId, ReservationId reservationId,
+    private HousekeepingTask(UUID id, HotelId hotelId, RoomId roomId,
+                             ReservationId reservationId,
                              StaffId assignedTo, String notes, boolean completed,
                              LocalDateTime completedAt, LocalDateTime createdAt,
                              LocalDateTime updatedAt) {
         this.id = id;
+        this.hotelId = hotelId;
         this.roomId = roomId;
         this.reservationId = reservationId;
         this.assignedTo = assignedTo;

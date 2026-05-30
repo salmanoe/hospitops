@@ -44,6 +44,9 @@ public class StaffJpaEntity {
     @Column(nullable = false)
     private boolean active;
 
+    @Column(nullable = false, columnDefinition = "uuid")
+    private UUID hotelId;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

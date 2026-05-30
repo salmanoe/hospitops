@@ -3,6 +3,7 @@ package id.co.hospitops.reservation.infrastructure.persistence;
 import id.co.hospitops.reservation.domain.model.Reservation;
 import id.co.hospitops.reservation.domain.model.ReservationStatus;
 import id.co.hospitops.reservation.infrastructure.persistence.entity.ReservationJpaEntity;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.*;
 import org.junit.jupiter.api.*;
 import org.mapstruct.factory.Mappers;
@@ -16,7 +17,7 @@ import static org.assertj.core.api.Assertions.*;
 
 /**
  * Unit tests for ReservationMapper (MapStruct @Mapper interface).
- *
+ * <p>
  * Uses Mappers.getMapper() for Spring-componentModel mappers in tests.
  * Covers toJpa(), toDomain(), round-trip, and null createdBy handling.
  */
@@ -25,8 +26,8 @@ class ReservationMapperTest {
 
     private final ReservationMapper mapper = Mappers.getMapper(ReservationMapper.class);
 
-    private static final LocalDate     CHECK_IN   = LocalDate.of(2025, 7, 10);
-    private static final LocalDate     CHECK_OUT  = LocalDate.of(2025, 7, 13);
+    private static final LocalDate CHECK_IN = LocalDate.of(2025, 7, 10);
+    private static final LocalDate CHECK_OUT = LocalDate.of(2025, 7, 13);
     private static final LocalDateTime CREATED_AT = LocalDateTime.of(2025, 7, 1, 10, 0);
 
     private Reservation buildReservation(StaffId createdBy) {
@@ -36,7 +37,7 @@ class ReservationMapperTest {
                 CHECK_IN, CHECK_OUT,
                 ReservationStatus.CONFIRMED, Money.of(800_000L),
                 2, 1, "Late check-in requested",
-                createdBy, CREATED_AT, CREATED_AT);
+                createdBy, HotelId.generate(), CREATED_AT, CREATED_AT);
     }
 
     // ── toJpa ────────────────────────────────────────────────────────────
@@ -130,7 +131,7 @@ class ReservationMapperTest {
         @DisplayName("maps all fields from entity to domain object")
         void mapsAllFields() {
             UUID guestId = UUID.randomUUID();
-            UUID roomId  = UUID.randomUUID();
+            UUID roomId = UUID.randomUUID();
             UUID staffId = UUID.randomUUID();
 
             ReservationJpaEntity entity = ReservationJpaEntity.builder()
@@ -148,6 +149,7 @@ class ReservationMapperTest {
                     .specialRequests("High floor please")
                     .createdAt(CREATED_AT)
                     .updatedAt(CREATED_AT)
+                    .hotelId(java.util.UUID.randomUUID())
                     .build();
 
             Reservation domain = mapper.toDomain(entity);
@@ -184,6 +186,7 @@ class ReservationMapperTest {
                     .specialRequests(null)
                     .createdAt(CREATED_AT)
                     .updatedAt(CREATED_AT)
+                    .hotelId(java.util.UUID.randomUUID())
                     .build();
 
             Reservation domain = mapper.toDomain(entity);
@@ -201,7 +204,7 @@ class ReservationMapperTest {
         @Test
         @DisplayName("all fields survive a full round-trip")
         void allFieldsSurviveRoundTrip() {
-            StaffId     staffId = StaffId.generate();
+            StaffId staffId = StaffId.generate();
             Reservation original = buildReservation(staffId);
 
             Reservation restored = mapper.toDomain(mapper.toJpa(original));

@@ -3,6 +3,7 @@ package id.co.hospitops.billing.domain;
 import id.co.hospitops.billing.domain.model.Invoice;
 import id.co.hospitops.billing.domain.model.PaymentMethod;
 import id.co.hospitops.billing.domain.model.PaymentStatus;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.Money;
 import id.co.hospitops.shared.ReservationId;
 import id.co.hospitops.shared.StaffId;
@@ -25,7 +26,7 @@ class InvoiceDomainTest {
      * 3 nights x Rp 500,000 = subtotal 1,500,000; tax 11% = 165,000; total 1,665,000
      */
     private Invoice newInvoice() {
-        return Invoice.create("INV-2025-00001", ReservationId.generate(),
+        return Invoice.create(HotelId.generate(), "INV-2025-00001", ReservationId.generate(),
                 "RES-2025-00001", "Budi Santoso",
                 3L, Money.of(500_000L), "Deluxe");
     }

@@ -5,7 +5,6 @@ import id.co.hospitops.billing.application.response.InvoiceResponse;
 import id.co.hospitops.billing.domain.model.Invoice;
 import id.co.hospitops.billing.domain.model.PaymentMethod;
 import id.co.hospitops.billing.domain.model.PaymentStatus;
-import id.co.hospitops.billing.domain.port.in.BillingUseCase;
 import id.co.hospitops.billing.domain.port.out.InvoiceNumberGenerator;
 import id.co.hospitops.billing.domain.port.out.InvoiceRepository;
 import id.co.hospitops.billing.domain.port.out.ReservationDetailPort;
@@ -14,9 +13,13 @@ import id.co.hospitops.billing.infrastructure.pdf.InvoicePdfGenerator;
 import id.co.hospitops.shared.*;
 import id.co.hospitops.shared.event.PaymentReceivedEvent;
 import id.co.hospitops.shared.exception.ResourceNotFoundException;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.*;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -24,36 +27,42 @@ import java.time.LocalDate;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.*;
 
 /**
  * Unit tests for BillingService.createInvoiceForCheckout() and recordPayment().
- *
+ * <p>
  * Covers:
- *   createInvoiceForCheckout():
- *     - fetches reservation detail and saves the resulting invoice
- *     - uses the number generator to produce a unique invoice number
- *     - does NOT publish PaymentReceivedEvent at creation (R-07 fix)
- *
- *   recordPayment():
- *     - throws ResourceNotFoundException for an unknown invoice ID
- *     - delegates payment to Invoice.recordPayment(), saves, and returns response
- *     - publishes PaymentReceivedEvent after a payment is recorded
- *     - publishes fullyPaid = true when the invoice reaches PAID status
- *     - publishes fullyPaid = false when the invoice is still PARTIAL
+ * createInvoiceForCheckout():
+ * - fetches reservation detail and saves the resulting invoice
+ * - uses the number generator to produce a unique invoice number
+ * - does NOT publish PaymentReceivedEvent at creation (R-07 fix)
+ * <p>
+ * recordPayment():
+ * - throws ResourceNotFoundException for an unknown invoice ID
+ * - delegates payment to Invoice.recordPayment(), saves, and returns response
+ * - publishes PaymentReceivedEvent after a payment is recorded
+ * - publishes fullyPaid = true when the invoice reaches PAID status
+ * - publishes fullyPaid = false when the invoice is still PARTIAL
  */
 @DisplayName("BillingService — createInvoiceForCheckout + recordPayment")
 @ExtendWith(MockitoExtension.class)
 class BillingServiceCreateInvoiceTest {
 
-    @Mock InvoiceRepository         invoiceRepo;
-    @Mock InvoiceNumberGenerator    numberGenerator;
-    @Mock ReservationDetailPort     reservationDetail;
-    @Mock InvoicePdfGenerator       pdfGenerator;
-    @Mock ApplicationEventPublisher eventPublisher;
+    @Mock
+    InvoiceRepository invoiceRepo;
+    @Mock
+    InvoiceNumberGenerator numberGenerator;
+    @Mock
+    ReservationDetailPort reservationDetail;
+    @Mock
+    InvoicePdfGenerator pdfGenerator;
+    @Mock
+    ApplicationEventPublisher eventPublisher;
 
-    @InjectMocks BillingService service;
+    @InjectMocks
+    BillingService service;
 
     // ── helpers ───────────────────────────────────────────────────────────
 
@@ -75,8 +84,11 @@ class BillingServiceCreateInvoiceTest {
         );
     }
 
+    private static final HotelId TEST_HOTEL = HotelId.generate();
+
     private Invoice buildSavedInvoice(ReservationId reservationId, long nights) {
         return Invoice.create(
+                TEST_HOTEL,
                 "INV-2025-00001",
                 reservationId,
                 "RES-2025-00001",
@@ -85,6 +97,13 @@ class BillingServiceCreateInvoiceTest {
                 Money.of(500_000L),
                 "Deluxe"
         );
+    }
+
+    /**
+     * Runs {@code action} with {@link HotelContext} bound — mirrors what JwtAuthFilter does.
+     */
+    private void withHotelContext(Runnable action) {
+        ScopedValue.where(HotelContext.HOTEL_ID, TEST_HOTEL).run(action);
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -104,7 +123,7 @@ class BillingServiceCreateInvoiceTest {
             given(numberGenerator.generate()).willReturn("INV-2025-00001");
             given(invoiceRepo.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            service.createInvoiceForCheckout(reservationId, 3L);
+            withHotelContext(() -> service.createInvoiceForCheckout(reservationId, 3L));
 
             then(reservationDetail).should().findById(reservationId);
         }
@@ -118,7 +137,7 @@ class BillingServiceCreateInvoiceTest {
             given(numberGenerator.generate()).willReturn("INV-2025-00042");
             given(invoiceRepo.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            service.createInvoiceForCheckout(reservationId, 2L);
+            withHotelContext(() -> service.createInvoiceForCheckout(reservationId, 2L));
 
             then(numberGenerator).should().generate();
         }
@@ -132,7 +151,7 @@ class BillingServiceCreateInvoiceTest {
             given(numberGenerator.generate()).willReturn("INV-2025-00001");
             given(invoiceRepo.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            service.createInvoiceForCheckout(reservationId, 1L);
+            withHotelContext(() -> service.createInvoiceForCheckout(reservationId, 1L));
 
             then(invoiceRepo).should(times(1)).save(any(Invoice.class));
         }
@@ -148,7 +167,7 @@ class BillingServiceCreateInvoiceTest {
             ArgumentCaptor<Invoice> captor = ArgumentCaptor.forClass(Invoice.class);
             given(invoiceRepo.save(captor.capture())).willAnswer(inv -> inv.getArgument(0));
 
-            service.createInvoiceForCheckout(reservationId, 3L);
+            withHotelContext(() -> service.createInvoiceForCheckout(reservationId, 3L));
 
             assertThat(captor.getValue().getPaymentStatus()).isEqualTo(PaymentStatus.UNPAID);
         }
@@ -162,7 +181,7 @@ class BillingServiceCreateInvoiceTest {
             given(numberGenerator.generate()).willReturn("INV-2025-00001");
             given(invoiceRepo.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            service.createInvoiceForCheckout(reservationId, 3L);
+            withHotelContext(() -> service.createInvoiceForCheckout(reservationId, 3L));
 
             then(eventPublisher).should(never()).publishEvent(any());
         }

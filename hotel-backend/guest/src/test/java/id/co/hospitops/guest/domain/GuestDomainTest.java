@@ -1,6 +1,7 @@
 package id.co.hospitops.guest.domain;
 
 import id.co.hospitops.guest.domain.model.Guest;
+import id.co.hospitops.shared.HotelId;
 import org.junit.jupiter.api.*;
 
 import static org.assertj.core.api.Assertions.*;
@@ -23,13 +24,13 @@ class GuestDomainTest {
 
         @Test
         void rejectsBlankName() {
-            assertThatThrownBy(() -> Guest.create("", null, null, null, null, null)).isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> Guest.create(HotelId.generate(), "", null, null, null, null, null)).isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         void rejectsNameTooLong() {
             String tooLong = "A".repeat(201);
-            assertThatThrownBy(() -> Guest.create(tooLong, null, null, null, null, null)).isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> Guest.create(HotelId.generate(), tooLong, null, null, null, null, null)).isInstanceOf(IllegalArgumentException.class);
         }
     }
 
@@ -54,6 +55,6 @@ class GuestDomainTest {
     }
 
     private Guest guest() {
-        return Guest.create("John Doe", "P123", "ID", "+62811", "j@e.com", "Jakarta");
+        return Guest.create(HotelId.generate(), "John Doe", "P123", "ID", "+62811", "j@e.com", "Jakarta");
     }
 }

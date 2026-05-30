@@ -15,8 +15,8 @@ import java.util.UUID;
 @Entity
 @ConcreteProxy
 @Table(name = "room", indexes = {
-        @Index(name = "idx_room_number",  columnList = "room_number"),
-        @Index(name = "idx_room_status",  columnList = "status"),
+        @Index(name = "idx_room_number", columnList = "room_number"),
+        @Index(name = "idx_room_status", columnList = "status"),
         @Index(name = "idx_room_type_id", columnList = "room_type_id")
 })
 @Getter
@@ -46,6 +46,9 @@ public class RoomJpaEntity {
 
     @Column(columnDefinition = "text")
     private String notes;
+
+    @Column(nullable = false, columnDefinition = "uuid")
+    private UUID hotelId;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

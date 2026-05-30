@@ -10,9 +10,17 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface StaffJpaRepository extends JpaRepository<StaffJpaEntity, UUID> {
+    // Auth path — must NOT filter by hotel_id (HotelContext is unbound during authentication)
     Optional<StaffJpaEntity> findByUsername(String username);
 
-    boolean existsByUsername(String username);
+    // Hotel-scoped lookup — use for management operations where HotelContext is bound
+    Optional<StaffJpaEntity> findByIdAndHotelId(UUID id, UUID hotelId);
 
-    @NonNull Page<StaffJpaEntity> findAll(@NonNull Pageable pageable);
+    // Hotel-scoped uniqueness check (used when creating a staff member)
+    boolean existsByUsernameAndHotelId(String username, UUID hotelId);
+
+    // Hotel-scoped list (used for staff management endpoints)
+    @NonNull Page<StaffJpaEntity> findByHotelId(@NonNull UUID hotelId, @NonNull Pageable pageable);
+
+    long countByHotelId(UUID hotelId);
 }

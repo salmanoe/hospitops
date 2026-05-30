@@ -6,6 +6,7 @@ import id.co.hospitops.guest.domain.model.Guest;
 import id.co.hospitops.guest.domain.port.in.ManageGuestUseCase;
 import id.co.hospitops.guest.domain.port.out.GuestRepository;
 import id.co.hospitops.shared.GuestId;
+import id.co.hospitops.shared.HotelContext;
 import id.co.hospitops.shared.exception.*;
 import id.co.hospitops.shared.web.PageResult;
 import lombok.RequiredArgsConstructor;
@@ -28,8 +29,8 @@ public class GuestService implements ManageGuestUseCase {
                 && guestRepo.existsByIdNumber(cmd.idNumber())) {
             throw new ConflictException("Guest with ID number already exists: " + cmd.idNumber());
         }
-        Guest guest = Guest.create(cmd.fullName(), cmd.idNumber(), cmd.nationality(),
-                cmd.phone(), cmd.email(), cmd.address());
+        Guest guest = Guest.create(HotelContext.current(), cmd.fullName(), cmd.idNumber(),
+                cmd.nationality(), cmd.phone(), cmd.email(), cmd.address());
         return GuestResponse.from(guestRepo.save(guest));
     }
 

@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@RequiresHotelContext
 @RestController
 @RequestMapping("/api/v1/reservations")
 @RequiredArgsConstructor
@@ -55,7 +56,8 @@ public class ReservationController {
     }
 
     @PostMapping
-    @SuppressWarnings({"JvmTaintAnalysis", "SpringElInspection"}) // @Valid + Bean Validation; JSON response; SpEL 'id' resolves at runtime on the Staff principal
+    @SuppressWarnings({"JvmTaintAnalysis", "SpringElInspection"})
+    // @Valid + Bean Validation; JSON response; SpEL 'id' resolves at runtime on the Staff principal
     public ResponseEntity<ApiResponse<ReservationResponse>> create(
             @Valid @RequestBody CreateReservationRequest req,
             // R-14 FIX: expression = "id" extracts only the StaffId field from

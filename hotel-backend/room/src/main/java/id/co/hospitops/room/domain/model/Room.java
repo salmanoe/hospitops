@@ -1,5 +1,6 @@
 package id.co.hospitops.room.domain.model;
 
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.Money;
 import id.co.hospitops.shared.RoomId;
 import id.co.hospitops.shared.RoomTypeId;
@@ -12,51 +13,60 @@ import java.util.List;
 @Getter
 public class Room {
 
-    private final RoomId     id;
-    private final String     roomNumber;
-    private int              floor;
-    private RoomStatus       status;
+    private final RoomId id;
+    private final String roomNumber;
+    private int floor;
+    private RoomStatus status;
     private final RoomTypeId roomTypeId;
-    private String           notes;
+    private String notes;
+    private final HotelId hotelId;
     private final LocalDateTime createdAt;
-    private LocalDateTime    updatedAt;
+    private LocalDateTime updatedAt;
 
-    public static Room create(String roomNumber, int floor,
+    public static Room create(HotelId hotelId, String roomNumber, int floor,
                               RoomTypeId roomTypeId, String notes) {
         if (roomNumber == null || roomNumber.isBlank())
             throw new IllegalArgumentException("Room number cannot be blank");
         if (floor < 1)
             throw new IllegalArgumentException("Floor must be >= 1");
         return new Room(RoomId.generate(), roomNumber, floor,
-                        RoomStatus.AVAILABLE, roomTypeId, notes,
-                        LocalDateTime.now(), LocalDateTime.now());
+                RoomStatus.AVAILABLE, roomTypeId, notes, hotelId,
+                LocalDateTime.now(), LocalDateTime.now());
     }
 
     public static Room reconstitute(RoomId id, String roomNumber, int floor,
                                     RoomStatus status, RoomTypeId roomTypeId,
-                                    String notes, LocalDateTime createdAt,
-                                    LocalDateTime updatedAt) {
+                                    String notes, HotelId hotelId,
+                                    LocalDateTime createdAt, LocalDateTime updatedAt) {
         return new Room(id, roomNumber, floor, status,
-                        roomTypeId, notes, createdAt, updatedAt);
+                roomTypeId, notes, hotelId, createdAt, updatedAt);
     }
 
     private Room(RoomId id, String roomNumber, int floor, RoomStatus status,
-                 RoomTypeId roomTypeId, String notes,
+                 RoomTypeId roomTypeId, String notes, HotelId hotelId,
                  LocalDateTime createdAt, LocalDateTime updatedAt) {
-        this.id = id; this.roomNumber = roomNumber; this.floor = floor;
-        this.status = status; this.roomTypeId = roomTypeId; this.notes = notes;
-        this.createdAt = createdAt; this.updatedAt = updatedAt;
+        this.id = id;
+        this.roomNumber = roomNumber;
+        this.floor = floor;
+        this.status = status;
+        this.roomTypeId = roomTypeId;
+        this.notes = notes;
+        this.hotelId = hotelId;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
     // ── Business rules (State Machine) ──────────────────────────────
 
-    /** Check-in: only AVAILABLE rooms may become OCCUPIED. */
+    /**
+     * Check-in: only AVAILABLE rooms may become OCCUPIED.
+     */
     public void markOccupied() {
         if (this.status != RoomStatus.AVAILABLE)
             throw new IllegalStateException(
-                "Room " + roomNumber + " cannot be occupied from state " + status +
-                " (must be AVAILABLE)");
-        this.status    = RoomStatus.OCCUPIED;
+                    "Room " + roomNumber + " cannot be occupied from state " + status +
+                            " (must be AVAILABLE)");
+        this.status = RoomStatus.OCCUPIED;
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -64,33 +74,39 @@ public class Room {
     // Previously markDirty(), markAvailable(), and markMaintenance() had no guards,
     // allowing impossible transitions such as AVAILABLE → DIRTY (before any guest).
 
-    /** Check-out: only OCCUPIED rooms may become DIRTY. */
+    /**
+     * Check-out: only OCCUPIED rooms may become DIRTY.
+     */
     public void markDirty() {
         if (this.status != RoomStatus.OCCUPIED)
             throw new IllegalStateException(
-                "Room " + roomNumber + " cannot be marked dirty from state " + status +
-                " (must be OCCUPIED)");
-        this.status    = RoomStatus.DIRTY;
+                    "Room " + roomNumber + " cannot be marked dirty from state " + status +
+                            " (must be OCCUPIED)");
+        this.status = RoomStatus.DIRTY;
         this.updatedAt = LocalDateTime.now();
     }
 
-    /** Housekeeping complete: only DIRTY rooms may become AVAILABLE. */
+    /**
+     * Housekeeping complete: only DIRTY rooms may become AVAILABLE.
+     */
     public void markAvailable() {
         if (this.status != RoomStatus.DIRTY && this.status != RoomStatus.MAINTENANCE)
             throw new IllegalStateException(
-                "Room " + roomNumber + " cannot be marked available from state " + status +
-                " (must be DIRTY or MAINTENANCE)");
-        this.status    = RoomStatus.AVAILABLE;
+                    "Room " + roomNumber + " cannot be marked available from state " + status +
+                            " (must be DIRTY or MAINTENANCE)");
+        this.status = RoomStatus.AVAILABLE;
         this.updatedAt = LocalDateTime.now();
     }
 
-    /** Maintenance: any room without an active guest may be taken out of service. */
+    /**
+     * Maintenance: any room without an active guest may be taken out of service.
+     */
     public void markMaintenance(String reason) {
         if (this.status == RoomStatus.OCCUPIED || this.status == RoomStatus.SERVICE_REQUESTED)
             throw new IllegalStateException(
-                "Room " + roomNumber + " cannot be placed in maintenance while " + status);
-        this.status    = RoomStatus.MAINTENANCE;
-        this.notes     = reason;
+                    "Room " + roomNumber + " cannot be placed in maintenance while " + status);
+        this.status = RoomStatus.MAINTENANCE;
+        this.notes = reason;
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -101,9 +117,9 @@ public class Room {
     public void requestService() {
         if (this.status != RoomStatus.OCCUPIED)
             throw new IllegalStateException(
-                "Room " + roomNumber + " cannot request service from state " + status +
-                " (must be OCCUPIED)");
-        this.status    = RoomStatus.SERVICE_REQUESTED;
+                    "Room " + roomNumber + " cannot request service from state " + status +
+                            " (must be OCCUPIED)");
+        this.status = RoomStatus.SERVICE_REQUESTED;
         this.updatedAt = LocalDateTime.now();
     }
 
@@ -114,16 +130,16 @@ public class Room {
     public void markServiceComplete() {
         if (this.status != RoomStatus.SERVICE_REQUESTED)
             throw new IllegalStateException(
-                "Room " + roomNumber + " cannot complete service from state " + status +
-                " (must be SERVICE_REQUESTED)");
-        this.status    = RoomStatus.OCCUPIED;
+                    "Room " + roomNumber + " cannot complete service from state " + status +
+                            " (must be SERVICE_REQUESTED)");
+        this.status = RoomStatus.OCCUPIED;
         this.updatedAt = LocalDateTime.now();
     }
 
     public void updateDetails(int floor, String notes) {
         if (floor < 1) throw new IllegalArgumentException("Floor must be >= 1");
-        this.floor     = floor;
-        this.notes     = notes;
+        this.floor = floor;
+        this.notes = notes;
         this.updatedAt = LocalDateTime.now();
     }
 

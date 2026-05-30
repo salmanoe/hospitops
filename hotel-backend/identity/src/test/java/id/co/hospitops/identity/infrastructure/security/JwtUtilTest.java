@@ -3,6 +3,7 @@ package id.co.hospitops.identity.infrastructure.security;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import id.co.hospitops.identity.domain.model.Staff;
 import id.co.hospitops.identity.domain.model.StaffRole;
+import id.co.hospitops.shared.HotelId;
 import org.junit.jupiter.api.*;
 
 import static org.assertj.core.api.Assertions.*;
@@ -51,7 +52,7 @@ class JwtUtilTest {
     @DisplayName("default dev secret constructs (logs warning, does not throw)")
     void defaultSecretConstructsWithWarning() {
         // The default secret is >= 32 bytes so construction must succeed;
-        // a WARN log is emitted but we don't assert on log output here.
+        // a WARN log is emitted, but we don't assert on log output here.
         assertThatNoException().isThrownBy(() -> new JwtUtil(DEFAULT_SECRET, EXPIRY_MS));
     }
 
@@ -67,7 +68,7 @@ class JwtUtilTest {
         @BeforeEach
         void setUp() {
             jwt = new JwtUtil(VALID_SECRET, EXPIRY_MS);
-            staff = Staff.create("Alice Manager", "alice", "hash", StaffRole.MANAGER);
+            staff = Staff.create(HotelId.generate(), "Alice Manager", "alice", "hash", StaffRole.MANAGER);
         }
 
         @Test

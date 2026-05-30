@@ -1,5 +1,6 @@
 package id.co.hospitops.billing.domain.model;
 
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.InvoiceId;
 import id.co.hospitops.shared.Money;
 import id.co.hospitops.shared.ReservationId;
@@ -17,6 +18,7 @@ import java.util.UUID;
 public class Invoice {
 
     private final InvoiceId id;
+    private final HotelId hotelId;
     private final String invoiceNumber;
     private final ReservationId reservationId;
     private final String reservationNumber;
@@ -39,7 +41,8 @@ public class Invoice {
     private static final TaxPolicy TAX_POLICY = TaxPolicy.Standard.PPN_11;
 
     // ── Factories ───────────────────────────────────────────────
-    public static Invoice create(String invoiceNumber, ReservationId reservationId,
+    public static Invoice create(HotelId hotelId, String invoiceNumber,
+                                 ReservationId reservationId,
                                  String reservationNumber, String guestName,
                                  long nights, Money ratePerNight, String roomTypeName) {
         List<InvoiceItem> items = new ArrayList<>();
@@ -52,12 +55,12 @@ public class Invoice {
         Money discount = Money.zero();
         Money total = subtotal.add(tax);
 
-        return new Invoice(InvoiceId.generate(), invoiceNumber, reservationId,
+        return new Invoice(InvoiceId.generate(), hotelId, invoiceNumber, reservationId,
                 reservationNumber, guestName, items, new ArrayList<>(), subtotal, tax, discount,
                 total, PaymentStatus.UNPAID, null, null, LocalDateTime.now(), LocalDateTime.now());
     }
 
-    public static Invoice reconstitute(InvoiceId id, String invoiceNumber,
+    public static Invoice reconstitute(InvoiceId id, HotelId hotelId, String invoiceNumber,
                                        ReservationId reservationId, String reservationNumber,
                                        String guestName,
                                        List<InvoiceItem> items, List<Payment> payments,
@@ -66,18 +69,20 @@ public class Invoice {
                                        PaymentStatus paymentStatus, LocalDate dueDate,
                                        String notes, LocalDateTime issuedAt,
                                        LocalDateTime updatedAt) {
-        return new Invoice(id, invoiceNumber, reservationId, reservationNumber, guestName,
+        return new Invoice(id, hotelId, invoiceNumber, reservationId, reservationNumber, guestName,
                 items, payments, subtotal, taxAmount, discountAmount, totalAmount,
                 paymentStatus, dueDate, notes, issuedAt, updatedAt);
     }
 
-    private Invoice(InvoiceId id, String invoiceNumber, ReservationId reservationId,
+    private Invoice(InvoiceId id, HotelId hotelId, String invoiceNumber,
+                    ReservationId reservationId,
                     String reservationNumber, String guestName,
                     List<InvoiceItem> items, List<Payment> payments,
                     Money subtotal, Money taxAmount, Money discountAmount,
                     Money totalAmount, PaymentStatus paymentStatus, LocalDate dueDate,
                     String notes, LocalDateTime issuedAt, LocalDateTime updatedAt) {
         this.id = id;
+        this.hotelId = hotelId;
         this.invoiceNumber = invoiceNumber;
         this.reservationId = reservationId;
         this.reservationNumber = reservationNumber;

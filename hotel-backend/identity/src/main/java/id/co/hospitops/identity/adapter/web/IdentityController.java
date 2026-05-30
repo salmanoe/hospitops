@@ -34,7 +34,7 @@ public class IdentityController {
             @RequestHeader("Authorization") String authHeader,
             @RequestBody(required = false) LogoutCommand command) {
         // R3-01 FIX: substring(7) strips only the "Bearer " prefix — safe.
-        String accessToken  = authHeader.substring(7);
+        String accessToken = authHeader.substring(7);
         String refreshToken = command != null ? command.refreshToken() : null;
         authUseCase.logout(accessToken, refreshToken);
         return ResponseEntity.ok(ApiResponse.ok("Logged out successfully", null));
@@ -56,6 +56,7 @@ public class IdentityController {
         return ResponseEntity.ok(ApiResponse.ok(StaffResponse.from(staff)));
     }
 
+    @RequiresHotelContext
     @GetMapping("/staff")
     public ResponseEntity<ApiResponse<PageResult<StaffResponse>>> listStaff(
             @RequestParam(defaultValue = "0") int page,
@@ -64,13 +65,16 @@ public class IdentityController {
         return ResponseEntity.ok(ApiResponse.ok(staffUseCase.findAll(pageable)));
     }
 
+    @RequiresHotelContext
     @GetMapping("/staff/{id}")
     public ResponseEntity<ApiResponse<StaffResponse>> getStaff(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.ok(staffUseCase.findById(StaffId.of(id))));
     }
 
+    @RequiresHotelContext
     @PostMapping("/staff")
-    @SuppressWarnings("JvmTaintAnalysis") // @Valid enforces Bean Validation on all string inputs; response is JSON, not HTML
+    @SuppressWarnings("JvmTaintAnalysis")
+    // @Valid enforces Bean Validation on all string inputs; response is JSON, not HTML
     public ResponseEntity<ApiResponse<StaffResponse>> createStaff(
             @Valid @RequestBody CreateStaffCommand command) {
         StaffResponse created = staffUseCase.createStaff(command);
@@ -78,6 +82,7 @@ public class IdentityController {
                 .body(ApiResponse.created(created));
     }
 
+    @RequiresHotelContext
     @PutMapping("/staff/{id}")
     public ResponseEntity<ApiResponse<StaffResponse>> updateStaff(
             @PathVariable UUID id,
@@ -86,6 +91,7 @@ public class IdentityController {
                 ApiResponse.ok(staffUseCase.updateStaff(StaffId.of(id), command)));
     }
 
+    @RequiresHotelContext
     @PatchMapping("/staff/{id}/password")
     public ResponseEntity<ApiResponse<Void>> changePassword(
             @PathVariable UUID id,
@@ -94,6 +100,7 @@ public class IdentityController {
         return ResponseEntity.ok(ApiResponse.ok("Password changed", null));
     }
 
+    @RequiresHotelContext
     @PatchMapping("/staff/{id}/toggle")
     public ResponseEntity<ApiResponse<Void>> toggleActive(@PathVariable UUID id) {
         staffUseCase.toggleActive(StaffId.of(id));

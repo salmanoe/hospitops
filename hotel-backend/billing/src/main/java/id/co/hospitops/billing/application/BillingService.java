@@ -16,6 +16,7 @@ import id.co.hospitops.billing.domain.port.out.InvoiceNumberGenerator;
 import id.co.hospitops.billing.domain.port.out.InvoiceRepository;
 import id.co.hospitops.billing.domain.port.out.ReservationDetailPort;
 import id.co.hospitops.billing.infrastructure.pdf.InvoicePdfGenerator;
+import id.co.hospitops.shared.HotelContext;
 import id.co.hospitops.shared.InvoiceId;
 import id.co.hospitops.shared.Money;
 import id.co.hospitops.shared.ReservationId;
@@ -56,7 +57,8 @@ public class BillingService implements BillingUseCase {
                 reservationDetail.findById(reservationId);
 
         String number = numberGenerator.generate();
-        Invoice invoice = Invoice.create(number, reservationId,
+        Invoice invoice = Invoice.create(
+                HotelContext.current(), number, reservationId,
                 detail.reservationNumber(), detail.guestFullName(),
                 nights, detail.ratePerNight(), detail.roomTypeName());
 

@@ -9,6 +9,7 @@ package id.co.hospitops.guest.infrastructure.persistence;
 import id.co.hospitops.guest.domain.model.Guest;
 import id.co.hospitops.guest.infrastructure.persistence.entity.GuestJpaEntity;
 import id.co.hospitops.shared.GuestId;
+import id.co.hospitops.shared.HotelId;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -23,6 +24,9 @@ public class GuestMapper {
                 .phone(g.getPhone())
                 .email(g.getEmail())
                 .address(g.getAddress())
+                .hotelId(g.getHotelId().value())
+                .createdAt(g.getCreatedAt())
+                .updatedAt(g.getUpdatedAt())
                 .build();
     }
 
@@ -35,6 +39,7 @@ public class GuestMapper {
                 e.getPhone(),
                 e.getEmail(),
                 e.getAddress(),
+                HotelId.of(e.getHotelId()),
                 e.getCreatedAt(),
                 e.getUpdatedAt());
     }

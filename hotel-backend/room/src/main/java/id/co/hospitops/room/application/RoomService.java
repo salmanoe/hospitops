@@ -8,12 +8,14 @@ package id.co.hospitops.room.application;
 // R-18 FIX: findAll() validates the statusFilter before calling RoomStatus.valueOf(),
 // throwing a BusinessRuleViolationException on unknown values instead of a raw
 // IllegalArgumentException from deep in the JVM stack.
+
 import id.co.hospitops.room.application.command.*;
 import id.co.hospitops.room.application.response.*;
 import id.co.hospitops.room.domain.model.*;
 import id.co.hospitops.room.domain.port.in.*;
 import id.co.hospitops.room.domain.port.out.*;
 import id.co.hospitops.shared.*;
+import id.co.hospitops.shared.HotelContext;
 import id.co.hospitops.shared.exception.*;
 import id.co.hospitops.shared.web.PageResult;
 import lombok.RequiredArgsConstructor;
@@ -29,8 +31,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RoomService implements ManageRoomUseCase, RoomAvailabilityUseCase {
 
-    private final RoomRepository            roomRepo;
-    private final RoomTypeRepository        roomTypeRepo;
+    private final RoomRepository roomRepo;
+    private final RoomTypeRepository roomTypeRepo;
     private final RoomRateOverrideRepository overrideRepo;
 
     // ── Room ────────────────────────────────────────────────────
@@ -40,7 +42,8 @@ public class RoomService implements ManageRoomUseCase, RoomAvailabilityUseCase {
             throw new ConflictException("Room number already exists: " + cmd.roomNumber());
         findRoomType(cmd.roomTypeId()); // validates room type exists
 
-        Room room = Room.create(cmd.roomNumber(), cmd.floor(), cmd.roomTypeId(), cmd.notes());
+        Room room = Room.create(HotelContext.current(), cmd.roomNumber(), cmd.floor(),
+                cmd.roomTypeId(), cmd.notes());
         Room saved = roomRepo.save(room);
         RoomType rt = findRoomType(saved.getRoomTypeId());
         return RoomResponse.from(saved, rt);
@@ -82,16 +85,16 @@ public class RoomService implements ManageRoomUseCase, RoomAvailabilityUseCase {
         }
 
         List<RoomResponse> list = rooms.stream()
-            .map(r -> RoomResponse.from(r, findRoomType(r.getRoomTypeId())))
-            .toList();
+                .map(r -> RoomResponse.from(r, findRoomType(r.getRoomTypeId())))
+                .toList();
         long total = (status != null)
-            ? roomRepo.countByStatus(status)
-            : roomRepo.count();
+                ? roomRepo.countByStatus(status)
+                : roomRepo.count();
         // Unpaged.getPageNumber() / getPageSize() throw UnsupportedOperationException.
         // When the caller wants all rows (Pageable.unpaged()), report page 0 and
         // size = total so PageResult math stays coherent.
         int pageNumber = pageable.isPaged() ? pageable.getPageNumber() : 0;
-        int pageSize   = pageable.isPaged() ? pageable.getPageSize()   : (int) total;
+        int pageSize = pageable.isPaged() ? pageable.getPageSize() : (int) total;
         return PageResult.of(list, pageNumber, pageSize, total);
     }
 
@@ -101,13 +104,13 @@ public class RoomService implements ManageRoomUseCase, RoomAvailabilityUseCase {
     @Transactional(readOnly = true)
     public List<AvailableRoomResponse> findAvailable(LocalDate checkIn, LocalDate checkOut) {
         return roomRepo.findAvailable(checkIn, checkOut).stream()
-            .map(r -> {
-                RoomType rt = findRoomType(r.getRoomTypeId());
-                List<RoomRateOverride> overrides = overrideRepo.findByRoomTypeId(rt.getId());
-                Money rate = r.resolveRate(checkIn, rt, overrides);
-                return new AvailableRoomResponse(r.getId(), r.getRoomNumber(), r.getFloor(),
-                    rt.getId(), rt.getName(), rt.getCapacity(), rate.amount());
-            }).toList();
+                .map(r -> {
+                    RoomType rt = findRoomType(r.getRoomTypeId());
+                    List<RoomRateOverride> overrides = overrideRepo.findByRoomTypeId(rt.getId());
+                    Money rate = r.resolveRate(checkIn, rt, overrides);
+                    return new AvailableRoomResponse(r.getId(), r.getRoomNumber(), r.getFloor(),
+                            rt.getId(), rt.getName(), rt.getCapacity(), rate.amount());
+                }).toList();
     }
 
     // R-06 FIX: delegates to a dedicated EXISTS query in the repository —
@@ -155,10 +158,10 @@ public class RoomService implements ManageRoomUseCase, RoomAvailabilityUseCase {
     public void changeRoomStatus(RoomId id, RoomStatus newStatus, String notes) {
         Room room = findRoom(id);
         switch (newStatus) {
-            case AVAILABLE         -> room.markAvailable();
-            case MAINTENANCE       -> room.markMaintenance(notes != null ? notes : "");
+            case AVAILABLE -> room.markAvailable();
+            case MAINTENANCE -> room.markMaintenance(notes != null ? notes : "");
             case SERVICE_REQUESTED -> room.requestService();
-            case OCCUPIED          -> room.markServiceComplete();
+            case OCCUPIED -> room.markServiceComplete();
             default -> throw new BusinessRuleViolationException(
                     "Status transition to " + newStatus + " is not permitted via housekeeping endpoint");
         }
@@ -168,11 +171,11 @@ public class RoomService implements ManageRoomUseCase, RoomAvailabilityUseCase {
     // ── Helpers ─────────────────────────────────────────────────
     private Room findRoom(RoomId id) {
         return roomRepo.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Room", id.value()));
+                .orElseThrow(() -> new ResourceNotFoundException("Room", id.value()));
     }
 
     private RoomType findRoomType(RoomTypeId id) {
         return roomTypeRepo.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("RoomType", id.value()));
+                .orElseThrow(() -> new ResourceNotFoundException("RoomType", id.value()));
     }
 }

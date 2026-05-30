@@ -6,11 +6,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public interface RoomTypeJpaRepository extends JpaRepository<RoomTypeJpaEntity, UUID> {
 
-    boolean existsByName(String name);
+    Optional<RoomTypeJpaEntity> findByIdAndHotelId(UUID id, UUID hotelId);
 
-    @NonNull Page<RoomTypeJpaEntity> findAll(@NonNull Pageable pageable);
+    boolean existsByNameAndHotelId(String name, UUID hotelId);
+
+    @NonNull Page<RoomTypeJpaEntity> findByHotelId(@NonNull UUID hotelId, @NonNull Pageable pageable);
+
+    long countByHotelId(UUID hotelId);
 }

@@ -11,22 +11,32 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface GuestJpaRepository extends JpaRepository<GuestJpaEntity, UUID> {
-    Optional<GuestJpaEntity> findByIdNumber(String idNumber);
+    // Hotel-scoped lookups
+    Optional<GuestJpaEntity> findByIdAndHotelId(UUID id, UUID hotelId);
 
-    boolean existsByIdNumber(String idNumber);
+    Optional<GuestJpaEntity> findByIdNumberAndHotelId(String idNumber, UUID hotelId);
+
+    boolean existsByIdNumberAndHotelId(String idNumber, UUID hotelId);
+
+    long countByHotelId(UUID hotelId);
 
     @Query("""
                 SELECT g FROM GuestJpaEntity g
-                WHERE LOWER(g.fullName) LIKE LOWER(CONCAT('%', :q, '%'))
-                   OR g.idNumber LIKE CONCAT('%', :q, '%')
+                WHERE g.hotelId = :hotelId
+                  AND (LOWER(g.fullName) LIKE LOWER(CONCAT('%', :q, '%'))
+                       OR g.idNumber LIKE CONCAT('%', :q, '%'))
                 ORDER BY g.fullName
             """)
-    List<GuestJpaEntity> search(@Param("q") String q, Pageable pageable);
+    List<GuestJpaEntity> searchByHotelId(@Param("hotelId") UUID hotelId,
+                                         @Param("q") String q, Pageable pageable);
 
     @Query("""
                 SELECT COUNT(g) FROM GuestJpaEntity g
-                WHERE LOWER(g.fullName) LIKE LOWER(CONCAT('%', :q, '%'))
-                   OR g.idNumber LIKE CONCAT('%', :q, '%')
+                WHERE g.hotelId = :hotelId
+                  AND (LOWER(g.fullName) LIKE LOWER(CONCAT('%', :q, '%'))
+                       OR g.idNumber LIKE CONCAT('%', :q, '%'))
             """)
-    long countByQuery(@Param("q") String q);
+    long countByHotelIdAndQuery(@Param("hotelId") UUID hotelId, @Param("q") String q);
+
+    List<GuestJpaEntity> findByHotelId(UUID hotelId, Pageable pageable);
 }

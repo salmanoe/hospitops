@@ -7,6 +7,8 @@ import id.co.hospitops.room.application.response.RoomTypeResponse;
 import id.co.hospitops.room.domain.model.RoomType;
 import id.co.hospitops.room.domain.port.out.RoomRateOverrideRepository;
 import id.co.hospitops.room.domain.port.out.RoomTypeRepository;
+import id.co.hospitops.shared.HotelContext;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.Money;
 import id.co.hospitops.shared.RoomTypeId;
 import id.co.hospitops.shared.exception.ConflictException;
@@ -30,25 +32,28 @@ import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for RoomTypeService — application layer.
- *
+ * <p>
  * Covers:
- *   - createRoomType: duplicate-name conflict, happy path
- *   - updateRoomType: not-found, happy path
- *   - findRoomTypeById: not-found, happy path
- *   - findAllRoomTypes: empty and non-empty pages
- *   - addRateOverride: not-found, happy path
+ * - createRoomType: duplicate-name conflict, happy path
+ * - updateRoomType: not-found, happy path
+ * - findRoomTypeById: not-found, happy path
+ * - findAllRoomTypes: empty and non-empty pages
+ * - addRateOverride: not-found, happy path
  */
 @DisplayName("RoomTypeService")
 @ExtendWith(MockitoExtension.class)
 class RoomTypeServiceTest {
 
-    @Mock RoomTypeRepository        roomTypeRepo;
-    @Mock RoomRateOverrideRepository overrideRepo;
+    @Mock
+    RoomTypeRepository roomTypeRepo;
+    @Mock
+    RoomRateOverrideRepository overrideRepo;
 
-    @InjectMocks RoomTypeService service;
+    @InjectMocks
+    RoomTypeService service;
 
     private static RoomType stubRoomType() {
-        return RoomType.create("Deluxe", 2, "Sea view", Money.of(new BigDecimal("500000")));
+        return RoomType.create(HotelId.generate(), "Deluxe", 2, "Sea view", Money.of(new BigDecimal("500000")));
     }
 
     private final Pageable page = PageRequest.of(0, 20);
@@ -76,15 +81,20 @@ class RoomTypeServiceTest {
         @DisplayName("saves and returns response for new room type")
         void savesNewRoomType() {
             when(roomTypeRepo.existsByName("Suite")).thenReturn(false);
-            RoomType saved = RoomType.create("Suite", 3, "Luxury", Money.of(new BigDecimal("1200000")));
+            RoomType saved = RoomType.create(HotelId.generate(), "Suite", 3, "Luxury", Money.of(new BigDecimal("1200000")));
             when(roomTypeRepo.save(any(RoomType.class))).thenReturn(saved);
 
             var cmd = new CreateRoomTypeCommand("Suite", 3, "Luxury", new BigDecimal("1200000"));
-            var result = service.createRoomType(cmd);
 
-            assertThat(result.name()).isEqualTo("Suite");
-            assertThat(result.capacity()).isEqualTo(3);
-            assertThat(result.basePrice()).isEqualByComparingTo("1200000");
+            // createRoomType() calls HotelContext.current() to stamp the new RoomType.
+            // Bind a ScopedValue here as the HotelContextInterceptor would in production.
+            RoomTypeResponse[] holder = new RoomTypeResponse[1];
+            ScopedValue.where(HotelContext.HOTEL_ID, HotelId.generate())
+                    .run(() -> holder[0] = service.createRoomType(cmd));
+
+            assertThat(holder[0].name()).isEqualTo("Suite");
+            assertThat(holder[0].capacity()).isEqualTo(3);
+            assertThat(holder[0].basePrice()).isEqualByComparingTo("1200000");
             verify(roomTypeRepo).save(any());
         }
     }

@@ -2,6 +2,7 @@ package id.co.hospitops.room.infrastructure.persistence;
 
 import id.co.hospitops.room.domain.model.*;
 import id.co.hospitops.room.infrastructure.persistence.entity.*;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.*;
 import org.junit.jupiter.api.*;
 import org.mapstruct.factory.Mappers;
@@ -15,12 +16,12 @@ import static org.assertj.core.api.Assertions.*;
 
 /**
  * Unit tests for RoomMapper (MapStruct @Mapper interface).
- *
+ * <p>
  * Covers three mapping pairs independently:
- *   - RoomType  <-> RoomTypeJpaEntity
- *   - Room      <-> RoomJpaEntity
- *   - RoomRateOverride <-> RoomRateOverrideJpaEntity
- *
+ * - RoomType  <-> RoomTypeJpaEntity
+ * - Room      <-> RoomJpaEntity
+ * - RoomRateOverride <-> RoomRateOverrideJpaEntity
+ * <p>
  * Each section exercises toJpa(), toDomain(), and a round-trip.
  */
 @DisplayName("RoomMapper")
@@ -41,7 +42,7 @@ class RoomMapperTest {
         private RoomType sampleRoomType() {
             return RoomType.reconstitute(
                     RoomTypeId.generate(), "Deluxe", 2,
-                    "Sea-view room", Money.of(750_000L), NOW, NOW);
+                    "Sea-view room", Money.of(750_000L), HotelId.generate(), NOW, NOW);
         }
 
         @Test
@@ -78,6 +79,7 @@ class RoomMapperTest {
                     .description("Presidential suite")
                     .basePrice(BigDecimal.valueOf(2_000_000))
                     .createdAt(NOW).updatedAt(NOW)
+                    .hotelId(java.util.UUID.randomUUID())
                     .build();
 
             RoomType rt = mapper.toDomain(entity);
@@ -117,7 +119,7 @@ class RoomMapperTest {
             return Room.reconstitute(
                     RoomId.generate(), "101", 1,
                     RoomStatus.AVAILABLE, RoomTypeId.generate(),
-                    null, NOW, NOW);
+                    null, HotelId.generate(), NOW, NOW);
         }
 
         @Test
@@ -162,14 +164,14 @@ class RoomMapperTest {
         void toJpaMapsNonNullNotes() {
             Room room = Room.reconstitute(RoomId.generate(), "202", 2,
                     RoomStatus.MAINTENANCE, RoomTypeId.generate(),
-                    "AC repair", NOW, NOW);
+                    "AC repair", HotelId.generate(), NOW, NOW);
             assertThat(mapper.toJpa(room).getNotes()).isEqualTo("AC repair");
         }
 
         @Test
         @DisplayName("toDomain() maps all fields from entity")
         void toDomainMapsAllFields() {
-            UUID id         = UUID.randomUUID();
+            UUID id = UUID.randomUUID();
             UUID roomTypeId = UUID.randomUUID();
 
             RoomJpaEntity entity = RoomJpaEntity.builder()
@@ -177,6 +179,7 @@ class RoomMapperTest {
                     .status(RoomStatus.DIRTY)
                     .roomTypeId(roomTypeId).notes("stained carpet")
                     .createdAt(NOW).updatedAt(NOW)
+                    .hotelId(java.util.UUID.randomUUID())
                     .build();
 
             Room room = mapper.toDomain(entity);
@@ -193,7 +196,7 @@ class RoomMapperTest {
         @DisplayName("round-trip preserves all fields including status")
         void roundTripPreservesFields() {
             Room original = Room.reconstitute(RoomId.generate(), "101", 1,
-                    RoomStatus.OCCUPIED, RoomTypeId.generate(), "VIP guest", NOW, NOW);
+                    RoomStatus.OCCUPIED, RoomTypeId.generate(), "VIP guest", HotelId.generate(), NOW, NOW);
 
             Room restored = mapper.toDomain(mapper.toJpa(original));
 
@@ -213,7 +216,7 @@ class RoomMapperTest {
     @DisplayName("RoomRateOverride mapping")
     class RoomRateOverrideMapping {
 
-        private static final LocalDate FROM  = LocalDate.of(2025, 12, 20);
+        private static final LocalDate FROM = LocalDate.of(2025, 12, 20);
         private static final LocalDate UNTIL = LocalDate.of(2026, 1, 3);
 
         private RoomRateOverride sampleOverride() {
@@ -239,7 +242,7 @@ class RoomMapperTest {
         @Test
         @DisplayName("toDomain() maps all fields from entity")
         void toDomainMapsAllFields() {
-            UUID id         = UUID.randomUUID();
+            UUID id = UUID.randomUUID();
             UUID roomTypeId = UUID.randomUUID();
 
             RoomRateOverrideJpaEntity entity = RoomRateOverrideJpaEntity.builder()

@@ -3,6 +3,7 @@ package id.co.hospitops.guest.infrastructure.persistence;
 import id.co.hospitops.guest.domain.model.Guest;
 import id.co.hospitops.guest.domain.port.out.GuestRepository;
 import id.co.hospitops.shared.GuestId;
+import id.co.hospitops.shared.HotelContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Repository;
@@ -27,39 +28,43 @@ public class GuestRepositoryImpl implements GuestRepository {
 
     @Override
     public Optional<Guest> findById(GuestId id) {
-        return jpa.findById(id.value()).map(mapper::toDomain);
+        return jpa.findByIdAndHotelId(id.value(), HotelContext.current().value())
+                .map(mapper::toDomain);
     }
 
     @Override
     public Optional<Guest> findByIdNumber(String n) {
-        return jpa.findByIdNumber(n).map(mapper::toDomain);
+        return jpa.findByIdNumberAndHotelId(n, HotelContext.current().value())
+                .map(mapper::toDomain);
     }
 
     @Override
     public boolean existsByIdNumber(String n) {
-        return jpa.existsByIdNumber(n);
+        return jpa.existsByIdNumberAndHotelId(n, HotelContext.current().value());
     }
 
     @Override
     public long count() {
-        return jpa.count();
+        return jpa.countByHotelId(HotelContext.current().value());
     }
 
     @Override
     public long countByQuery(String q) {
-        return jpa.countByQuery(q);
+        return jpa.countByHotelIdAndQuery(HotelContext.current().value(), q);
     }
 
     @Override
     public List<Guest> search(String q, Pageable pageable) {
+        var hotelId = HotelContext.current().value();
         if (q == null || q.isBlank()) {
-            return jpa.findAll(pageable).getContent().stream().map(mapper::toDomain).toList();
+            return jpa.findByHotelId(hotelId, pageable).stream().map(mapper::toDomain).toList();
         }
-        return jpa.search(q, pageable).stream().map(mapper::toDomain).toList();
+        return jpa.searchByHotelId(hotelId, q, pageable).stream().map(mapper::toDomain).toList();
     }
 
     @Override
     public List<Guest> quickSearch(String q, int limit) {
-        return jpa.search(q, PageRequest.of(0, limit)).stream().map(mapper::toDomain).toList();
+        return jpa.searchByHotelId(HotelContext.current().value(), q, PageRequest.of(0, limit))
+                .stream().map(mapper::toDomain).toList();
     }
 }

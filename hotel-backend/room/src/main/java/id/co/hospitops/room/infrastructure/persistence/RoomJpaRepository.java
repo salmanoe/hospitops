@@ -14,13 +14,18 @@ import java.util.UUID;
 
 public interface RoomJpaRepository extends JpaRepository<RoomJpaEntity, UUID> {
 
-    Optional<RoomJpaEntity> findByRoomNumber(String roomNumber);
+    // Hotel-scoped queries — use these in all hotel-context operations
+    Optional<RoomJpaEntity> findByIdAndHotelId(UUID id, UUID hotelId);
 
-    boolean existsByRoomNumber(String roomNumber);
+    boolean existsByRoomNumberAndHotelId(String roomNumber, UUID hotelId);
 
-    List<RoomJpaEntity> findByStatus(RoomStatus status, Pageable pageable);
+    List<RoomJpaEntity> findByHotelId(UUID hotelId, Pageable pageable);
 
-    long countByStatus(RoomStatus status);
+    List<RoomJpaEntity> findByHotelIdAndStatus(UUID hotelId, RoomStatus status, Pageable pageable);
+
+    long countByHotelId(UUID hotelId);
+
+    long countByHotelIdAndStatus(UUID hotelId, RoomStatus status);
 
     /**
      * Returns all AVAILABLE rooms with no overlapping active reservation.
@@ -35,16 +40,18 @@ public interface RoomJpaRepository extends JpaRepository<RoomJpaEntity, UUID> {
      * cross-schema subquery.
      */
     @Query(value = "SELECT r.* FROM room r" +
-                   " WHERE r.status = 'AVAILABLE'" +
-                   " AND r.id NOT IN (" +
-                   "   SELECT res.room_id FROM reservation res" +
-                   "   WHERE res.status IN ('CONFIRMED','CHECKED_IN')" +
-                   "     AND res.check_in_date  < :checkOut" +
-                   "     AND res.check_out_date > :checkIn" +
-                   " ) ORDER BY r.floor, r.room_number",
-           nativeQuery = true)
+            " WHERE r.hotel_id = :hotelId" +
+            "   AND r.status = 'AVAILABLE'" +
+            "   AND r.id NOT IN (" +
+            "   SELECT res.room_id FROM reservation res" +
+            "   WHERE res.status IN ('CONFIRMED','CHECKED_IN')" +
+            "     AND res.check_in_date  < :checkOut" +
+            "     AND res.check_out_date > :checkIn" +
+            " ) ORDER BY r.floor, r.room_number",
+            nativeQuery = true)
     List<RoomJpaEntity> findAvailable(
-            @Param("checkIn")  LocalDate checkIn,
+            @Param("hotelId") UUID hotelId,
+            @Param("checkIn") LocalDate checkIn,
             @Param("checkOut") LocalDate checkOut
     );
 
@@ -58,19 +65,21 @@ public interface RoomJpaRepository extends JpaRepository<RoomJpaEntity, UUID> {
      * Stage 3: replace subquery with an OccupancyPort call.
      */
     @Query(value = "SELECT CASE WHEN COUNT(r.id) > 0 THEN TRUE ELSE FALSE END" +
-                   " FROM room r" +
-                   " WHERE r.id = :roomId" +
-                   "   AND r.status = 'AVAILABLE'" +
-                   "   AND r.id NOT IN (" +
-                   "     SELECT res.room_id FROM reservation res" +
-                   "     WHERE res.status IN ('CONFIRMED','CHECKED_IN')" +
-                   "       AND res.check_in_date  < :checkOut" +
-                   "       AND res.check_out_date > :checkIn" +
-                   "   )",
-           nativeQuery = true)
+            " FROM room r" +
+            " WHERE r.id = :roomId" +
+            "   AND r.hotel_id = :hotelId" +
+            "   AND r.status = 'AVAILABLE'" +
+            "   AND r.id NOT IN (" +
+            "     SELECT res.room_id FROM reservation res" +
+            "     WHERE res.status IN ('CONFIRMED','CHECKED_IN')" +
+            "       AND res.check_in_date  < :checkOut" +
+            "       AND res.check_out_date > :checkIn" +
+            "   )",
+            nativeQuery = true)
     boolean existsAvailableRoom(
-            @Param("roomId")   UUID      roomId,
-            @Param("checkIn")  LocalDate checkIn,
+            @Param("roomId") UUID roomId,
+            @Param("hotelId") UUID hotelId,
+            @Param("checkIn") LocalDate checkIn,
             @Param("checkOut") LocalDate checkOut
     );
 }

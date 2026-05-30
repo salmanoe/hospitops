@@ -6,6 +6,7 @@ import id.co.hospitops.reservation.domain.model.*;
 import id.co.hospitops.reservation.domain.port.in.ReservationUseCase;
 import id.co.hospitops.reservation.domain.port.out.*;
 import id.co.hospitops.shared.*;
+import id.co.hospitops.shared.HotelContext;
 import id.co.hospitops.shared.event.*;
 import id.co.hospitops.shared.exception.*;
 import id.co.hospitops.shared.web.PageResult;
@@ -44,9 +45,9 @@ public class ReservationService implements ReservationUseCase {
         Money rate = roomAvailability.resolveRate(cmd.roomId(), cmd.checkIn());
         String number = numberGenerator.generate();
 
-        Reservation reservation = Reservation.create(number, cmd.guestId(), cmd.roomId(),
-                cmd.checkIn(), cmd.checkOut(), rate, cmd.adults(), cmd.children(),
-                cmd.specialRequests(), cmd.createdBy());
+        Reservation reservation = Reservation.create(HotelContext.current(), number,
+                cmd.guestId(), cmd.roomId(), cmd.checkIn(), cmd.checkOut(), rate,
+                cmd.adults(), cmd.children(), cmd.specialRequests(), cmd.createdBy());
 
         // R-03 FIX: The GIST exclusion constraint (V8 migration) is the authoritative
         // guard against concurrent double-bookings. If two requests race past the
@@ -163,7 +164,9 @@ public class ReservationService implements ReservationUseCase {
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation", id.value()));
     }
 
-    /** Builds an enriched response by resolving display names from guest and room modules. */
+    /**
+     * Builds an enriched response by resolving display names from guest and room modules.
+     */
     private ReservationResponse enrich(Reservation r) {
         String guestFullName = displayEnrichment.findGuestDisplay(r.getGuestId()).fullName();
         String roomNumber = displayEnrichment.findRoomDisplay(r.getRoomId()).roomNumber();

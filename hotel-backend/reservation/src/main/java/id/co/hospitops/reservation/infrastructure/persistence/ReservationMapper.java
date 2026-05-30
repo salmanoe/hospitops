@@ -9,7 +9,7 @@ import org.mapstruct.*;
         componentModel = "spring",
         unmappedTargetPolicy = ReportingPolicy.ERROR,
         imports = {ReservationId.class, GuestId.class, RoomId.class,
-                StaffId.class, Money.class}
+                StaffId.class, Money.class, HotelId.class}
 )
 public interface ReservationMapper {
 
@@ -19,6 +19,7 @@ public interface ReservationMapper {
     @Mapping(target = "createdBy", expression = "java(r.getCreatedBy() != null ? r.getCreatedBy().value() : null)")
     @Mapping(target = "status", source = "status")
     @Mapping(target = "ratePerNight", expression = "java(r.getRatePerNight().amount())")
+    @Mapping(target = "hotelId", expression = "java(r.getHotelId().value())")
     ReservationJpaEntity toJpa(Reservation r);
 
     default Reservation toDomain(ReservationJpaEntity e) {
@@ -35,6 +36,7 @@ public interface ReservationMapper {
                 e.getChildren(),
                 e.getSpecialRequests(),
                 e.getCreatedBy() != null ? StaffId.of(e.getCreatedBy()) : null,
+                HotelId.of(e.getHotelId()),
                 e.getCreatedAt(),
                 e.getUpdatedAt());
     }

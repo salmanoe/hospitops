@@ -22,6 +22,8 @@ public class HousekeepingTaskJpaEntity {
     @Id
     @Column(columnDefinition = "uuid")
     private UUID id;
+    @Column(name = "hotel_id", nullable = false, columnDefinition = "uuid")
+    private UUID hotelId;
     @Column(name = "room_id", nullable = false, columnDefinition = "uuid")
     private UUID roomId;
     @Column(name = "reservation_id", columnDefinition = "uuid")

@@ -38,6 +38,9 @@ public class RoomTypeJpaEntity {
     @Column(name = "base_price", nullable = false, precision = 15, scale = 2)
     private BigDecimal basePrice;
 
+    @Column(nullable = false, columnDefinition = "uuid")
+    private UUID hotelId;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

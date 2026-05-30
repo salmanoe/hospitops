@@ -6,6 +6,8 @@ import id.co.hospitops.housekeeping.domain.model.HousekeepingTask;
 import id.co.hospitops.housekeeping.domain.port.out.HousekeepingTaskRepository;
 import id.co.hospitops.housekeeping.domain.port.out.RoomStatusPort;
 import id.co.hospitops.housekeeping.domain.port.out.RoomStatusPort.RoomBoardEntry;
+import id.co.hospitops.shared.HotelContext;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.ReservationId;
 import id.co.hospitops.shared.RoomId;
 import id.co.hospitops.shared.StaffId;
@@ -27,28 +29,31 @@ import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for HousekeepingService — first test coverage for the housekeeping module.
- *
+ * <p>
  * Covers:
- *   - assignTask()         : not-found, assigns staff + saves
- *   - completeTask()       : not-found, already-completed guard, happy path
- *   - createManualTask()   : delegates domain factory, saves, returns response
- *   - createCheckoutTask() : delegates domain factory, saves
- *   - findPendingTasks()   : pagination delegation + countPending() total
- *   - getBoardByFloor()    : floor grouping via RoomStatusPort, ascending order
+ * - assignTask()         : not-found, assigns staff + saves
+ * - completeTask()       : not-found, already-completed guard, happy path
+ * - createManualTask()   : delegates domain factory, saves, returns response
+ * - createCheckoutTask() : delegates domain factory, saves
+ * - findPendingTasks()   : pagination delegation + countPending() total
+ * - getBoardByFloor()    : floor grouping via RoomStatusPort, ascending order
  */
 @DisplayName("HousekeepingService")
 @ExtendWith(MockitoExtension.class)
 class HousekeepingServiceTest {
 
-    @Mock HousekeepingTaskRepository taskRepo;
-    @Mock RoomStatusPort             roomStatusPort;
+    @Mock
+    HousekeepingTaskRepository taskRepo;
+    @Mock
+    RoomStatusPort roomStatusPort;
 
-    @InjectMocks HousekeepingService service;
+    @InjectMocks
+    HousekeepingService service;
 
     // ── helpers ────────────────────────────────────────────────────
 
     private static HousekeepingTask stubPendingTask() {
-        return HousekeepingTask.createManual(RoomId.generate(), "Routine cleaning");
+        return HousekeepingTask.createManual(HotelId.generate(), RoomId.generate(), "Routine cleaning");
     }
 
     private static HousekeepingTask stubCompletedTask() {
@@ -80,8 +85,8 @@ class HousekeepingServiceTest {
         @Test
         @DisplayName("assigns staff, saves, and returns response")
         void assignsStaffAndSaves() {
-            UUID             taskId  = UUID.randomUUID();
-            StaffId          staff   = StaffId.generate();
+            UUID taskId = UUID.randomUUID();
+            StaffId staff = StaffId.generate();
             HousekeepingTask pending = stubPendingTask();
             when(taskRepo.findById(taskId)).thenReturn(Optional.of(pending));
             when(taskRepo.save(pending)).thenReturn(pending);
@@ -96,7 +101,7 @@ class HousekeepingServiceTest {
         @Test
         @DisplayName("saves exactly once per assign call")
         void savesExactlyOnce() {
-            UUID             taskId  = UUID.randomUUID();
+            UUID taskId = UUID.randomUUID();
             HousekeepingTask pending = stubPendingTask();
             when(taskRepo.findById(taskId)).thenReturn(Optional.of(pending));
             when(taskRepo.save(pending)).thenReturn(pending);
@@ -130,7 +135,7 @@ class HousekeepingServiceTest {
         @Test
         @DisplayName("throws IllegalStateException when task is already completed")
         void throwsWhenAlreadyCompleted() {
-            UUID             taskId    = UUID.randomUUID();
+            UUID taskId = UUID.randomUUID();
             HousekeepingTask completed = stubCompletedTask();
             when(taskRepo.findById(taskId)).thenReturn(Optional.of(completed));
 
@@ -144,7 +149,7 @@ class HousekeepingServiceTest {
         @Test
         @DisplayName("marks task completed, saves, and returns response")
         void completesAndSaves() {
-            UUID             taskId  = UUID.randomUUID();
+            UUID taskId = UUID.randomUUID();
             HousekeepingTask pending = stubPendingTask();
             when(taskRepo.findById(taskId)).thenReturn(Optional.of(pending));
             when(taskRepo.save(pending)).thenReturn(pending);
@@ -160,7 +165,7 @@ class HousekeepingServiceTest {
         @Test
         @DisplayName("saves exactly once per complete call")
         void savesExactlyOnce() {
-            UUID             taskId  = UUID.randomUUID();
+            UUID taskId = UUID.randomUUID();
             HousekeepingTask pending = stubPendingTask();
             when(taskRepo.findById(taskId)).thenReturn(Optional.of(pending));
             when(taskRepo.save(pending)).thenReturn(pending);
@@ -183,24 +188,27 @@ class HousekeepingServiceTest {
         @Test
         @DisplayName("saves task and returns response")
         void savesAndReturnsResponse() {
-            RoomId           roomId = RoomId.generate();
-            HousekeepingTask task   = HousekeepingTask.createManual(roomId, "Deep clean required");
+            RoomId roomId = RoomId.generate();
+            HousekeepingTask task = HousekeepingTask.createManual(HotelId.generate(), roomId, "Deep clean required");
             when(taskRepo.save(any(HousekeepingTask.class))).thenReturn(task);
 
-            HousekeepingTaskResponse result = service.createManualTask(roomId, "Deep clean required");
+            HousekeepingTaskResponse[] holder = new HousekeepingTaskResponse[1];
+            ScopedValue.where(HotelContext.HOTEL_ID, HotelId.generate())
+                    .run(() -> holder[0] = service.createManualTask(roomId, "Deep clean required"));
 
-            assertThat(result).isNotNull();
+            assertThat(holder[0]).isNotNull();
             verify(taskRepo).save(any(HousekeepingTask.class));
         }
 
         @Test
         @DisplayName("task has no reservationId (manual trigger)")
         void taskHasNullReservationId() {
-            RoomId           roomId = RoomId.generate();
-            HousekeepingTask task   = HousekeepingTask.createManual(roomId, "Spot clean");
+            RoomId roomId = RoomId.generate();
+            HousekeepingTask task = HousekeepingTask.createManual(HotelId.generate(), roomId, "Spot clean");
             when(taskRepo.save(any(HousekeepingTask.class))).thenReturn(task);
 
-            service.createManualTask(roomId, "Spot clean");
+            ScopedValue.where(HotelContext.HOTEL_ID, HotelId.generate())
+                    .run(() -> service.createManualTask(roomId, "Spot clean"));
 
             ArgumentCaptor<HousekeepingTask> captor = ArgumentCaptor.forClass(HousekeepingTask.class);
             verify(taskRepo).save(captor.capture());
@@ -210,11 +218,12 @@ class HousekeepingServiceTest {
         @Test
         @DisplayName("task is not completed at creation time")
         void taskIsNotCompletedAtCreation() {
-            RoomId           roomId = RoomId.generate();
-            HousekeepingTask task   = HousekeepingTask.createManual(roomId, "Polish floors");
+            RoomId roomId = RoomId.generate();
+            HousekeepingTask task = HousekeepingTask.createManual(HotelId.generate(), roomId, "Polish floors");
             when(taskRepo.save(any(HousekeepingTask.class))).thenReturn(task);
 
-            service.createManualTask(roomId, "Polish floors");
+            ScopedValue.where(HotelContext.HOTEL_ID, HotelId.generate())
+                    .run(() -> service.createManualTask(roomId, "Polish floors"));
 
             ArgumentCaptor<HousekeepingTask> captor = ArgumentCaptor.forClass(HousekeepingTask.class);
             verify(taskRepo).save(captor.capture());
@@ -233,26 +242,29 @@ class HousekeepingServiceTest {
         @Test
         @DisplayName("saves task and returns domain object")
         void savesAndReturnsTask() {
-            RoomId          roomId        = RoomId.generate();
-            ReservationId   reservationId = ReservationId.generate();
-            HousekeepingTask task = HousekeepingTask.createForCheckout(roomId, reservationId);
+            RoomId roomId = RoomId.generate();
+            ReservationId reservationId = ReservationId.generate();
+            HousekeepingTask task = HousekeepingTask.createForCheckout(HotelId.generate(), roomId, reservationId);
             when(taskRepo.save(any(HousekeepingTask.class))).thenReturn(task);
 
-            HousekeepingTask result = service.createCheckoutTask(roomId, reservationId);
+            HousekeepingTask[] holder = new HousekeepingTask[1];
+            ScopedValue.where(HotelContext.HOTEL_ID, HotelId.generate())
+                    .run(() -> holder[0] = service.createCheckoutTask(roomId, reservationId));
 
-            assertThat(result).isNotNull();
+            assertThat(holder[0]).isNotNull();
             verify(taskRepo).save(any(HousekeepingTask.class));
         }
 
         @Test
         @DisplayName("task carries the reservationId as trigger context")
         void taskCarriesReservationId() {
-            RoomId          roomId        = RoomId.generate();
-            ReservationId   reservationId = ReservationId.generate();
-            HousekeepingTask task = HousekeepingTask.createForCheckout(roomId, reservationId);
+            RoomId roomId = RoomId.generate();
+            ReservationId reservationId = ReservationId.generate();
+            HousekeepingTask task = HousekeepingTask.createForCheckout(HotelId.generate(), roomId, reservationId);
             when(taskRepo.save(any(HousekeepingTask.class))).thenReturn(task);
 
-            service.createCheckoutTask(roomId, reservationId);
+            ScopedValue.where(HotelContext.HOTEL_ID, HotelId.generate())
+                    .run(() -> service.createCheckoutTask(roomId, reservationId));
 
             ArgumentCaptor<HousekeepingTask> captor = ArgumentCaptor.forClass(HousekeepingTask.class);
             verify(taskRepo).save(captor.capture());
@@ -262,12 +274,13 @@ class HousekeepingServiceTest {
         @Test
         @DisplayName("task is not completed at creation time")
         void taskIsNotCompletedAtCreation() {
-            RoomId          roomId        = RoomId.generate();
-            ReservationId   reservationId = ReservationId.generate();
-            HousekeepingTask task = HousekeepingTask.createForCheckout(roomId, reservationId);
+            RoomId roomId = RoomId.generate();
+            ReservationId reservationId = ReservationId.generate();
+            HousekeepingTask task = HousekeepingTask.createForCheckout(HotelId.generate(), roomId, reservationId);
             when(taskRepo.save(any(HousekeepingTask.class))).thenReturn(task);
 
-            service.createCheckoutTask(roomId, reservationId);
+            ScopedValue.where(HotelContext.HOTEL_ID, HotelId.generate())
+                    .run(() -> service.createCheckoutTask(roomId, reservationId));
 
             ArgumentCaptor<HousekeepingTask> captor = ArgumentCaptor.forClass(HousekeepingTask.class);
             verify(taskRepo).save(captor.capture());
@@ -339,7 +352,8 @@ class HousekeepingServiceTest {
             when(taskRepo.save(any(HousekeepingTask.class)))
                     .thenAnswer(inv -> inv.getArgument(0));
 
-            service.updateRoomStatus(roomId, "SERVICE_REQUESTED", "handuk baru");
+            ScopedValue.where(HotelContext.HOTEL_ID, HotelId.generate())
+                    .run(() -> service.updateRoomStatus(roomId, "SERVICE_REQUESTED", "handuk baru"));
 
             verify(roomStatusPort).updateRoomStatus(
                     argThat(r -> r.value().equals(roomId)), eq("SERVICE_REQUESTED"), eq("handuk baru"));
@@ -356,7 +370,8 @@ class HousekeepingServiceTest {
             when(taskRepo.save(any(HousekeepingTask.class)))
                     .thenAnswer(inv -> inv.getArgument(0));
 
-            service.updateRoomStatus(roomId, "SERVICE_REQUESTED", null);
+            ScopedValue.where(HotelContext.HOTEL_ID, HotelId.generate())
+                    .run(() -> service.updateRoomStatus(roomId, "SERVICE_REQUESTED", null));
 
             ArgumentCaptor<HousekeepingTask> captor = ArgumentCaptor.forClass(HousekeepingTask.class);
             verify(taskRepo).save(captor.capture());
@@ -406,8 +421,8 @@ class HousekeepingServiceTest {
             RoomId roomC = RoomId.generate();
             when(roomStatusPort.getAllRoomsGroupedByFloor()).thenReturn(List.of(
                     new RoomBoardEntry(roomA, "101", 1, "AVAILABLE", "Standard"),
-                    new RoomBoardEntry(roomB, "102", 1, "OCCUPIED",  "Deluxe"),
-                    new RoomBoardEntry(roomC, "201", 2, "DIRTY",     "Suite")
+                    new RoomBoardEntry(roomB, "102", 1, "OCCUPIED", "Deluxe"),
+                    new RoomBoardEntry(roomC, "201", 2, "DIRTY", "Suite")
             ));
 
             List<RoomStatusResponse> result = service.getBoardByFloor();
@@ -424,7 +439,7 @@ class HousekeepingServiceTest {
             when(roomStatusPort.getAllRoomsGroupedByFloor()).thenReturn(List.of(
                     new RoomBoardEntry(RoomId.generate(), "301", 3, "AVAILABLE", "Suite"),
                     new RoomBoardEntry(RoomId.generate(), "101", 1, "AVAILABLE", "Standard"),
-                    new RoomBoardEntry(RoomId.generate(), "201", 2, "DIRTY",     "Deluxe")
+                    new RoomBoardEntry(RoomId.generate(), "201", 2, "DIRTY", "Deluxe")
             ));
 
             List<RoomStatusResponse> result = service.getBoardByFloor();
@@ -438,8 +453,8 @@ class HousekeepingServiceTest {
         void singleFloorReturnsSingleGroup() {
             when(roomStatusPort.getAllRoomsGroupedByFloor()).thenReturn(List.of(
                     new RoomBoardEntry(RoomId.generate(), "101", 1, "AVAILABLE", "Standard"),
-                    new RoomBoardEntry(RoomId.generate(), "102", 1, "OCCUPIED",  "Standard"),
-                    new RoomBoardEntry(RoomId.generate(), "103", 1, "DIRTY",     "Standard")
+                    new RoomBoardEntry(RoomId.generate(), "102", 1, "OCCUPIED", "Standard"),
+                    new RoomBoardEntry(RoomId.generate(), "103", 1, "DIRTY", "Standard")
             ));
 
             List<RoomStatusResponse> result = service.getBoardByFloor();

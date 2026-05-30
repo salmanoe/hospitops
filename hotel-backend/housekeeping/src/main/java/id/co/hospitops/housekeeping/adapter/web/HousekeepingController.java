@@ -13,6 +13,7 @@ import id.co.hospitops.shared.RoomId;
 import id.co.hospitops.shared.StaffId;
 import id.co.hospitops.shared.web.ApiResponse;
 import id.co.hospitops.shared.web.PageResult;
+import id.co.hospitops.shared.web.RequiresHotelContext;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@RequiresHotelContext
 @RestController
 @RequestMapping("/api/v1/housekeeping")
 @RequiredArgsConstructor
@@ -46,7 +48,8 @@ public class HousekeepingController {
     // R-04 FIX: @Valid added — was missing, so @NotNull on CreateTaskRequest.roomId
     // was never evaluated and null roomIds reached HousekeepingService.createManualTask().
     @PostMapping("/tasks")
-    @SuppressWarnings("JvmTaintAnalysis") // @Valid enforces Bean Validation on all string inputs; response is JSON, not HTML
+    @SuppressWarnings("JvmTaintAnalysis")
+    // @Valid enforces Bean Validation on all string inputs; response is JSON, not HTML
     public ResponseEntity<ApiResponse<HousekeepingTaskResponse>> createTask(
             @Valid @RequestBody CreateTaskRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
