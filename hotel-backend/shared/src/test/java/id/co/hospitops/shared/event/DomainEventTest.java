@@ -81,7 +81,7 @@ class DomainEventTest {
             LocalDate checkOut = LocalDate.of(2026, 6, 5);
 
             ReservationCreatedEvent event = new ReservationCreatedEvent(
-                    reservationId, roomId, guestId, checkIn, checkOut);
+                    HotelId.generate(), reservationId, roomId, guestId, checkIn, checkOut);
 
             assertThat(event.getReservationId()).isEqualTo(reservationId);
             assertThat(event.getRoomId()).isEqualTo(roomId);
@@ -103,7 +103,7 @@ class DomainEventTest {
             GuestId guestId = GuestId.generate();
 
             ReservationCheckedInEvent event =
-                    new ReservationCheckedInEvent(reservationId, roomId, guestId);
+                    new ReservationCheckedInEvent(HotelId.generate(), reservationId, roomId, guestId);
 
             assertThat(event.getReservationId()).isEqualTo(reservationId);
             assertThat(event.getRoomId()).isEqualTo(roomId);
@@ -124,7 +124,7 @@ class DomainEventTest {
             long nights = 4L;
 
             ReservationCheckedOutEvent event =
-                    new ReservationCheckedOutEvent(reservationId, roomId, guestId, nights);
+                    new ReservationCheckedOutEvent(HotelId.generate(), reservationId, roomId, guestId, nights);
 
             assertThat(event.getReservationId()).isEqualTo(reservationId);
             assertThat(event.getRoomId()).isEqualTo(roomId);
@@ -144,7 +144,7 @@ class DomainEventTest {
             RoomId roomId = RoomId.generate();
 
             ReservationCancelledEvent event =
-                    new ReservationCancelledEvent(reservationId, roomId);
+                    new ReservationCancelledEvent(HotelId.generate(), reservationId, roomId);
 
             assertThat(event.getReservationId()).isEqualTo(reservationId);
             assertThat(event.getRoomId()).isEqualTo(roomId);
@@ -162,7 +162,7 @@ class DomainEventTest {
             RoomId roomId = RoomId.generate();
 
             HousekeepingTaskCreatedEvent event =
-                    new HousekeepingTaskCreatedEvent(taskId, roomId);
+                    new HousekeepingTaskCreatedEvent(HotelId.generate(), taskId, roomId);
 
             assertThat(event.getTaskId()).isEqualTo(taskId);
             assertThat(event.getRoomId()).isEqualTo(roomId);
@@ -181,7 +181,7 @@ class DomainEventTest {
             Money amount = Money.of(500_000L);
 
             PaymentReceivedEvent event =
-                    new PaymentReceivedEvent(invoiceId, reservationId, amount, true);
+                    new PaymentReceivedEvent(HotelId.generate(), invoiceId, reservationId, amount, true);
 
             assertThat(event.getInvoiceId()).isEqualTo(invoiceId);
             assertThat(event.getReservationId()).isEqualTo(reservationId);
@@ -193,7 +193,7 @@ class DomainEventTest {
         @DisplayName("fullyPaid=false when payment is partial")
         void partialPaymentStoresFalse() {
             PaymentReceivedEvent event = new PaymentReceivedEvent(
-                    InvoiceId.generate(), ReservationId.generate(),
+                    HotelId.generate(), InvoiceId.generate(), ReservationId.generate(),
                     Money.of(100_000L), false);
 
             assertThat(event.isFullyPaid()).isFalse();
@@ -287,7 +287,7 @@ class DomainEventTest {
 
     private ReservationCreatedEvent sampleReservationCreatedEvent() {
         return new ReservationCreatedEvent(
-                ReservationId.generate(), RoomId.generate(), GuestId.generate(),
+                HotelId.generate(), ReservationId.generate(), RoomId.generate(), GuestId.generate(),
                 LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 3));
     }
 }

@@ -16,6 +16,8 @@ import id.co.hospitops.room.domain.port.in.*;
 import id.co.hospitops.room.domain.port.out.*;
 import id.co.hospitops.shared.*;
 import id.co.hospitops.shared.HotelContext;
+import id.co.hospitops.shared.event.RoomCreatedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import id.co.hospitops.shared.exception.*;
 import id.co.hospitops.shared.web.PageResult;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,7 @@ public class RoomService implements ManageRoomUseCase, RoomAvailabilityUseCase {
     private final RoomRepository roomRepo;
     private final RoomTypeRepository roomTypeRepo;
     private final RoomRateOverrideRepository overrideRepo;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ── Room ────────────────────────────────────────────────────
     @Override
@@ -45,6 +48,7 @@ public class RoomService implements ManageRoomUseCase, RoomAvailabilityUseCase {
         Room room = Room.create(HotelContext.current(), cmd.roomNumber(), cmd.floor(),
                 cmd.roomTypeId(), cmd.notes());
         Room saved = roomRepo.save(room);
+        eventPublisher.publishEvent(new RoomCreatedEvent(saved.getHotelId(), saved.getId()));
         RoomType rt = findRoomType(saved.getRoomTypeId());
         return RoomResponse.from(saved, rt);
     }

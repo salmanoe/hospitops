@@ -9,6 +9,10 @@ import java.util.Optional;
 
 public interface HotelRepository {
     Hotel save(Hotel hotel);
+
     Optional<Hotel> findById(HotelId id);
+
     List<Hotel> findByGroupId(GroupId groupId);
+
+    List<Hotel> findAll();
 }

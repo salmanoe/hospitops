@@ -1,6 +1,7 @@
 package id.co.hospitops.housekeeping.infrastructure.event;
 
 import id.co.hospitops.housekeeping.application.HousekeepingService;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.ReservationId;
 import id.co.hospitops.shared.RoomId;
 import id.co.hospitops.shared.GuestId;
@@ -16,6 +17,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
@@ -25,7 +27,7 @@ import static org.mockito.Mockito.*;
  * <ul>
  *   <li>onCheckout() is annotated with {@code @TransactionalEventListener(AFTER_COMMIT)}
  *       so housekeeping task creation never rolls back the guest's checkout transaction.</li>
- *   <li>onCheckout() delegates the correct roomId and reservationId to
+ *   <li>onCheckout() delegates hotelId, roomId, and reservationId to
  *       {@link HousekeepingService#createCheckoutTask}.</li>
  *   <li>No other HousekeepingService methods are invoked.</li>
  * </ul>
@@ -34,8 +36,10 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class HousekeepingEventListenerTest {
 
-    @Mock HousekeepingService housekeepingService;
-    @InjectMocks HousekeepingEventListener listener;
+    @Mock
+    HousekeepingService housekeepingService;
+    @InjectMocks
+    HousekeepingEventListener listener;
 
     // ── annotation contract ───────────────────────────────────────
 
@@ -67,27 +71,29 @@ class HousekeepingEventListenerTest {
     class OnCheckout {
 
         @Test
-        @DisplayName("delegates correct roomId and reservationId to createCheckoutTask()")
+        @DisplayName("delegates hotelId, roomId, and reservationId to createCheckoutTask()")
         void delegatesWithCorrectArguments() {
-            RoomId        roomId        = RoomId.generate();
+            HotelId hotelId = HotelId.generate();
+            RoomId roomId = RoomId.generate();
             ReservationId reservationId = ReservationId.generate();
             ReservationCheckedOutEvent event =
-                    new ReservationCheckedOutEvent(reservationId, roomId, GuestId.generate(), 2L);
+                    new ReservationCheckedOutEvent(hotelId, reservationId, roomId, GuestId.generate(), 2L);
 
             listener.onCheckout(event);
 
-            verify(housekeepingService).createCheckoutTask(roomId, reservationId);
+            verify(housekeepingService).createCheckoutTask(hotelId, roomId, reservationId);
         }
 
         @Test
         @DisplayName("calls createCheckoutTask() exactly once per event")
         void callsServiceExactlyOnce() {
             ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(
-                    ReservationId.generate(), RoomId.generate(), GuestId.generate(), 1L);
+                    HotelId.generate(), ReservationId.generate(), RoomId.generate(),
+                    GuestId.generate(), 1L);
 
             listener.onCheckout(event);
 
-            verify(housekeepingService, times(1)).createCheckoutTask(any(), any());
+            verify(housekeepingService, times(1)).createCheckoutTask(any(), any(), any());
             verifyNoMoreInteractions(housekeepingService);
         }
 
@@ -95,26 +101,28 @@ class HousekeepingEventListenerTest {
         @DisplayName("does NOT call any other HousekeepingService method")
         void doesNotCallOtherMethods() {
             ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(
-                    ReservationId.generate(), RoomId.generate(), GuestId.generate(), 3L);
+                    HotelId.generate(), ReservationId.generate(), RoomId.generate(),
+                    GuestId.generate(), 3L);
 
             listener.onCheckout(event);
 
-            verify(housekeepingService).createCheckoutTask(any(), any());
+            verify(housekeepingService).createCheckoutTask(any(), any(), any());
             verifyNoMoreInteractions(housekeepingService);
         }
 
         @Test
-        @DisplayName("roomId from event is passed — not guestId or reservationId")
-        void passesRoomIdNotOtherIds() {
-            RoomId        expectedRoomId        = RoomId.generate();
+        @DisplayName("passes all three IDs correctly — no accidental transposition")
+        void passesAllThreeIdsCorrectly() {
+            HotelId expectedHotelId = HotelId.generate();
+            RoomId expectedRoomId = RoomId.generate();
             ReservationId expectedReservationId = ReservationId.generate();
-            // Different IDs to confirm no accidental transposition
             ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(
-                    expectedReservationId, expectedRoomId, GuestId.generate(), 5L);
+                    expectedHotelId, expectedReservationId, expectedRoomId, GuestId.generate(), 5L);
 
             listener.onCheckout(event);
 
-            verify(housekeepingService).createCheckoutTask(expectedRoomId, expectedReservationId);
+            verify(housekeepingService).createCheckoutTask(
+                    expectedHotelId, expectedRoomId, expectedReservationId);
         }
     }
 }

@@ -17,6 +17,7 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.*;
 
 import java.util.List;
@@ -46,6 +47,9 @@ class HousekeepingServiceTest {
     HousekeepingTaskRepository taskRepo;
     @Mock
     RoomStatusPort roomStatusPort;
+
+    @Mock
+    ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     HousekeepingService service;
@@ -249,7 +253,7 @@ class HousekeepingServiceTest {
 
             HousekeepingTask[] holder = new HousekeepingTask[1];
             ScopedValue.where(HotelContext.HOTEL_ID, HotelId.generate())
-                    .run(() -> holder[0] = service.createCheckoutTask(roomId, reservationId));
+                    .run(() -> holder[0] = service.createCheckoutTask(HotelId.generate(), roomId, reservationId));
 
             assertThat(holder[0]).isNotNull();
             verify(taskRepo).save(any(HousekeepingTask.class));
@@ -264,7 +268,7 @@ class HousekeepingServiceTest {
             when(taskRepo.save(any(HousekeepingTask.class))).thenReturn(task);
 
             ScopedValue.where(HotelContext.HOTEL_ID, HotelId.generate())
-                    .run(() -> service.createCheckoutTask(roomId, reservationId));
+                    .run(() -> service.createCheckoutTask(HotelId.generate(), roomId, reservationId));
 
             ArgumentCaptor<HousekeepingTask> captor = ArgumentCaptor.forClass(HousekeepingTask.class);
             verify(taskRepo).save(captor.capture());
@@ -280,7 +284,7 @@ class HousekeepingServiceTest {
             when(taskRepo.save(any(HousekeepingTask.class))).thenReturn(task);
 
             ScopedValue.where(HotelContext.HOTEL_ID, HotelId.generate())
-                    .run(() -> service.createCheckoutTask(roomId, reservationId));
+                    .run(() -> service.createCheckoutTask(HotelId.generate(), roomId, reservationId));
 
             ArgumentCaptor<HousekeepingTask> captor = ArgumentCaptor.forClass(HousekeepingTask.class);
             verify(taskRepo).save(captor.capture());

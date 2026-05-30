@@ -51,6 +51,19 @@ class HotelRepositoryImpl implements HotelRepository {
                 .toList();
     }
 
+    @Override
+    public List<Hotel> findAll() {
+        return hotelJpa.findAll().stream()
+                .map(hotelEntity -> {
+                    HotelId hotelId = HotelId.of(hotelEntity.getId());
+                    SetupChecklistJpaEntity checklist =
+                            checklistJpa.findById(hotelEntity.getId())
+                                    .orElseGet(() -> emptyChecklist(hotelId));
+                    return mapper.toDomain(hotelEntity, checklist);
+                })
+                .toList();
+    }
+
     private SetupChecklistJpaEntity emptyChecklist(HotelId hotelId) {
         return SetupChecklistJpaEntity.builder()
                 .hotelId(hotelId.value())

@@ -9,6 +9,8 @@ import id.co.hospitops.hotel.domain.port.out.HotelRepository;
 import id.co.hospitops.shared.GroupId;
 import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.event.HotelActivatedEvent;
+import id.co.hospitops.shared.event.HotelCreatedEvent;
+import id.co.hospitops.shared.event.HotelSuspendedEvent;
 import id.co.hospitops.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -28,7 +30,9 @@ public class HotelService implements ManageHotelUseCase {
     @Override
     public HotelResponse createHotel(CreateHotelCommand cmd) {
         Hotel hotel = Hotel.create(cmd.groupId(), cmd.name());
-        return HotelResponse.from(hotelRepo.save(hotel));
+        Hotel saved = hotelRepo.save(hotel);
+        eventPublisher.publishEvent(new HotelCreatedEvent(saved.getId(), saved.getGroupId()));
+        return HotelResponse.from(saved);
     }
 
     @Override
@@ -60,8 +64,7 @@ public class HotelService implements ManageHotelUseCase {
         Hotel hotel = requireHotel(id);
         hotel.suspend();
         Hotel saved = hotelRepo.save(hotel);
-        eventPublisher.publishEvent(
-                new id.co.hospitops.shared.event.HotelSuspendedEvent(saved.getId()));
+        eventPublisher.publishEvent(new HotelSuspendedEvent(saved.getId()));
         return HotelResponse.from(saved);
     }
 

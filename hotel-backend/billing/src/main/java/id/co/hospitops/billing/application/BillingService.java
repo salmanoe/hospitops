@@ -113,7 +113,7 @@ public class BillingService implements BillingUseCase {
 
         boolean fullyPaid = saved.getPaymentStatus() == PaymentStatus.PAID;
         eventPublisher.publishEvent(new PaymentReceivedEvent(
-                saved.getId(), saved.getReservationId(),
+                saved.getHotelId(), saved.getId(), saved.getReservationId(),
                 Money.of(cmd.amount()), fullyPaid));
 
         log.info("Payment of {} recorded for invoice {}", cmd.amount(),
