@@ -56,40 +56,62 @@ public class HotelController {
                 ApiResponse.ok(hotelUseCase.findByGroupId(admin.groupId())));
     }
 
-    /** Get a single hotel by ID. */
+    /**
+     * Get a single hotel by ID, scoped to the authenticated GROUP_ADMIN's group.
+     *
+     * <p>The groupId is derived from the JWT claim — the service verifies the hotel
+     * belongs to that group before returning data, preventing cross-group info disclosure.
+     */
     @GetMapping("/{hotelId}")
     public ResponseEntity<ApiResponse<HotelResponse>> get(
+            @AuthenticationPrincipal GroupAdminPrincipal admin,
             @PathVariable UUID hotelId) {
         return ResponseEntity.ok(
-                ApiResponse.ok(hotelUseCase.findById(HotelId.of(hotelId))));
+                ApiResponse.ok(hotelUseCase.findById(HotelId.of(hotelId), admin.groupId())));
     }
 
     /**
      * Mark a setup wizard step as complete.
      * If all five steps are now complete, the hotel automatically transitions to ACTIVE.
+     *
+     * <p>The groupId is taken from the JWT claim — prevents a GROUP_ADMIN from completing
+     * steps on a hotel belonging to another group.
      */
     @PostMapping("/{hotelId}/setup/{step}")
     public ResponseEntity<ApiResponse<HotelResponse>> completeSetupStep(
+            @AuthenticationPrincipal GroupAdminPrincipal admin,
             @PathVariable UUID hotelId,
             @PathVariable SetupStep step) {
-        var cmd = new CompleteSetupStepCommand(HotelId.of(hotelId), step);
+        var cmd = new CompleteSetupStepCommand(admin.groupId(), HotelId.of(hotelId), step);
         return ResponseEntity.ok(
                 ApiResponse.ok(hotelUseCase.completeSetupStep(cmd)));
     }
 
-    /** Suspend an active hotel. */
+    /**
+     * Suspend an active hotel.
+     *
+     * <p>The groupId is taken from the JWT claim — prevents a GROUP_ADMIN from suspending
+     * a hotel that belongs to another group.
+     */
     @PostMapping("/{hotelId}/suspend")
     public ResponseEntity<ApiResponse<HotelResponse>> suspend(
+            @AuthenticationPrincipal GroupAdminPrincipal admin,
             @PathVariable UUID hotelId) {
         return ResponseEntity.ok(
-                ApiResponse.ok(hotelUseCase.suspend(HotelId.of(hotelId))));
+                ApiResponse.ok(hotelUseCase.suspend(HotelId.of(hotelId), admin.groupId())));
     }
 
-    /** Reactivate a suspended hotel. */
+    /**
+     * Reactivate a suspended hotel.
+     *
+     * <p>The groupId is taken from the JWT claim — prevents a GROUP_ADMIN from reactivating
+     * a hotel that belongs to another group.
+     */
     @PostMapping("/{hotelId}/reactivate")
     public ResponseEntity<ApiResponse<HotelResponse>> reactivate(
+            @AuthenticationPrincipal GroupAdminPrincipal admin,
             @PathVariable UUID hotelId) {
         return ResponseEntity.ok(
-                ApiResponse.ok(hotelUseCase.reactivate(HotelId.of(hotelId))));
+                ApiResponse.ok(hotelUseCase.reactivate(HotelId.of(hotelId), admin.groupId())));
     }
 }

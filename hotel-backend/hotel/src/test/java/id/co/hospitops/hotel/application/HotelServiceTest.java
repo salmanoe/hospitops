@@ -61,11 +61,12 @@ class HotelServiceTest {
         @Test
         @DisplayName("does not publish event when hotel stays in SETUP")
         void noEventWhenNotActivated() {
-            Hotel hotel = Hotel.create(GroupId.generate(), "Grand Palace");
+            GroupId groupId = GroupId.generate();
+            Hotel hotel = Hotel.create(groupId, "Grand Palace");
             when(hotelRepo.findById(hotel.getId())).thenReturn(Optional.of(hotel));
             when(hotelRepo.save(any())).thenReturn(hotel);
 
-            service.completeSetupStep(new CompleteSetupStepCommand(hotel.getId(), SetupStep.PROFILE));
+            service.completeSetupStep(new CompleteSetupStepCommand(groupId, hotel.getId(), SetupStep.PROFILE));
 
             verify(eventPublisher, never()).publishEvent(any(HotelActivatedEvent.class));
         }
@@ -73,13 +74,14 @@ class HotelServiceTest {
         @Test
         @DisplayName("publishes HotelActivatedEvent when hotel transitions to ACTIVE")
         void publishesEventOnActivation() {
-            Hotel hotel = partiallySetupHotel(
+            GroupId groupId = GroupId.generate();
+            Hotel hotel = partiallySetupHotel(groupId,
                     SetupStep.PROFILE, SetupStep.POLICY, SetupStep.ROOM_TYPE, SetupStep.ROOM);
             when(hotelRepo.findById(hotel.getId())).thenReturn(Optional.of(hotel));
             when(hotelRepo.save(any())).thenReturn(hotel);
 
             service.completeSetupStep(
-                    new CompleteSetupStepCommand(hotel.getId(), SetupStep.STAFF_ACCOUNT));
+                    new CompleteSetupStepCommand(groupId, hotel.getId(), SetupStep.STAFF_ACCOUNT));
 
             verify(eventPublisher).publishEvent(any(HotelActivatedEvent.class));
         }
@@ -91,8 +93,21 @@ class HotelServiceTest {
             when(hotelRepo.findById(unknown)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() ->
-                    service.completeSetupStep(new CompleteSetupStepCommand(unknown, SetupStep.PROFILE)))
+                    service.completeSetupStep(new CompleteSetupStepCommand(GroupId.generate(), unknown, SetupStep.PROFILE)))
                     .isInstanceOf(ResourceNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("throws BusinessRuleViolationException when hotel belongs to a different group")
+        void throwsForWrongGroup() {
+            Hotel hotel = Hotel.create(GroupId.generate(), "Grand Palace");
+            when(hotelRepo.findById(hotel.getId())).thenReturn(Optional.of(hotel));
+
+            GroupId otherGroup = GroupId.generate();
+            assertThatThrownBy(() ->
+                    service.completeSetupStep(new CompleteSetupStepCommand(otherGroup, hotel.getId(), SetupStep.PROFILE)))
+                    .isInstanceOf(BusinessRuleViolationException.class)
+                    .hasMessageContaining("does not belong to your group");
         }
     }
 
@@ -103,11 +118,12 @@ class HotelServiceTest {
         @Test
         @DisplayName("publishes HotelSuspendedEvent")
         void publishesSuspendedEvent() {
-            Hotel hotel = activeHotel();
+            GroupId groupId = GroupId.generate();
+            Hotel hotel = activeHotel(groupId);
             when(hotelRepo.findById(hotel.getId())).thenReturn(Optional.of(hotel));
             when(hotelRepo.save(any())).thenReturn(hotel);
 
-            service.suspend(hotel.getId());
+            service.suspend(hotel.getId(), groupId);
 
             verify(eventPublisher).publishEvent(any(HotelSuspendedEvent.class));
         }
@@ -115,11 +131,23 @@ class HotelServiceTest {
         @Test
         @DisplayName("throws BusinessRuleViolationException when hotel is not ACTIVE")
         void throwsWhenNotActive() {
-            Hotel hotel = Hotel.create(GroupId.generate(), "Grand Palace");
+            GroupId groupId = GroupId.generate();
+            Hotel hotel = Hotel.create(groupId, "Grand Palace");
             when(hotelRepo.findById(hotel.getId())).thenReturn(Optional.of(hotel));
 
-            assertThatThrownBy(() -> service.suspend(hotel.getId()))
+            assertThatThrownBy(() -> service.suspend(hotel.getId(), groupId))
                     .isInstanceOf(BusinessRuleViolationException.class);
+        }
+
+        @Test
+        @DisplayName("throws BusinessRuleViolationException when hotel belongs to a different group")
+        void throwsForWrongGroup() {
+            Hotel hotel = activeHotel(GroupId.generate());
+            when(hotelRepo.findById(hotel.getId())).thenReturn(Optional.of(hotel));
+
+            assertThatThrownBy(() -> service.suspend(hotel.getId(), GroupId.generate()))
+                    .isInstanceOf(BusinessRuleViolationException.class)
+                    .hasMessageContaining("does not belong to your group");
         }
     }
 
@@ -130,12 +158,13 @@ class HotelServiceTest {
         @Test
         @DisplayName("transitions SUSPENDED → ACTIVE and publishes HotelReactivatedEvent")
         void publishesReactivatedEvent() {
-            Hotel hotel = activeHotel();
+            GroupId groupId = GroupId.generate();
+            Hotel hotel = activeHotel(groupId);
             hotel.suspend();
             when(hotelRepo.findById(hotel.getId())).thenReturn(Optional.of(hotel));
             when(hotelRepo.save(any())).thenReturn(hotel);
 
-            HotelResponse response = service.reactivate(hotel.getId());
+            HotelResponse response = service.reactivate(hotel.getId(), groupId);
 
             assertThat(response.status()).isEqualTo(HotelStatus.ACTIVE);
             verify(eventPublisher).publishEvent(any(HotelReactivatedEvent.class));
@@ -146,11 +175,24 @@ class HotelServiceTest {
         @Test
         @DisplayName("throws BusinessRuleViolationException when hotel is not SUSPENDED")
         void throwsWhenNotSuspended() {
-            Hotel hotel = activeHotel();
+            GroupId groupId = GroupId.generate();
+            Hotel hotel = activeHotel(groupId);
             when(hotelRepo.findById(hotel.getId())).thenReturn(Optional.of(hotel));
 
-            assertThatThrownBy(() -> service.reactivate(hotel.getId()))
+            assertThatThrownBy(() -> service.reactivate(hotel.getId(), groupId))
                     .isInstanceOf(BusinessRuleViolationException.class);
+        }
+
+        @Test
+        @DisplayName("throws BusinessRuleViolationException when hotel belongs to a different group")
+        void throwsForWrongGroup() {
+            Hotel hotel = activeHotel(GroupId.generate());
+            hotel.suspend();
+            when(hotelRepo.findById(hotel.getId())).thenReturn(Optional.of(hotel));
+
+            assertThatThrownBy(() -> service.reactivate(hotel.getId(), GroupId.generate()))
+                    .isInstanceOf(BusinessRuleViolationException.class)
+                    .hasMessageContaining("does not belong to your group");
         }
     }
 
@@ -174,13 +216,13 @@ class HotelServiceTest {
 
     // ── helpers ───────────────────────────────────────────────────
 
-    private Hotel partiallySetupHotel(SetupStep... steps) {
-        Hotel h = Hotel.create(GroupId.generate(), "Grand Palace");
+    private Hotel partiallySetupHotel(GroupId groupId, SetupStep... steps) {
+        Hotel h = Hotel.create(groupId, "Grand Palace");
         for (SetupStep step : steps) h.completeSetupStep(step);
         return h;
     }
 
-    private Hotel activeHotel() {
-        return partiallySetupHotel(SetupStep.values());
+    private Hotel activeHotel(GroupId groupId) {
+        return partiallySetupHotel(groupId, SetupStep.values());
     }
 }

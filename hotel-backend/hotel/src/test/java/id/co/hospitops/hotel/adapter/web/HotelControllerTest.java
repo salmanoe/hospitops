@@ -159,7 +159,7 @@ class HotelControllerTest {
         @Test
         @DisplayName("returns 200 with hotel data")
         void success() throws Exception {
-            given(hotelUseCase.findById(HotelId.of(HOTEL_UUID)))
+            given(hotelUseCase.findById(HotelId.of(HOTEL_UUID), GroupId.of(GROUP_UUID)))
                     .willReturn(setupResponse());
 
             mockMvc.perform(get("/api/v1/group/hotels/{id}", HOTEL_UUID))
@@ -171,11 +171,22 @@ class HotelControllerTest {
         @Test
         @DisplayName("returns 404 when hotel does not exist")
         void notFound() throws Exception {
-            given(hotelUseCase.findById(any()))
+            given(hotelUseCase.findById(any(), any()))
                     .willThrow(new ResourceNotFoundException("Hotel", HOTEL_UUID));
 
             mockMvc.perform(get("/api/v1/group/hotels/{id}", HOTEL_UUID))
                     .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("returns 422 when hotel belongs to a different group (IDOR attempt)")
+        void wrongGroup() throws Exception {
+            given(hotelUseCase.findById(any(), any()))
+                    .willThrow(new BusinessRuleViolationException("Hotel does not belong to your group"));
+
+            mockMvc.perform(get("/api/v1/group/hotels/{id}", HOTEL_UUID))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.message").value("Hotel does not belong to your group"));
         }
     }
 
@@ -208,8 +219,9 @@ class HotelControllerTest {
         @Test
         @DisplayName("returns 200 when step is valid and hotel stays in SETUP")
         void stepCompleted() throws Exception {
-            given(hotelUseCase.completeSetupStep(
-                    argThat(cmd -> SetupStep.PROFILE.equals(cmd.step()))))
+            given(hotelUseCase.completeSetupStep(argThat(cmd ->
+                    SetupStep.PROFILE.equals(cmd.step())
+                    && GROUP_UUID.equals(cmd.callerGroupId().value()))))
                     .willReturn(setupResponse());
 
             mockMvc.perform(post("/api/v1/group/hotels/{id}/setup/{step}", HOTEL_UUID, "PROFILE"))
@@ -220,8 +232,9 @@ class HotelControllerTest {
         @Test
         @DisplayName("returns 200 with ACTIVE status after the final step triggers activation")
         void autoActivation() throws Exception {
-            given(hotelUseCase.completeSetupStep(
-                    argThat(cmd -> SetupStep.STAFF_ACCOUNT.equals(cmd.step()))))
+            given(hotelUseCase.completeSetupStep(argThat(cmd ->
+                    SetupStep.STAFF_ACCOUNT.equals(cmd.step())
+                    && GROUP_UUID.equals(cmd.callerGroupId().value()))))
                     .willReturn(activeResponse());
 
             mockMvc.perform(post("/api/v1/group/hotels/{id}/setup/{step}", HOTEL_UUID, "STAFF_ACCOUNT"))
@@ -253,6 +266,17 @@ class HotelControllerTest {
                     .andExpect(jsonPath("$.message").value(
                             "Setup steps can only be completed while the hotel is in SETUP status"));
         }
+
+        @Test
+        @DisplayName("returns 422 when hotel belongs to a different group (IDOR attempt)")
+        void wrongGroup() throws Exception {
+            given(hotelUseCase.completeSetupStep(any()))
+                    .willThrow(new BusinessRuleViolationException("Hotel does not belong to your group"));
+
+            mockMvc.perform(post("/api/v1/group/hotels/{id}/setup/{step}", HOTEL_UUID, "PROFILE"))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.message").value("Hotel does not belong to your group"));
+        }
     }
 
     // ── POST /api/v1/group/hotels/{hotelId}/suspend ───────────────────────
@@ -264,7 +288,8 @@ class HotelControllerTest {
         @Test
         @DisplayName("returns 200 with SUSPENDED hotel")
         void success() throws Exception {
-            given(hotelUseCase.suspend(HotelId.of(HOTEL_UUID))).willReturn(suspendedResponse());
+            given(hotelUseCase.suspend(HotelId.of(HOTEL_UUID), GroupId.of(GROUP_UUID)))
+                    .willReturn(suspendedResponse());
 
             mockMvc.perform(post("/api/v1/group/hotels/{id}/suspend", HOTEL_UUID))
                     .andExpect(status().isOk())
@@ -274,11 +299,22 @@ class HotelControllerTest {
         @Test
         @DisplayName("returns 422 when hotel is not ACTIVE")
         void notActive() throws Exception {
-            given(hotelUseCase.suspend(any()))
+            given(hotelUseCase.suspend(any(), any()))
                     .willThrow(new BusinessRuleViolationException("Only an ACTIVE hotel can be suspended"));
 
             mockMvc.perform(post("/api/v1/group/hotels/{id}/suspend", HOTEL_UUID))
                     .andExpect(status().isUnprocessableEntity());
+        }
+
+        @Test
+        @DisplayName("returns 422 when hotel belongs to a different group (IDOR attempt)")
+        void wrongGroup() throws Exception {
+            given(hotelUseCase.suspend(any(), any()))
+                    .willThrow(new BusinessRuleViolationException("Hotel does not belong to your group"));
+
+            mockMvc.perform(post("/api/v1/group/hotels/{id}/suspend", HOTEL_UUID))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.message").value("Hotel does not belong to your group"));
         }
     }
 
@@ -291,7 +327,8 @@ class HotelControllerTest {
         @Test
         @DisplayName("returns 200 with ACTIVE hotel")
         void success() throws Exception {
-            given(hotelUseCase.reactivate(HotelId.of(HOTEL_UUID))).willReturn(activeResponse());
+            given(hotelUseCase.reactivate(HotelId.of(HOTEL_UUID), GroupId.of(GROUP_UUID)))
+                    .willReturn(activeResponse());
 
             mockMvc.perform(post("/api/v1/group/hotels/{id}/reactivate", HOTEL_UUID))
                     .andExpect(status().isOk())
@@ -301,11 +338,22 @@ class HotelControllerTest {
         @Test
         @DisplayName("returns 422 when hotel is not SUSPENDED")
         void notSuspended() throws Exception {
-            given(hotelUseCase.reactivate(any()))
+            given(hotelUseCase.reactivate(any(), any()))
                     .willThrow(new BusinessRuleViolationException("Only a SUSPENDED hotel can be reactivated"));
 
             mockMvc.perform(post("/api/v1/group/hotels/{id}/reactivate", HOTEL_UUID))
                     .andExpect(status().isUnprocessableEntity());
+        }
+
+        @Test
+        @DisplayName("returns 422 when hotel belongs to a different group (IDOR attempt)")
+        void wrongGroup() throws Exception {
+            given(hotelUseCase.reactivate(any(), any()))
+                    .willThrow(new BusinessRuleViolationException("Hotel does not belong to your group"));
+
+            mockMvc.perform(post("/api/v1/group/hotels/{id}/reactivate", HOTEL_UUID))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.message").value("Hotel does not belong to your group"));
         }
     }
 }

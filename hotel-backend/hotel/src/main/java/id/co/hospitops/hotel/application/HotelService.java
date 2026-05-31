@@ -12,6 +12,7 @@ import id.co.hospitops.shared.event.HotelActivatedEvent;
 import id.co.hospitops.shared.event.HotelCreatedEvent;
 import id.co.hospitops.shared.event.HotelReactivatedEvent;
 import id.co.hospitops.shared.event.HotelSuspendedEvent;
+import id.co.hospitops.shared.exception.BusinessRuleViolationException;
 import id.co.hospitops.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -38,8 +39,8 @@ public class HotelService implements ManageHotelUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public HotelResponse findById(HotelId id) {
-        return HotelResponse.from(requireHotel(id));
+    public HotelResponse findById(HotelId id, GroupId callerGroupId) {
+        return HotelResponse.from(requireHotel(id, callerGroupId));
     }
 
     @Override
@@ -51,7 +52,7 @@ public class HotelService implements ManageHotelUseCase {
 
     @Override
     public HotelResponse completeSetupStep(CompleteSetupStepCommand cmd) {
-        Hotel hotel = requireHotel(cmd.hotelId());
+        Hotel hotel = requireHotel(cmd.hotelId(), cmd.callerGroupId());
         boolean justActivated = hotel.completeSetupStep(cmd.step());
         Hotel saved = hotelRepo.save(hotel);
         if (justActivated) {
@@ -61,8 +62,8 @@ public class HotelService implements ManageHotelUseCase {
     }
 
     @Override
-    public HotelResponse suspend(HotelId id) {
-        Hotel hotel = requireHotel(id);
+    public HotelResponse suspend(HotelId id, GroupId callerGroupId) {
+        Hotel hotel = requireHotel(id, callerGroupId);
         hotel.suspend();
         Hotel saved = hotelRepo.save(hotel);
         eventPublisher.publishEvent(new HotelSuspendedEvent(saved.getId()));
@@ -70,16 +71,28 @@ public class HotelService implements ManageHotelUseCase {
     }
 
     @Override
-    public HotelResponse reactivate(HotelId id) {
-        Hotel hotel = requireHotel(id);
+    public HotelResponse reactivate(HotelId id, GroupId callerGroupId) {
+        Hotel hotel = requireHotel(id, callerGroupId);
         hotel.reactivate();
         Hotel saved = hotelRepo.save(hotel);
         eventPublisher.publishEvent(new HotelReactivatedEvent(saved.getId()));
         return HotelResponse.from(saved);
     }
 
-    private Hotel requireHotel(HotelId id) {
-        return hotelRepo.findById(id)
+    /**
+     * Loads the hotel aggregate and verifies group ownership.
+     *
+     * @throws ResourceNotFoundException if no hotel exists with the given ID
+     * @throws BusinessRuleViolationException if the hotel belongs to a different group —
+     *         deliberately returns a generic message to avoid group enumeration
+     */
+    private Hotel requireHotel(HotelId id, GroupId callerGroupId) {
+        Hotel hotel = hotelRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Hotel", id.value()));
+        if (!hotel.getGroupId().equals(callerGroupId)) {
+            throw new BusinessRuleViolationException(
+                    "Hotel does not belong to your group");
+        }
+        return hotel;
     }
 }
