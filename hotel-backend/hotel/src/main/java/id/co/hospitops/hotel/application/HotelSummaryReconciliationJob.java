@@ -54,10 +54,12 @@ public class HotelSummaryReconciliationJob {
 
     /**
      * Recomputes and persists the summary for a single hotel.
-     * Exposed package-private for use in integration tests.
+     *
+     * <p>Public to allow direct invocation from integration tests in {@code bootstrap/},
+     * which cannot share the package {@code id.co.hospitops.hotel.application}.
      */
     @Transactional
-    void reconcileHotel(HotelId hotelId) {
+    public void reconcileHotel(HotelId hotelId) {
         String id = hotelId.value().toString();
         LocalDate today = LocalDate.now();
 

@@ -7,6 +7,7 @@ import id.co.hospitops.group.domain.port.in.GroupAuthUseCase;
 import id.co.hospitops.group.domain.port.out.GroupAdminRepository;
 import id.co.hospitops.group.domain.port.out.GroupTokenService;
 import id.co.hospitops.group.domain.port.out.HotelLookupPort;
+import id.co.hospitops.group.domain.port.out.HotelLookupPort.HotelAccessResult;
 import id.co.hospitops.shared.GroupAdminPrincipal;
 import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.exception.BusinessRuleViolationException;
@@ -56,16 +57,13 @@ public class GroupAuthService implements GroupAuthUseCase {
     @Override
     public GroupLoginResponse enterHotel(GroupAdminPrincipal admin, HotelId targetHotel,
                                          String groupToken) {
-        // Rule 1: hotel must belong to this GROUP_ADMIN's group
-        if (!hotelLookupPort.belongsToGroup(targetHotel, admin.groupId())) {
-            throw new BusinessRuleViolationException(
-                    "Hotel does not belong to your group");
+        // Combined single-query check: group membership + active status.
+        HotelAccessResult access = hotelLookupPort.verifyAccess(targetHotel, admin.groupId());
+        if (access == HotelAccessResult.NOT_FOUND_OR_WRONG_GROUP) {
+            throw new BusinessRuleViolationException("Hotel does not belong to your group");
         }
-
-        // Rule 2: hotel must be ACTIVE — SUSPENDED hotels cannot be entered via /enter
-        if (!hotelLookupPort.isActive(targetHotel)) {
-            throw new BusinessRuleViolationException(
-                    "Hotel is not currently active");
+        if (access == HotelAccessResult.NOT_ACTIVE) {
+            throw new BusinessRuleViolationException("Hotel is not currently active");
         }
 
         // Rule 3: hotel-scoped token carries the same expiry as the group token

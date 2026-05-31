@@ -24,6 +24,9 @@ public class GroupJpaEntity {
     @Column(columnDefinition = "uuid")
     private UUID id;
 
+    @Version
+    private Long version;
+
     @Column(nullable = false, length = 200)
     private String name;
 

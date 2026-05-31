@@ -12,12 +12,13 @@ import org.springframework.stereotype.Component;
  * Implements the {@code group} module's {@link HotelLookupPort} using the
  * {@code hotel} module's domain repository.
  *
- * <p>Both {@code isActive} and {@code belongsToGroup} are called together by the
- * {@code /enter} endpoint. They share a single {@link HotelRepository#findSnapshotById}
- * call rather than loading the full Hotel aggregate twice.
- *
  * <p>Lives in {@code bootstrap} — the only module allowed to depend on both
  * {@code group} and {@code hotel} simultaneously.
+ *
+ * <p>{@link #isActive} and {@link #belongsToGroup} each make an independent
+ * {@link HotelRepository#findSnapshotById} call. Use {@link #verifyAccess} when
+ * both checks are needed together (e.g. the {@code /enter} endpoint) to avoid
+ * two round-trips for the same row.
  */
 @Component
 @RequiredArgsConstructor
@@ -37,5 +38,22 @@ public class HotelLookupPortAdapter implements HotelLookupPort {
         return hotelRepository.findSnapshotById(hotelId)
                 .map(snapshot -> groupId.equals(snapshot.groupId()))
                 .orElse(false);
+    }
+
+    /**
+     * Loads the hotel snapshot once and evaluates both checks in a single query.
+     */
+    @Override
+    public HotelAccessResult verifyAccess(HotelId hotelId, GroupId groupId) {
+        return hotelRepository.findSnapshotById(hotelId)
+                .map(snapshot -> {
+                    if (!groupId.equals(snapshot.groupId())) {
+                        return HotelAccessResult.NOT_FOUND_OR_WRONG_GROUP;
+                    }
+                    return snapshot.status() == HotelStatus.ACTIVE
+                            ? HotelAccessResult.ALLOWED
+                            : HotelAccessResult.NOT_ACTIVE;
+                })
+                .orElse(HotelAccessResult.NOT_FOUND_OR_WRONG_GROUP);
     }
 }

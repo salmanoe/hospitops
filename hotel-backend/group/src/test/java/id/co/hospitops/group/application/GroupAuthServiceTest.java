@@ -6,6 +6,7 @@ import id.co.hospitops.group.domain.model.GroupAdmin;
 import id.co.hospitops.group.domain.port.out.GroupAdminRepository;
 import id.co.hospitops.group.domain.port.out.GroupTokenService;
 import id.co.hospitops.group.domain.port.out.HotelLookupPort;
+import id.co.hospitops.group.domain.port.out.HotelLookupPort.HotelAccessResult;
 import id.co.hospitops.shared.GroupAdminId;
 import id.co.hospitops.shared.GroupAdminPrincipal;
 import id.co.hospitops.shared.GroupId;
@@ -115,8 +116,7 @@ class GroupAuthServiceTest {
         @Test
         @DisplayName("issues a hotel-scoped token when hotel belongs to group and is ACTIVE")
         void success() {
-            given(hotelLookupPort.belongsToGroup(HOTEL_ID, GROUP_ID)).willReturn(true);
-            given(hotelLookupPort.isActive(HOTEL_ID)).willReturn(true);
+            given(hotelLookupPort.verifyAccess(HOTEL_ID, GROUP_ID)).willReturn(HotelAccessResult.ALLOWED);
             given(tokenService.parseExpiry(rawGroupToken)).willReturn(expiry);
             given(tokenService.issueHotelToken(ADMIN_ID, GROUP_ID, EMAIL, HOTEL_ID, expiry))
                     .willReturn("hotel-token");
@@ -131,24 +131,27 @@ class GroupAuthServiceTest {
         @Test
         @DisplayName("rejects when hotel does not belong to group")
         void wrongGroup() {
-            given(hotelLookupPort.belongsToGroup(HOTEL_ID, GROUP_ID)).willReturn(false);
+            given(hotelLookupPort.verifyAccess(HOTEL_ID, GROUP_ID))
+                    .willReturn(HotelAccessResult.NOT_FOUND_OR_WRONG_GROUP);
 
             assertThatThrownBy(() -> service.enterHotel(principal, HOTEL_ID, rawGroupToken))
                     .isInstanceOf(BusinessRuleViolationException.class)
                     .hasMessageContaining("does not belong to your group");
 
-            then(hotelLookupPort).should(never()).isActive(HOTEL_ID);
+            then(tokenService).should(never()).issueHotelToken(ADMIN_ID, GROUP_ID, EMAIL, HOTEL_ID, expiry);
         }
 
         @Test
-        @DisplayName("rejects when hotel is not ACTIVE")
+        @DisplayName("rejects when hotel belongs to group but is not ACTIVE")
         void inactiveHotel() {
-            given(hotelLookupPort.belongsToGroup(HOTEL_ID, GROUP_ID)).willReturn(true);
-            given(hotelLookupPort.isActive(HOTEL_ID)).willReturn(false);
+            given(hotelLookupPort.verifyAccess(HOTEL_ID, GROUP_ID))
+                    .willReturn(HotelAccessResult.NOT_ACTIVE);
 
             assertThatThrownBy(() -> service.enterHotel(principal, HOTEL_ID, rawGroupToken))
                     .isInstanceOf(BusinessRuleViolationException.class)
                     .hasMessageContaining("not currently active");
+
+            then(tokenService).should(never()).issueHotelToken(ADMIN_ID, GROUP_ID, EMAIL, HOTEL_ID, expiry);
         }
     }
 }

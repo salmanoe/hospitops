@@ -50,6 +50,25 @@ public class HotelService implements ManageHotelUseCase {
                 .stream().map(HotelResponse::from).toList();
     }
 
+    /**
+     * Marks a setup step as complete, trusting the GROUP_ADMIN to signal
+     * when the underlying data is ready.
+     *
+     * <p><strong>Design trade-off (W4):</strong> this endpoint does <em>not</em>
+     * verify that the prerequisite data actually exists (e.g. it does not check
+     * {@code COUNT(*) FROM room_type WHERE hotel_id = ?} before accepting
+     * {@code ROOM_TYPE}). The GROUP_ADMIN is trusted to signal steps accurately.
+     *
+     * <p>The risk is that a misconfigured hotel can reach ACTIVE status with zero
+     * inventory. This was accepted as a deliberate simplification for the current
+     * phase — the setup wizard UI is the primary guard, and the GROUP_ADMIN is an
+     * authenticated, privileged actor with full responsibility for their hotels.
+     *
+     * <p><strong>Revisit when:</strong> self-service onboarding is introduced, or
+     * when audit requirements demand proof that each step was data-backed.
+     * At that point, add per-step repository count checks here before delegating
+     * to {@code hotel.completeSetupStep}.
+     */
     @Override
     public HotelResponse completeSetupStep(CompleteSetupStepCommand cmd) {
         Hotel hotel = requireHotel(cmd.hotelId(), cmd.callerGroupId());

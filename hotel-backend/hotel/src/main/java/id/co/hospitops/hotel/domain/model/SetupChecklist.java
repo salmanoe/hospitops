@@ -57,7 +57,7 @@ public class SetupChecklist {
                 && roomTypeAdded && roomAdded && staffAccountCreated;
     }
 
-    /** Returns a human-readable list of remaining steps. */
+    /** Returns an unmodifiable list of steps not yet completed. */
     public java.util.List<SetupStep> remainingSteps() {
         var remaining = new java.util.ArrayList<SetupStep>();
         if (!profileComplete)       remaining.add(SetupStep.PROFILE);
@@ -65,6 +65,6 @@ public class SetupChecklist {
         if (!roomTypeAdded)         remaining.add(SetupStep.ROOM_TYPE);
         if (!roomAdded)             remaining.add(SetupStep.ROOM);
         if (!staffAccountCreated)   remaining.add(SetupStep.STAFF_ACCOUNT);
-        return java.util.Collections.unmodifiableList(remaining);
+        return java.util.List.copyOf(remaining);
     }
 }

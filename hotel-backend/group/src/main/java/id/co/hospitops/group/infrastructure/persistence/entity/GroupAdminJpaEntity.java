@@ -24,6 +24,9 @@ public class GroupAdminJpaEntity {
     @Column(columnDefinition = "uuid")
     private UUID id;
 
+    @Version
+    private Long version;
+
     @Column(nullable = false, columnDefinition = "uuid")
     private UUID groupId;
 
