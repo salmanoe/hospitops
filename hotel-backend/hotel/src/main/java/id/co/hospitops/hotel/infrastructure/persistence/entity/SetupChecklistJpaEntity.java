@@ -23,6 +23,9 @@ public class SetupChecklistJpaEntity {
     @Column(columnDefinition = "uuid")
     private UUID hotelId;
 
+    @Version
+    private Long version;
+
     @Column(nullable = false)
     private boolean profileComplete;
 

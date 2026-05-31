@@ -20,12 +20,50 @@ class HotelRepositoryImpl implements HotelRepository {
     private final SetupChecklistJpaRepository checklistJpa;
     private final HotelMapper mapper;
 
+    /**
+     * Persists the hotel and its setup checklist.
+     *
+     * <p>Uses a load-and-update pattern for both entities: if a row already exists,
+     * the managed entity is updated in-place so that the {@code @Version} field is
+     * preserved across saves. Creating a fresh detached entity on every call would
+     * reset the version to {@code null}/0, causing Spring Data JPA to call
+     * {@code persist()} on an existing row (first case) or an optimistic-lock mismatch
+     * on the second update (second case).
+     */
     @Override
     public Hotel save(Hotel hotel) {
-        HotelJpaEntity savedHotel = hotelJpa.save(mapper.toJpa(hotel));
-        SetupChecklistJpaEntity savedChecklist =
-                checklistJpa.save(mapper.toChecklistJpa(hotel.getChecklist()));
+        HotelJpaEntity hotelEntity = hotelJpa.findById(hotel.getId().value())
+                .map(existing -> updateHotelFields(existing, hotel))
+                .orElseGet(() -> mapper.toJpa(hotel));
+        HotelJpaEntity savedHotel = hotelJpa.save(hotelEntity);
+
+        SetupChecklistJpaEntity checklistEntity = checklistJpa.findById(hotel.getId().value())
+                .map(existing -> updateChecklistFields(existing, hotel))
+                .orElseGet(() -> mapper.toChecklistJpa(hotel.getChecklist()));
+        SetupChecklistJpaEntity savedChecklist = checklistJpa.save(checklistEntity);
+
         return mapper.toDomain(savedHotel, savedChecklist);
+    }
+
+    private HotelJpaEntity updateHotelFields(HotelJpaEntity entity, Hotel hotel) {
+        entity.setName(hotel.getName());
+        entity.setAddress(hotel.getAddress());
+        entity.setTimezone(hotel.getTimezone());
+        entity.setCurrency(hotel.getCurrency());
+        entity.setStarRating(hotel.getStarRating());
+        entity.setDefaultCheckInTime(hotel.getDefaultCheckInTime());
+        entity.setDefaultCheckOutTime(hotel.getDefaultCheckOutTime());
+        entity.setStatus(hotel.getStatus());
+        return entity;
+    }
+
+    private SetupChecklistJpaEntity updateChecklistFields(SetupChecklistJpaEntity entity, Hotel hotel) {
+        entity.setProfileComplete(hotel.getChecklist().isProfileComplete());
+        entity.setPolicyComplete(hotel.getChecklist().isPolicyComplete());
+        entity.setRoomTypeAdded(hotel.getChecklist().isRoomTypeAdded());
+        entity.setRoomAdded(hotel.getChecklist().isRoomAdded());
+        entity.setStaffAccountCreated(hotel.getChecklist().isStaffAccountCreated());
+        return entity;
     }
 
     @Override
