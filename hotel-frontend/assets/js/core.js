@@ -353,9 +353,11 @@ const API = (() => {
         },
 
         // ── Group admin auth ─────────────────────────────────
+        // POST /api/v1/group/auth/signup → SignupResponse (groupId, adminId, adminEmail)
         // POST /api/v1/group/auth/login  → GroupLoginResponse (group-scoped token)
         // POST /api/v1/group/hotels/{id}/enter → GroupLoginResponse (hotel-scoped token)
         groupAuth: {
+            signup:     (groupName, adminEmail, password) => post('/group/auth/signup', { groupName, adminEmail, password }),
             login:      (email, password) => post('/group/auth/login', { email, password }),
             enterHotel: (hotelId)         => post(`/group/hotels/${hotelId}/enter`, {}),
         },
