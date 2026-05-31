@@ -2,7 +2,6 @@ package id.co.hospitops.hotel.domain;
 
 import id.co.hospitops.hotel.domain.model.*;
 import id.co.hospitops.shared.GroupId;
-import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.exception.BusinessRuleViolationException;
 import org.junit.jupiter.api.*;
 
@@ -174,14 +173,14 @@ class HotelDomainTest {
         @Test
         @DisplayName("empty checklist has all five remaining steps")
         void emptyChecklistHasFiveSteps() {
-            SetupChecklist c = SetupChecklist.empty(HotelId.generate());
+            SetupChecklist c = SetupChecklist.empty();
             assertThat(c.remainingSteps()).containsExactlyInAnyOrder(SetupStep.values());
         }
 
         @Test
         @DisplayName("completing a step removes it from remainingSteps")
         void completingRemovesStep() {
-            SetupChecklist c = SetupChecklist.empty(HotelId.generate());
+            SetupChecklist c = SetupChecklist.empty();
             c.complete(SetupStep.PROFILE);
             assertThat(c.remainingSteps()).doesNotContain(SetupStep.PROFILE);
         }
@@ -189,7 +188,7 @@ class HotelDomainTest {
         @Test
         @DisplayName("isComplete returns true only when all five are done")
         void isCompleteRequiresAllFive() {
-            SetupChecklist c = SetupChecklist.empty(HotelId.generate());
+            SetupChecklist c = SetupChecklist.empty();
             for (SetupStep step : SetupStep.values()) {
                 assertThat(c.isComplete()).isFalse();
                 c.complete(step);

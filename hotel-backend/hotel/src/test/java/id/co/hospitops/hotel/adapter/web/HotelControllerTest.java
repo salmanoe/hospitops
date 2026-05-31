@@ -111,14 +111,15 @@ class HotelControllerTest {
     class CreateHotel {
 
         @Test
-        @DisplayName("returns 201 with SETUP hotel on valid request")
+        @DisplayName("returns 201 with SETUP hotel — groupId is taken from JWT, not body")
         void success() throws Exception {
-            given(hotelUseCase.createHotel(argThat(cmd -> "Grand Palace".equals(cmd.name()))))
+            given(hotelUseCase.createHotel(argThat(cmd ->
+                    "Grand Palace".equals(cmd.name()) && GROUP_UUID.equals(cmd.groupId().value()))))
                     .willReturn(setupResponse());
 
             mockMvc.perform(post("/api/v1/group/hotels")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"groupId\":\"" + GROUP_UUID + "\",\"name\":\"Grand Palace\"}"))
+                            .content("{\"name\":\"Grand Palace\"}"))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.status").value("SETUP"))
@@ -131,18 +132,18 @@ class HotelControllerTest {
         void blankName() throws Exception {
             mockMvc.perform(post("/api/v1/group/hotels")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"groupId\":\"" + GROUP_UUID + "\",\"name\":\"\"}"))
+                            .content("{\"name\":\"\"}"))
                     .andExpect(status().isBadRequest());
 
             then(hotelUseCase).shouldHaveNoInteractions();
         }
 
         @Test
-        @DisplayName("returns 400 when groupId is null")
-        void nullGroupId() throws Exception {
+        @DisplayName("returns 400 when name is missing from body")
+        void missingName() throws Exception {
             mockMvc.perform(post("/api/v1/group/hotels")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"name\":\"Grand Palace\"}"))
+                            .content("{}"))
                     .andExpect(status().isBadRequest());
 
             then(hotelUseCase).shouldHaveNoInteractions();

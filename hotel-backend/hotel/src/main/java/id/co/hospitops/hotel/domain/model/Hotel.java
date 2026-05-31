@@ -41,7 +41,7 @@ public class Hotel {
         return new Hotel(id, groupId, name,
                 null, "UTC", "IDR", 3,
                 LocalTime.of(14, 0), LocalTime.of(12, 0),
-                HotelStatus.SETUP, SetupChecklist.empty(id),
+                HotelStatus.SETUP, SetupChecklist.empty(),
                 now, now);
     }
 

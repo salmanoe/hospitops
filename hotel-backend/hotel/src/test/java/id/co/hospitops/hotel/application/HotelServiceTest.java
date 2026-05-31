@@ -8,6 +8,7 @@ import id.co.hospitops.hotel.domain.port.out.HotelRepository;
 import id.co.hospitops.shared.GroupId;
 import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.event.HotelActivatedEvent;
+import id.co.hospitops.shared.event.HotelReactivatedEvent;
 import id.co.hospitops.shared.event.HotelSuspendedEvent;
 import id.co.hospitops.shared.exception.BusinessRuleViolationException;
 import id.co.hospitops.shared.exception.ResourceNotFoundException;
@@ -17,8 +18,6 @@ import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -129,8 +128,8 @@ class HotelServiceTest {
     class Reactivate {
 
         @Test
-        @DisplayName("transitions SUSPENDED → ACTIVE without publishing an event")
-        void reactivatesWithoutEvent() {
+        @DisplayName("transitions SUSPENDED → ACTIVE and publishes HotelReactivatedEvent")
+        void publishesReactivatedEvent() {
             Hotel hotel = activeHotel();
             hotel.suspend();
             when(hotelRepo.findById(hotel.getId())).thenReturn(Optional.of(hotel));
@@ -139,7 +138,19 @@ class HotelServiceTest {
             HotelResponse response = service.reactivate(hotel.getId());
 
             assertThat(response.status()).isEqualTo(HotelStatus.ACTIVE);
+            verify(eventPublisher).publishEvent(any(HotelReactivatedEvent.class));
+            // HotelActivatedEvent must NOT fire — that is reserved for SETUP → ACTIVE
             verify(eventPublisher, never()).publishEvent(any(HotelActivatedEvent.class));
+        }
+
+        @Test
+        @DisplayName("throws BusinessRuleViolationException when hotel is not SUSPENDED")
+        void throwsWhenNotSuspended() {
+            Hotel hotel = activeHotel();
+            when(hotelRepo.findById(hotel.getId())).thenReturn(Optional.of(hotel));
+
+            assertThatThrownBy(() -> service.reactivate(hotel.getId()))
+                    .isInstanceOf(BusinessRuleViolationException.class);
         }
     }
 

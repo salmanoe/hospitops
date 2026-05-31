@@ -1,55 +1,21 @@
 package id.co.hospitops.hotel.adapter.web;
 
-import id.co.hospitops.shared.exception.BusinessRuleViolationException;
-import id.co.hospitops.shared.exception.ConflictException;
-import id.co.hospitops.shared.exception.ResourceNotFoundException;
-import id.co.hospitops.shared.web.ApiResponse;
-import org.springframework.http.HttpStatus;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
+import id.co.hospitops.shared.web.BaseApiExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.stream.Collectors;
-
 /**
- * Exception → HTTP response mapping for the hotel module's web adapter.
+ * Exception → HTTP response mapping scoped to the hotel module's web adapter.
  *
- * <p>Handles domain exceptions thrown by {@link id.co.hospitops.hotel.domain.port.in.ManageHotelUseCase}
- * and {@link id.co.hospitops.hotel.domain.port.in.GroupDashboardUseCase} so that each maps
- * to a semantically correct HTTP status and a consistent {@link ApiResponse} envelope.
- *
- * <p>The bootstrap module's {@code GlobalExceptionHandler} remains the application-wide
- * fallback for any exceptions not handled here.
+ * <p>All handler logic lives in {@link BaseApiExceptionHandler}. The
+ * {@code basePackageClasses} scope serves two purposes:
+ * <ol>
+ *   <li>Keeps {@code @WebMvcTest} slices working — they only load beans in this
+ *       package and cannot see the bootstrap-level {@code GlobalExceptionHandler}.</li>
+ *   <li>Prevents "Ambiguous @ExceptionHandler" startup failures in full-context
+ *       ({@code @SpringBootTest}) tests: Spring MVC treats package-scoped advisors as
+ *       non-overlapping with the unscoped global handler.</li>
+ * </ol>
  */
-@RestControllerAdvice
-class HotelExceptionHandler {
-
-    @ExceptionHandler(BusinessRuleViolationException.class)
-    @ResponseStatus(HttpStatus.UNPROCESSABLE_CONTENT)
-    public ApiResponse<Void> handleBusinessRule(BusinessRuleViolationException ex) {
-        return ApiResponse.error(ex.getMessage());
-    }
-
-    @ExceptionHandler(ConflictException.class)
-    @ResponseStatus(HttpStatus.CONFLICT)
-    public ApiResponse<Void> handleConflict(ConflictException ex) {
-        return ApiResponse.error(ex.getMessage());
-    }
-
-    @ExceptionHandler(ResourceNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ApiResponse<Void> handleNotFound(ResourceNotFoundException ex) {
-        return ApiResponse.error(ex.getMessage());
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ApiResponse<Void> handleValidation(MethodArgumentNotValidException ex) {
-        String message = ex.getBindingResult().getFieldErrors().stream()
-                .map(FieldError::getDefaultMessage)
-                .collect(Collectors.joining("; "));
-        return ApiResponse.error(message);
-    }
+@RestControllerAdvice(basePackageClasses = HotelExceptionHandler.class)
+class HotelExceptionHandler extends BaseApiExceptionHandler {
 }

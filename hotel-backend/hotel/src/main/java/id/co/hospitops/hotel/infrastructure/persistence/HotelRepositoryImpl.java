@@ -1,6 +1,7 @@
 package id.co.hospitops.hotel.infrastructure.persistence;
 
 import id.co.hospitops.hotel.domain.model.Hotel;
+import id.co.hospitops.hotel.domain.model.HotelStatus;
 import id.co.hospitops.hotel.domain.port.out.HotelRepository;
 import id.co.hospitops.hotel.infrastructure.persistence.entity.HotelJpaEntity;
 import id.co.hospitops.hotel.infrastructure.persistence.entity.SetupChecklistJpaEntity;
@@ -39,7 +40,7 @@ class HotelRepositoryImpl implements HotelRepository {
 
         SetupChecklistJpaEntity checklistEntity = checklistJpa.findById(hotel.getId().value())
                 .map(existing -> updateChecklistFields(existing, hotel))
-                .orElseGet(() -> mapper.toChecklistJpa(hotel.getChecklist()));
+                .orElseGet(() -> mapper.toChecklistJpa(hotel.getId(), hotel.getChecklist()));
         SetupChecklistJpaEntity savedChecklist = checklistJpa.save(checklistEntity);
 
         return mapper.toDomain(savedHotel, savedChecklist);
@@ -100,6 +101,20 @@ class HotelRepositoryImpl implements HotelRepository {
                     return mapper.toDomain(hotelEntity, checklist);
                 })
                 .toList();
+    }
+
+    @Override
+    public Optional<HotelStatus> findStatusById(HotelId id) {
+        return hotelJpa.findStatusById(id.value());
+    }
+
+    @Override
+    public Optional<HotelSnapshot> findSnapshotById(HotelId id) {
+        return hotelJpa.findStatusAndGroupById(id.value())
+                .map(view -> new HotelSnapshot(
+                        view.getStatus(),
+                        GroupId.of(view.getGroupId())
+                ));
     }
 
     private SetupChecklistJpaEntity emptyChecklist(HotelId hotelId) {

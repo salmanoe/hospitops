@@ -7,7 +7,6 @@ import id.co.hospitops.hotel.application.response.HotelResponse;
 import id.co.hospitops.hotel.domain.model.SetupStep;
 import id.co.hospitops.hotel.domain.port.in.ManageHotelUseCase;
 import id.co.hospitops.shared.GroupAdminPrincipal;
-import id.co.hospitops.shared.GroupId;
 import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.web.ApiResponse;
 import jakarta.validation.Valid;
@@ -28,13 +27,20 @@ public class HotelController {
     private final ManageHotelUseCase hotelUseCase;
 
     /**
-     * Create a hotel within a group. The hotel starts in SETUP status.
-     * Requires GROUP_ADMIN role (enforced in SecurityConfig).
+     * Create a hotel within the authenticated GROUP_ADMIN's group.
+     * The hotel starts in SETUP status.
+     *
+     * <p>The {@code groupId} is derived exclusively from the JWT claim —
+     * it is not accepted from the request body to prevent IDOR attacks where a
+     * caller creates a hotel under a different group's ID.
+     *
+     * <p>Requires GROUP_ADMIN role (enforced in SecurityConfig).
      */
     @PostMapping
     public ResponseEntity<ApiResponse<HotelResponse>> create(
+            @AuthenticationPrincipal GroupAdminPrincipal admin,
             @Valid @RequestBody CreateHotelRequest req) {
-        var cmd = new CreateHotelCommand(GroupId.of(req.groupId()), req.name());
+        var cmd = new CreateHotelCommand(admin.groupId(), req.name());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(hotelUseCase.createHotel(cmd)));
     }

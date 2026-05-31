@@ -27,8 +27,9 @@ class HotelMapper {
     }
 
     Hotel toDomain(HotelJpaEntity e, SetupChecklistJpaEntity c) {
+        // SetupChecklist is a value object — hotelId is supplied by the mapper (owner),
+        // not carried by the checklist itself.
         SetupChecklist checklist = SetupChecklist.reconstitute(
-                HotelId.of(e.getId()),
                 c.isProfileComplete(),
                 c.isPolicyComplete(),
                 c.isRoomTypeAdded(),
@@ -51,9 +52,13 @@ class HotelMapper {
                 e.getUpdatedAt());
     }
 
-    SetupChecklistJpaEntity toChecklistJpa(SetupChecklist c) {
+    /**
+     * @param hotelId the owning hotel's ID — the checklist does not carry its own identity,
+     *                so the mapper supplies it when building the JPA entity.
+     */
+    SetupChecklistJpaEntity toChecklistJpa(HotelId hotelId, SetupChecklist c) {
         return SetupChecklistJpaEntity.builder()
-                .hotelId(c.getHotelId().value())
+                .hotelId(hotelId.value())
                 .profileComplete(c.isProfileComplete())
                 .policyComplete(c.isPolicyComplete())
                 .roomTypeAdded(c.isRoomTypeAdded())

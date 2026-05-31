@@ -102,6 +102,13 @@ class CrossHotelIsolationTest {
 
         UUID groupId = UUID.fromString("b0000000-0000-0000-0000-000000000001");
 
+        // Explicitly seed both hotels so this test is self-contained and does not
+        // rely on V14 migration seed data for Hotel A. ON CONFLICT DO NOTHING is safe
+        // across @BeforeEach runs since the IDs are stable constants.
+        jdbc.update("INSERT INTO hotel (id, group_id, name, status, version, created_at, updated_at) " +
+                        "VALUES (?, ?, 'Hotel A', 'ACTIVE', 0, now(), now()) ON CONFLICT (id) DO NOTHING",
+                HOTEL_A_ID, groupId);
+
         jdbc.update("INSERT INTO hotel (id, group_id, name, status, version, created_at, updated_at) " +
                         "VALUES (?, ?, 'Hotel B', 'ACTIVE', 0, now(), now()) ON CONFLICT (id) DO NOTHING",
                 HOTEL_B_ID, groupId);

@@ -11,6 +11,9 @@ import org.springframework.stereotype.Component;
  * Implements the {@code identity} module's {@link HotelStatusPort} using the
  * {@code hotel} module's domain repository.
  *
+ * <p>Uses a focused status-only query rather than loading the full Hotel aggregate —
+ * this runs on every staff login and must stay lightweight.
+ *
  * <p>Lives in {@code bootstrap} — the only module that is allowed to depend on both
  * {@code identity} and {@code hotel} simultaneously.
  */
@@ -22,8 +25,8 @@ public class HotelStatusPortAdapter implements HotelStatusPort {
 
     @Override
     public boolean isActive(HotelId hotelId) {
-        return hotelRepository.findById(hotelId)
-                .map(hotel -> hotel.getStatus() == HotelStatus.ACTIVE)
+        return hotelRepository.findStatusById(hotelId)
+                .map(status -> status == HotelStatus.ACTIVE)
                 .orElse(false);
     }
 }

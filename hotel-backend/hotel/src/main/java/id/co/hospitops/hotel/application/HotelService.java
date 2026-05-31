@@ -10,6 +10,7 @@ import id.co.hospitops.shared.GroupId;
 import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.event.HotelActivatedEvent;
 import id.co.hospitops.shared.event.HotelCreatedEvent;
+import id.co.hospitops.shared.event.HotelReactivatedEvent;
 import id.co.hospitops.shared.event.HotelSuspendedEvent;
 import id.co.hospitops.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -72,7 +73,9 @@ public class HotelService implements ManageHotelUseCase {
     public HotelResponse reactivate(HotelId id) {
         Hotel hotel = requireHotel(id);
         hotel.reactivate();
-        return HotelResponse.from(hotelRepo.save(hotel));
+        Hotel saved = hotelRepo.save(hotel);
+        eventPublisher.publishEvent(new HotelReactivatedEvent(saved.getId()));
+        return HotelResponse.from(saved);
     }
 
     private Hotel requireHotel(HotelId id) {

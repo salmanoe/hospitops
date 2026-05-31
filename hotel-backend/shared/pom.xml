@@ -16,14 +16,30 @@
 
     <!--
         The shared kernel must stay THIN.
-        Only: value objects, IDs, domain events base, API response wrappers.
-        NO Spring, NO JPA, NO business logic.
+        Only: value objects, IDs, domain events base, API response wrappers,
+        and web-adapter base classes (BaseApiExceptionHandler).
+        NO JPA, NO business logic.
     -->
     <dependencies>
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
-            <!-- Only for ApplicationEvent base class -->
+            <!-- For ApplicationEvent base class -->
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <!--
+                For BaseApiExceptionHandler — spring-web is already on every module's
+                classpath transitively via spring-boot-starter-web; this just makes the
+                compile-time dependency explicit so @ExceptionHandler / @ResponseStatus
+                annotations are available here.
+            -->
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <!-- For MethodArgumentNotValidException used in BaseApiExceptionHandler -->
         </dependency>
         <dependency>
             <groupId>jakarta.validation</groupId>

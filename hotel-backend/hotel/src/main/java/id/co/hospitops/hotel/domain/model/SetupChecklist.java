@@ -1,39 +1,38 @@
 package id.co.hospitops.hotel.domain.model;
 
-import id.co.hospitops.shared.HotelId;
 import lombok.Getter;
 
 /**
  * Tracks the five setup steps a hotel must complete before it can go ACTIVE.
- * This is a value object owned by {@link Hotel} — it has no independent lifecycle.
+ *
+ * <p>This is a value object owned by {@link Hotel} — it has no independent lifecycle
+ * and therefore carries no identity ({@code HotelId}). The owning Hotel is responsible
+ * for associating this checklist with the correct hotel when persisting.
  */
 @Getter
 public class SetupChecklist {
 
-    private final HotelId hotelId;
     private boolean profileComplete;
     private boolean policyComplete;
     private boolean roomTypeAdded;
     private boolean roomAdded;
     private boolean staffAccountCreated;
 
-    public static SetupChecklist empty(HotelId hotelId) {
-        return new SetupChecklist(hotelId, false, false, false, false, false);
+    public static SetupChecklist empty() {
+        return new SetupChecklist(false, false, false, false, false);
     }
 
-    public static SetupChecklist reconstitute(HotelId hotelId,
-                                              boolean profileComplete,
+    public static SetupChecklist reconstitute(boolean profileComplete,
                                               boolean policyComplete,
                                               boolean roomTypeAdded,
                                               boolean roomAdded,
                                               boolean staffAccountCreated) {
-        return new SetupChecklist(hotelId, profileComplete, policyComplete,
+        return new SetupChecklist(profileComplete, policyComplete,
                 roomTypeAdded, roomAdded, staffAccountCreated);
     }
 
-    private SetupChecklist(HotelId hotelId, boolean profileComplete, boolean policyComplete,
+    private SetupChecklist(boolean profileComplete, boolean policyComplete,
                            boolean roomTypeAdded, boolean roomAdded, boolean staffAccountCreated) {
-        this.hotelId = hotelId;
         this.profileComplete = profileComplete;
         this.policyComplete = policyComplete;
         this.roomTypeAdded = roomTypeAdded;

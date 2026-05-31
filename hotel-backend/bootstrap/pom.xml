@@ -138,6 +138,25 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-flyway</artifactId>
         </dependency>
+        <!--
+            spring-boot-starter-web transitively includes spring-boot-starter-json,
+            which registers JacksonAutoConfiguration. However, to make the ObjectMapper
+            bean definition explicit and robust (avoiding any autoconfiguration ordering
+            surprises), we define it explicitly in JacksonConfig rather than relying on
+            the autoconfiguration chain. spring-boot-jackson was removed: it is not a
+            valid Spring Boot 4 BOM-managed artifact and did not register any beans.
+        -->
+        <!--
+            JavaTimeModule — required to serialize java.time types (Instant, LocalDate, …)
+            used in ApiResponse.timestamp and throughout the domain model. Although this
+            jar is expected to arrive transitively via spring-boot-starter-json, declaring
+            it explicitly guarantees it is present and avoids relying on SPI auto-discovery
+            in JacksonConfig.objectMapper().
+        -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
 
         <!-- ── Dev only ──────────────────────────────────────── -->
         <!--
