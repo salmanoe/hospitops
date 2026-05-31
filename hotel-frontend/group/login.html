@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>Sign In — HospitOps</title>
+    <title>Group Admin Sign In — HospitOps</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
     <link href="/assets/css/custom.css" rel="stylesheet"/>
 </head>
@@ -12,19 +12,19 @@
 <div class="login-card">
     <div class="text-center mb-4">
         <div class="login-brand">HospitOps</div>
-        <small class="text-muted" style="letter-spacing:3px;font-size:11px;">HOSPITOPS</small>
+        <small class="text-muted" style="letter-spacing:3px;font-size:11px;">GROUP ADMINISTRATION</small>
     </div>
 
-    <h6 class="mb-1">Welcome back</h6>
-    <p class="text-muted small mb-4">Sign in to your staff account</p>
+    <h6 class="mb-1">Group Admin Sign In</h6>
+    <p class="text-muted small mb-4">Manage your hotel portfolio from one place</p>
 
     <div id="alert" class="alert alert-danger d-none" role="alert"></div>
 
     <form id="login-form" novalidate>
         <div class="mb-3">
-            <label class="form-label">Username</label>
-            <input type="text" id="username" name="username" class="form-control"
-                   placeholder="Enter username" autocomplete="username" required/>
+            <label class="form-label">Email</label>
+            <input type="email" id="email" name="email" class="form-control"
+                   placeholder="admin@example.com" autocomplete="email" required/>
         </div>
         <div class="mb-4">
             <label class="form-label">Password</label>
@@ -34,19 +34,18 @@
         <button type="submit" id="submit-btn" class="btn btn-gold w-100">Sign In</button>
     </form>
 
-    <p class="text-center mt-3 mb-0" style="font-size:12px;">
-        <a href="/group/login.html" class="text-muted">Group Admin? Sign in here →</a>
-    </p>
-    <p class="text-center text-muted mt-2 mb-0" style="font-size:11px;">
-        Internal use only · Unauthorized access prohibited
+    <p class="text-center mt-4 mb-0" style="font-size:12px;">
+        <a href="/login.html" class="text-muted">Hotel staff? Sign in here →</a>
     </p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/assets/js/core.js"></script>
 <script>
-    // Redirect if already logged in
-    if (Auth.isLoggedIn()) window.location.href = '/dashboard.html';
+    // Redirect if already logged in as GROUP_ADMIN
+    if (Auth.isLoggedIn() && Auth.isGroupAdmin()) {
+        window.location.href = '/group/dashboard.html';
+    }
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -56,14 +55,14 @@
         Utils.loading(btn, true);
 
         try {
-            const res = await API.auth.login(
-                document.getElementById('username').value,
+            const res = await API.groupAuth.login(
+                document.getElementById('email').value,
                 document.getElementById('password').value
             );
             Auth.save(res);
-            window.location.href = '/dashboard.html';
+            window.location.href = '/group/dashboard.html';
         } catch (err) {
-            alert.textContent = err.message || 'Invalid username or password';
+            alert.textContent = err.message || 'Invalid email or password';
             alert.classList.remove('d-none');
             Utils.loading(btn, false);
         }
@@ -71,8 +70,3 @@
 </script>
 </body>
 </html>
-
-
-<!-- ═══════════════════════════════════════════════════════════════
-     dashboard.html
-     ═══════════════════════════════════════════════════════════════ -->

@@ -24,20 +24,43 @@ const Auth = (() => {
     const USER_KEY          = 'hospitops_user';
     const REFRESH_TOKEN_KEY = 'hospitops_refresh_token';
 
+    /**
+     * Persists a login response from either the staff login endpoint
+     * (LoginResponse: token, staffId, fullName, username, role) or the
+     * GROUP_ADMIN endpoints (GroupLoginResponse: accessToken, adminId,
+     * groupId, email, role='GROUP_ADMIN', hotelId).
+     *
+     * Both shapes are normalised to the same stored user object so the
+     * rest of the app can use Auth.getUser() uniformly.
+     */
     const save = (loginResponse) => {
-        localStorage.setItem(TOKEN_KEY, loginResponse.token);
-        localStorage.setItem(USER_KEY, JSON.stringify({
+        // GroupLoginResponse uses 'accessToken'; LoginResponse uses 'token'.
+        const token = loginResponse.accessToken || loginResponse.token;
+        localStorage.setItem(TOKEN_KEY, token);
+
+        // Persist refresh token when supplied (staff logins only).
+        if (loginResponse.refreshToken) {
+            localStorage.setItem(REFRESH_TOKEN_KEY, loginResponse.refreshToken);
+        }
+
+        // Normalise user shape. All DomainId types serialise to plain UUIDs
+        // via @JsonValue, so staffId / adminId / groupId / hotelId are strings.
+        const isGroupAdmin = loginResponse.role === 'GROUP_ADMIN';
+        localStorage.setItem(USER_KEY, JSON.stringify(isGroupAdmin ? {
+            id:       loginResponse.adminId,
+            name:     loginResponse.email,
+            username: loginResponse.email,
+            role:     loginResponse.role,
+            groupId:  loginResponse.groupId  ?? null,
+            hotelId:  loginResponse.hotelId  ?? null,
+        } : {
             id:       loginResponse.staffId,
             name:     loginResponse.fullName,
             username: loginResponse.username,
             role:     loginResponse.role,
+            groupId:  null,
+            hotelId:  null,
         }));
-        // Persist refresh token only when the server supplies one.
-        // On a token-rotation response the server always provides a new value;
-        // this guard prevents accidentally wiping an existing token on a partial update.
-        if (loginResponse.refreshToken) {
-            localStorage.setItem(REFRESH_TOKEN_KEY, loginResponse.refreshToken);
-        }
     };
 
     const clear = () => {
@@ -68,10 +91,35 @@ const Auth = (() => {
     // never:
     //   Auth.isAtLeast('FRONT_DESK')  ← misleading, removed
 
+    /** True when the current session is a GROUP_ADMIN (group-scoped or hotel-scoped). */
+    const isGroupAdmin = () => hasRole('GROUP_ADMIN');
+
+    /**
+     * True when a GROUP_ADMIN has entered a hotel — i.e. the stored token is
+     * hotel-scoped (hotelId is non-null) rather than group-scoped.
+     */
+    const isHotelScoped = () => {
+        const user = getUser();
+        return user?.role === 'GROUP_ADMIN' && !!user.hotelId;
+    };
+
     // Guard: redirect to login if not authenticated
     const requireAuth = () => {
         if (!isLoggedIn()) {
             window.location.href = '/login.html';
+            return false;
+        }
+        return true;
+    };
+
+    // Guard: redirect to group login if not authenticated as GROUP_ADMIN
+    const requireGroupAdmin = () => {
+        if (!isLoggedIn()) {
+            window.location.href = '/group/login.html';
+            return false;
+        }
+        if (!isGroupAdmin()) {
+            window.location.href = '/group/login.html';
             return false;
         }
         return true;
@@ -99,7 +147,8 @@ const Auth = (() => {
     };
 
     return { save, clear, getToken, getRefreshToken, getUser, isLoggedIn,
-             hasRole, requireAuth, requireRole,    // R21: isAtLeast removed
+             hasRole, isGroupAdmin, isHotelScoped,
+             requireAuth, requireGroupAdmin, requireRole,  // R21: isAtLeast removed
              applyRoleVisibility };
 })();
 
@@ -174,8 +223,10 @@ const API = (() => {
         }
 
         if (res.status === 401) {
+            // Redirect GROUP_ADMIN sessions to their own login page.
+            const wasGroupAdmin = Auth.isGroupAdmin();
             Auth.clear();
-            window.location.href = '/login.html';
+            window.location.href = wasGroupAdmin ? '/group/login.html' : '/login.html';
             throw new Error('Unauthorized');
         }
 
@@ -299,6 +350,20 @@ const API = (() => {
             update:         (id, d)  => put(`/staff/${id}`, d),
             changePassword: (id, d)  => patch(`/staff/${id}/password`, d),
             toggle:         (id)     => patch(`/staff/${id}/toggle`),
+        },
+
+        // ── Group admin auth ─────────────────────────────────
+        // POST /api/v1/group/auth/login  → GroupLoginResponse (group-scoped token)
+        // POST /api/v1/group/hotels/{id}/enter → GroupLoginResponse (hotel-scoped token)
+        groupAuth: {
+            login:      (email, password) => post('/group/auth/login', { email, password }),
+            enterHotel: (hotelId)         => post(`/group/hotels/${hotelId}/enter`, {}),
+        },
+
+        // ── Group dashboard ──────────────────────────────────
+        // GET /api/v1/group/dashboard → HotelSummaryResponse[]
+        groupDashboard: {
+            get: () => get('/group/dashboard'),
         },
 
         // expose raw methods for edge cases
