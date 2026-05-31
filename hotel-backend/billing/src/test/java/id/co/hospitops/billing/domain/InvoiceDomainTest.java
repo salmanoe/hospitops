@@ -7,6 +7,7 @@ import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.Money;
 import id.co.hospitops.shared.ReservationId;
 import id.co.hospitops.shared.StaffId;
+import id.co.hospitops.shared.TaxPolicy;
 import org.junit.jupiter.api.*;
 
 import java.math.BigDecimal;
@@ -28,7 +29,7 @@ class InvoiceDomainTest {
     private Invoice newInvoice() {
         return Invoice.create(HotelId.generate(), "INV-2025-00001", ReservationId.generate(),
                 "RES-2025-00001", "Budi Santoso",
-                3L, Money.of(500_000L), "Deluxe");
+                3L, Money.of(500_000L), "Deluxe", TaxPolicy.Standard.PPN_11);
     }
 
     private StaffId cashier() {

@@ -35,23 +35,29 @@ public class Invoice {
     private final LocalDateTime issuedAt;
     private LocalDateTime updatedAt;
 
-    // Indonesian PPN (Pajak Pertambahan Nilai) per UU HPP No. 7/2021, effective 1 Apr 2022.
-    // Defined once in TaxPolicy.Standard.PPN_11 and referenced here so that a rate
-    // change requires editing only the shared constant.
-    private static final TaxPolicy TAX_POLICY = TaxPolicy.Standard.PPN_11;
-
     // ── Factories ───────────────────────────────────────────────
+
+    /**
+     * Creates a new invoice for a checkout.
+     *
+     * @param taxPolicy the tax strategy resolved from the hotel's policy config via
+     *                  {@link id.co.hospitops.billing.domain.port.out.HotelPolicyPort}.
+     *                  Previously this was a hardcoded static constant (PPN_11); it is
+     *                  now supplied by the caller so the rate is hotel-specific and
+     *                  configurable at runtime without a code change.
+     */
     public static Invoice create(HotelId hotelId, String invoiceNumber,
                                  ReservationId reservationId,
                                  String reservationNumber, String guestName,
-                                 long nights, Money ratePerNight, String roomTypeName) {
+                                 long nights, Money ratePerNight, String roomTypeName,
+                                 TaxPolicy taxPolicy) {
         List<InvoiceItem> items = new ArrayList<>();
         Money subtotal = ratePerNight.multiply((int) nights);
         items.add(new InvoiceItem(UUID.randomUUID(),
                 roomTypeName + " — " + nights + " night(s)",
                 (int) nights, ratePerNight, subtotal));
 
-        Money tax = TAX_POLICY.calculate(subtotal);
+        Money tax = taxPolicy.calculate(subtotal);
         Money discount = Money.zero();
         Money total = subtotal.add(tax);
 

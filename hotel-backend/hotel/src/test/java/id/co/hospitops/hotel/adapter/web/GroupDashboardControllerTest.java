@@ -2,6 +2,7 @@ package id.co.hospitops.hotel.adapter.web;
 
 import id.co.hospitops.hotel.application.response.HotelSummaryResponse;
 import id.co.hospitops.hotel.domain.port.in.GroupDashboardUseCase;
+import id.co.hospitops.hotel.domain.port.in.ManageHotelPolicyUseCase;
 import id.co.hospitops.hotel.domain.port.in.ManageHotelUseCase;
 import id.co.hospitops.shared.GroupAdminId;
 import id.co.hospitops.shared.GroupAdminPrincipal;
@@ -38,9 +39,11 @@ class GroupDashboardControllerTest {
     @MockitoBean
     GroupDashboardUseCase dashboardUseCase;
 
-    // Sibling controller in the same scan scope — provide its dependency.
+    // Sibling controllers in the same scan scope — provide their dependencies.
     @MockitoBean
     ManageHotelUseCase manageHotelUseCase;
+    @MockitoBean
+    ManageHotelPolicyUseCase manageHotelPolicyUseCase;
 
     private static final UUID GROUP_UUID = UUID.randomUUID();
     private static final UUID HOTEL_UUID = UUID.randomUUID();

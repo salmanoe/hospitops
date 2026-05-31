@@ -1,6 +1,7 @@
 package id.co.hospitops.billing.infrastructure.pdf;
 
 import id.co.hospitops.billing.domain.model.Invoice;
+import id.co.hospitops.billing.domain.port.out.HotelPolicyPort;
 import id.co.hospitops.billing.domain.port.out.ReservationDetailPort;
 import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.font.PdfFont;
@@ -28,8 +29,14 @@ public class InvoicePdfGenerator {
     private static final DeviceRgb MUTED = new DeviceRgb(136, 136, 136);
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd MMMM yyyy");
 
+    /**
+     * Generates an invoice PDF using hotel-specific branding and tax labeling from
+     * {@code hotelPolicy}. Previously the header name and tax label were hardcoded;
+     * they are now driven by the hotel's policy configuration (Phase 9).
+     */
     public byte[] generate(Invoice invoice,
-                           ReservationDetailPort.ReservationDetail detail) {
+                           ReservationDetailPort.ReservationDetail detail,
+                           HotelPolicyPort.HotelPolicy hotelPolicy) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             PdfDocument pdfDoc = new PdfDocument(new PdfWriter(baos));
             Document doc = new Document(pdfDoc, PageSize.A4);
@@ -38,12 +45,19 @@ public class InvoicePdfGenerator {
             PdfFont bold = PdfFontFactory.createFont("Helvetica-Bold");
             PdfFont regular = PdfFontFactory.createFont("Helvetica");
 
+            String hotelName = hotelPolicy.invoiceHotelName();
+            String hotelAddress = nvl(hotelPolicy.invoiceAddress());
+            String taxLabel = hotelPolicy.taxName() + " (" + hotelPolicy.taxPercent() + "%)";
+            String footerNote = hotelPolicy.invoiceFooterNote() != null
+                    ? hotelPolicy.invoiceFooterNote()
+                    : "Thank you for your stay.";
+
             // Header
             Table header = new Table(UnitValue.createPercentArray(new float[]{1, 1}))
                     .setWidth(UnitValue.createPercentValue(100)).setBorder(Border.NO_BORDER);
             header.addCell(new Cell().setBorder(Border.NO_BORDER)
-                    .add(new Paragraph("HospitOps").setFont(bold).setFontSize(26).setFontColor(GOLD))
-                    .add(new Paragraph("Hotel Management System")
+                    .add(new Paragraph(hotelName).setFont(bold).setFontSize(26).setFontColor(GOLD))
+                    .add(new Paragraph(hotelAddress)
                             .setFont(regular).setFontSize(10).setFontColor(MUTED)));
             header.addCell(new Cell().setBorder(Border.NO_BORDER)
                     .add(new Paragraph("INVOICE").setFont(bold).setFontSize(20)
@@ -107,15 +121,14 @@ public class InvoicePdfGenerator {
                     .setWidth(UnitValue.createPercentValue(100)).setBorder(Border.NO_BORDER);
             totals.addCell(new Cell(4, 1).setBorder(Border.NO_BORDER));
             addTotal(totals, "Subtotal", formatRp(invoice.getSubtotal().amount()), false, regular, bold);
-            addTotal(totals, "Tax (11%)", formatRp(invoice.getTaxAmount().amount()), false, regular, bold);
+            addTotal(totals, taxLabel, formatRp(invoice.getTaxAmount().amount()), false, regular, bold);
             if (!invoice.getDiscountAmount().isZero())
                 addTotal(totals, "Discount", "- " + formatRp(invoice.getDiscountAmount().amount()), false, regular, bold);
             addTotal(totals, "TOTAL", formatRp(invoice.getTotalAmount().amount()), true, regular, bold);
             doc.add(totals);
 
             doc.add(new Paragraph("\n\n"));
-            doc.add(new Paragraph(
-                    "Thank you for staying with us. We look forward to welcoming you again.")
+            doc.add(new Paragraph(footerNote)
                     .setFont(regular).setFontSize(9).setFontColor(MUTED)
                     .setTextAlignment(TextAlignment.CENTER));
 

@@ -5,12 +5,14 @@ import id.co.hospitops.billing.application.response.InvoiceResponse;
 import id.co.hospitops.billing.domain.model.Invoice;
 import id.co.hospitops.billing.domain.model.PaymentMethod;
 import id.co.hospitops.billing.domain.model.PaymentStatus;
+import id.co.hospitops.billing.domain.port.out.HotelPolicyPort;
 import id.co.hospitops.billing.domain.port.out.InvoiceNumberGenerator;
 import id.co.hospitops.billing.domain.port.out.InvoiceRepository;
 import id.co.hospitops.billing.domain.port.out.ReservationDetailPort;
 import id.co.hospitops.billing.domain.port.out.ReservationDetailPort.ReservationDetail;
 import id.co.hospitops.billing.infrastructure.pdf.InvoicePdfGenerator;
 import id.co.hospitops.shared.*;
+import id.co.hospitops.shared.TaxPolicy;
 import id.co.hospitops.shared.event.PaymentReceivedEvent;
 import id.co.hospitops.shared.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.DisplayName;
@@ -50,19 +52,18 @@ import static org.mockito.BDDMockito.*;
 @ExtendWith(MockitoExtension.class)
 class BillingServiceCreateInvoiceTest {
 
-    @Mock
-    InvoiceRepository invoiceRepo;
-    @Mock
-    InvoiceNumberGenerator numberGenerator;
-    @Mock
-    ReservationDetailPort reservationDetail;
-    @Mock
-    InvoicePdfGenerator pdfGenerator;
-    @Mock
-    ApplicationEventPublisher eventPublisher;
+    @Mock InvoiceRepository invoiceRepo;
+    @Mock InvoiceNumberGenerator numberGenerator;
+    @Mock ReservationDetailPort reservationDetail;
+    @Mock HotelPolicyPort hotelPolicyPort;
+    @Mock InvoicePdfGenerator pdfGenerator;
+    @Mock ApplicationEventPublisher eventPublisher;
 
-    @InjectMocks
-    BillingService service;
+    @InjectMocks BillingService service;
+
+    private static final HotelPolicyPort.HotelPolicy DEFAULT_POLICY =
+            new HotelPolicyPort.HotelPolicy("Grand Palace Hotel", null,
+                    "Thank you.", 11, "PPN");
 
     // ── helpers ───────────────────────────────────────────────────────────
 
@@ -95,7 +96,8 @@ class BillingServiceCreateInvoiceTest {
                 "Budi Santoso",
                 nights,
                 Money.of(500_000L),
-                "Deluxe"
+                "Deluxe",
+                TaxPolicy.Standard.PPN_11
         );
     }
 
@@ -121,6 +123,7 @@ class BillingServiceCreateInvoiceTest {
             given(reservationDetail.findById(reservationId))
                     .willReturn(buildDetail(reservationId, 3L));
             given(numberGenerator.generate()).willReturn("INV-2025-00001");
+            given(hotelPolicyPort.findByHotelId(any())).willReturn(DEFAULT_POLICY);
             given(invoiceRepo.save(any())).willAnswer(inv -> inv.getArgument(0));
 
             withHotelContext(() -> service.createInvoiceForCheckout(reservationId, 3L));
@@ -135,6 +138,7 @@ class BillingServiceCreateInvoiceTest {
             given(reservationDetail.findById(any()))
                     .willReturn(buildDetail(reservationId, 2L));
             given(numberGenerator.generate()).willReturn("INV-2025-00042");
+            given(hotelPolicyPort.findByHotelId(any())).willReturn(DEFAULT_POLICY);
             given(invoiceRepo.save(any())).willAnswer(inv -> inv.getArgument(0));
 
             withHotelContext(() -> service.createInvoiceForCheckout(reservationId, 2L));
@@ -149,6 +153,7 @@ class BillingServiceCreateInvoiceTest {
             given(reservationDetail.findById(any()))
                     .willReturn(buildDetail(reservationId, 1L));
             given(numberGenerator.generate()).willReturn("INV-2025-00001");
+            given(hotelPolicyPort.findByHotelId(any())).willReturn(DEFAULT_POLICY);
             given(invoiceRepo.save(any())).willAnswer(inv -> inv.getArgument(0));
 
             withHotelContext(() -> service.createInvoiceForCheckout(reservationId, 1L));
@@ -163,6 +168,7 @@ class BillingServiceCreateInvoiceTest {
             given(reservationDetail.findById(any()))
                     .willReturn(buildDetail(reservationId, 3L));
             given(numberGenerator.generate()).willReturn("INV-2025-00001");
+            given(hotelPolicyPort.findByHotelId(any())).willReturn(DEFAULT_POLICY);
 
             ArgumentCaptor<Invoice> captor = ArgumentCaptor.forClass(Invoice.class);
             given(invoiceRepo.save(captor.capture())).willAnswer(inv -> inv.getArgument(0));
@@ -179,6 +185,7 @@ class BillingServiceCreateInvoiceTest {
             given(reservationDetail.findById(any()))
                     .willReturn(buildDetail(reservationId, 3L));
             given(numberGenerator.generate()).willReturn("INV-2025-00001");
+            given(hotelPolicyPort.findByHotelId(any())).willReturn(DEFAULT_POLICY);
             given(invoiceRepo.save(any())).willAnswer(inv -> inv.getArgument(0));
 
             withHotelContext(() -> service.createInvoiceForCheckout(reservationId, 3L));

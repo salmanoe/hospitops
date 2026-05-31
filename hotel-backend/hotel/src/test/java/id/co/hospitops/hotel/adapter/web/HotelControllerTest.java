@@ -4,6 +4,7 @@ import id.co.hospitops.hotel.application.response.HotelResponse;
 import id.co.hospitops.hotel.domain.model.HotelStatus;
 import id.co.hospitops.hotel.domain.model.SetupStep;
 import id.co.hospitops.hotel.domain.port.in.GroupDashboardUseCase;
+import id.co.hospitops.hotel.domain.port.in.ManageHotelPolicyUseCase;
 import id.co.hospitops.hotel.domain.port.in.ManageHotelUseCase;
 import id.co.hospitops.shared.GroupAdminId;
 import id.co.hospitops.shared.GroupAdminPrincipal;
@@ -48,9 +49,11 @@ class HotelControllerTest {
     @MockitoBean
     ManageHotelUseCase hotelUseCase;
 
-    // GroupDashboardController is in the same adapter.web scan scope — mock its dependency.
+    // Sibling controllers in the same adapter.web scan scope — mock their dependencies.
     @MockitoBean
     GroupDashboardUseCase groupDashboardUseCase;
+    @MockitoBean
+    ManageHotelPolicyUseCase hotelPolicyUseCase;
 
     private static final UUID GROUP_UUID = UUID.randomUUID();
     private static final UUID HOTEL_UUID = UUID.randomUUID();
