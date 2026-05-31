@@ -24,6 +24,8 @@ COPY guest/pom.xml              guest/pom.xml
 COPY reservation/pom.xml        reservation/pom.xml
 COPY housekeeping/pom.xml       housekeeping/pom.xml
 COPY billing/pom.xml            billing/pom.xml
+COPY group/pom.xml              group/pom.xml
+COPY hotel/pom.xml              hotel/pom.xml
 COPY bootstrap/pom.xml          bootstrap/pom.xml
 COPY coverage-aggregate/pom.xml coverage-aggregate/pom.xml
 
