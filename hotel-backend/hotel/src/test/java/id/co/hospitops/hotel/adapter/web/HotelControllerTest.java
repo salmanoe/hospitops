@@ -5,16 +5,22 @@ import id.co.hospitops.hotel.domain.model.HotelStatus;
 import id.co.hospitops.hotel.domain.model.SetupStep;
 import id.co.hospitops.hotel.domain.port.in.GroupDashboardUseCase;
 import id.co.hospitops.hotel.domain.port.in.ManageHotelUseCase;
+import id.co.hospitops.shared.GroupAdminId;
+import id.co.hospitops.shared.GroupAdminPrincipal;
 import id.co.hospitops.shared.GroupId;
 import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.exception.BusinessRuleViolationException;
 import id.co.hospitops.shared.exception.ResourceNotFoundException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -48,6 +54,22 @@ class HotelControllerTest {
 
     private static final UUID GROUP_UUID = UUID.randomUUID();
     private static final UUID HOTEL_UUID = UUID.randomUUID();
+    private static final UUID ADMIN_UUID = UUID.randomUUID();
+
+    @BeforeEach
+    void setUpSecurityContext() {
+        var principal = new GroupAdminPrincipal(
+                GroupAdminId.of(ADMIN_UUID), GroupId.of(GROUP_UUID),
+                "admin@hospitops.local", null);
+        var context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(new UsernamePasswordAuthenticationToken(principal, null, List.of()));
+        SecurityContextHolder.setContext(context);
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     private HotelResponse setupResponse() {
         return new HotelResponse(
@@ -153,20 +175,20 @@ class HotelControllerTest {
         }
     }
 
-    // ── GET /api/v1/group/hotels?groupId=… ───────────────────────────────
+    // ── GET /api/v1/group/hotels ──────────────────────────────────────────
 
     @Nested
     @DisplayName("GET /api/v1/group/hotels")
     class ListHotels {
 
         @Test
-        @DisplayName("returns 200 with list of hotels for the group")
+        @DisplayName("returns 200 with hotels for the authenticated GROUP_ADMIN's own group")
         void success() throws Exception {
             given(hotelUseCase.findByGroupId(GroupId.of(GROUP_UUID)))
                     .willReturn(List.of(setupResponse()));
 
             mockMvc.perform(get("/api/v1/group/hotels")
-                            .param("groupId", GROUP_UUID.toString()))
+        )
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data").isArray())
                     .andExpect(jsonPath("$.data[0].id").value(HOTEL_UUID.toString()));

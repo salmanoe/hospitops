@@ -6,6 +6,7 @@ import id.co.hospitops.hotel.application.command.CreateHotelCommand;
 import id.co.hospitops.hotel.application.response.HotelResponse;
 import id.co.hospitops.hotel.domain.model.SetupStep;
 import id.co.hospitops.hotel.domain.port.in.ManageHotelUseCase;
+import id.co.hospitops.shared.GroupAdminPrincipal;
 import id.co.hospitops.shared.GroupId;
 import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.web.ApiResponse;
@@ -13,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -38,15 +40,14 @@ public class HotelController {
     }
 
     /**
-     * List all hotels belonging to a group.
-     *
-     * TODO Phase 6: Extract groupId from JWT claim, remove query parameter.
+     * List all hotels belonging to the authenticated GROUP_ADMIN's own group.
+     * The groupId is derived from the JWT claim — a caller cannot list another group's hotels.
      */
     @GetMapping
     public ResponseEntity<ApiResponse<List<HotelResponse>>> list(
-            @RequestParam UUID groupId) {
+            @AuthenticationPrincipal GroupAdminPrincipal admin) {
         return ResponseEntity.ok(
-                ApiResponse.ok(hotelUseCase.findByGroupId(GroupId.of(groupId))));
+                ApiResponse.ok(hotelUseCase.findByGroupId(admin.groupId())));
     }
 
     /** Get a single hotel by ID. */
