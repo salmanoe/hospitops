@@ -256,7 +256,7 @@
             title: 'Room Types',
             desc:  'Add at least one room type (e.g. Deluxe, Suite). Creating a room type auto-completes this step.',
             action: 'link',
-            href:  () => `/rooms/types.html`,
+            href:  () => `/rooms/types.html?setupHotelId=${hotelId}`,
             linkText: 'Add Room Type →',
         },
         {
@@ -265,7 +265,7 @@
             title: 'Rooms',
             desc:  'Add at least one physical room linked to a room type. Creating a room auto-completes this step.',
             action: 'link',
-            href:  () => `/rooms/list.html`,
+            href:  () => `/rooms/form.html?setupHotelId=${hotelId}`,
             linkText: 'Add Room →',
         },
         {
@@ -274,7 +274,7 @@
             title: 'First Staff Account',
             desc:  'Create at least one ADMIN or MANAGER staff account. Creating a staff account auto-completes this step.',
             action: 'link',
-            href:  () => `/staff/form.html`,
+            href:  () => `/staff/form.html?setupHotelId=${hotelId}`,
             linkText: 'Add Staff →',
         },
     ];

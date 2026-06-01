@@ -11,9 +11,17 @@
 <div id="main-content">
     <div class="topbar">
         <h2 class="page-title" id="page-title">Add Room</h2>
-        <a href="/rooms/list.html" class="btn btn-outline-secondary btn-sm">← Back</a>
+        <a id="back-btn" href="/rooms/list.html" class="btn btn-outline-secondary btn-sm">← Back</a>
     </div>
     <div class="page-body">
+        <!-- Setup wizard context banner -->
+        <div id="setup-banner" class="alert alert-info d-flex align-items-center gap-3 mb-3 d-none">
+            <div class="flex-grow-1">
+                <strong>Setup Step 4 of 5 — Rooms</strong><br>
+                <span class="small">Add at least one room, then you'll return to the wizard automatically.</span>
+            </div>
+            <a id="setup-back-link" href="#" class="btn btn-outline-primary btn-sm">← Back to Setup</a>
+        </div>
         <div style="max-width:560px">
             <form id="room-form" novalidate>
 
@@ -55,7 +63,7 @@
                 </div>
 
                 <div class="d-flex gap-2 justify-content-end">
-                    <a href="/rooms/list.html" class="btn btn-outline-secondary">Cancel</a>
+                    <a id="cancel-btn" href="/rooms/list.html" class="btn btn-outline-secondary">Cancel</a>
                     <button type="submit" id="submit-btn" class="btn btn-gold">Save Room</button>
                 </div>
             </form>
@@ -70,6 +78,18 @@
 Auth.requireRole('ADMIN', 'MANAGER', 'GROUP_ADMIN');
 const roomId = Utils.getParam('id');
 const isEdit = !!roomId;
+
+// Setup wizard context — present when arriving from setup.html
+const setupHotelId = Utils.getParam('setupHotelId');
+const setupWizardUrl = setupHotelId ? `/group/hotels/setup.html?hotelId=${setupHotelId}` : null;
+
+if (setupWizardUrl) {
+    document.getElementById('setup-banner').classList.remove('d-none');
+    document.getElementById('setup-back-link').href = setupWizardUrl;
+    document.getElementById('back-btn').href = setupWizardUrl;
+    document.getElementById('back-btn').textContent = '← Setup Wizard';
+    document.getElementById('cancel-btn').href = setupWizardUrl;
+}
 
 async function init() {
     document.getElementById('page-title').textContent = isEdit ? 'Edit Room' : 'Add Room';
@@ -109,7 +129,8 @@ document.getElementById('room-form').addEventListener('submit', async (e) => {
             await API.rooms.create(data);
         }
         Utils.toast(isEdit ? 'Room updated' : 'Room added');
-        window.location.href = '/rooms/list.html';
+        // In setup mode and creating (not editing): return to wizard for step 5.
+        window.location.href = (!isEdit && setupWizardUrl) ? setupWizardUrl : '/rooms/list.html';
     } catch (err) {
         Utils.setFormErrors(err.details || {});
         Utils.toast(err.message, 'danger');
