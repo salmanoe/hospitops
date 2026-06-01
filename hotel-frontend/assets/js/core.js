@@ -112,6 +112,29 @@ const Auth = (() => {
         return true;
     };
 
+    /**
+     * Guard for hotel-scoped pages (dashboard.html and all hotel-staff pages).
+     *
+     * Passes for:
+     *   - Any hotel staff role (ADMIN, MANAGER, FRONT_DESK, etc.)
+     *   - GROUP_ADMIN who has entered a hotel (hotelId is non-null in the stored user)
+     *
+     * Redirects to /group/dashboard.html if the user is a group-scoped GROUP_ADMIN
+     * (no hotelId) — they must use "Enter Hotel" first.
+     * Redirects to /login.html if not logged in at all.
+     */
+    const requireHotelSession = () => {
+        if (!isLoggedIn()) {
+            window.location.href = '/login.html';
+            return false;
+        }
+        if (isGroupAdmin() && !isHotelScoped()) {
+            window.location.href = '/group/dashboard.html';
+            return false;
+        }
+        return true;
+    };
+
     // Guard: redirect to group login if not authenticated as GROUP_ADMIN
     const requireGroupAdmin = () => {
         if (!isLoggedIn()) {
@@ -148,7 +171,7 @@ const Auth = (() => {
 
     return { save, clear, getToken, getRefreshToken, getUser, isLoggedIn,
              hasRole, isGroupAdmin, isHotelScoped,
-             requireAuth, requireGroupAdmin, requireRole,  // R21: isAtLeast removed
+             requireAuth, requireHotelSession, requireGroupAdmin, requireRole,
              applyRoleVisibility };
 })();
 

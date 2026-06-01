@@ -9,6 +9,14 @@
 
 <nav class="nav flex-column py-2">
 
+    <!-- Shown only when a GROUP_ADMIN has entered a hotel scope -->
+    <a href="/group/dashboard.html"
+       class="nav-link nav-link-back"
+       data-roles="GROUP_ADMIN"
+       title="Return to group overview">
+        <span class="nav-icon">←</span> Group Dashboard
+    </a>
+
     <div class="nav-section-label">Main</div>
     <a href="/dashboard.html" class="nav-link" data-page="dashboard">
         <span class="nav-icon">⊞</span> Dashboard
@@ -16,7 +24,7 @@
 
     <div class="nav-section-label">Front Desk</div>
     <a href="/reservations/list.html" class="nav-link" data-page="reservations"
-       data-roles="ADMIN,MANAGER,FRONT_DESK">
+       data-roles="ADMIN,MANAGER,FRONT_DESK,GROUP_ADMIN">
         <span class="nav-icon">📋</span> Reservations
     </a>
     <a href="/reservations/new.html" class="nav-link" data-page="new-reservation"
@@ -24,29 +32,29 @@
         <span class="nav-icon">＋</span> New Booking
     </a>
     <a href="/guests/list.html" class="nav-link" data-page="guests"
-       data-roles="ADMIN,MANAGER,FRONT_DESK">
+       data-roles="ADMIN,MANAGER,FRONT_DESK,GROUP_ADMIN">
         <span class="nav-icon">👤</span> Guests
     </a>
 
     <div class="nav-section-label">Operations</div>
     <a href="/rooms/list.html" class="nav-link" data-page="rooms"
-       data-roles="ADMIN,MANAGER">
+       data-roles="ADMIN,MANAGER,GROUP_ADMIN">
         <span class="nav-icon">🏨</span> Rooms
     </a>
     <a href="/housekeeping/board.html" class="nav-link" data-page="housekeeping"
-       data-roles="ADMIN,MANAGER,HOUSEKEEPING">
+       data-roles="ADMIN,MANAGER,HOUSEKEEPING,GROUP_ADMIN">
         <span class="nav-icon">🧹</span> Housekeeping
     </a>
 
     <div class="nav-section-label">Finance</div>
     <a href="/billing/list.html" class="nav-link" data-page="billing"
-       data-roles="ADMIN,MANAGER,ACCOUNTANT,FRONT_DESK">
+       data-roles="ADMIN,MANAGER,ACCOUNTANT,FRONT_DESK,GROUP_ADMIN">
         <span class="nav-icon">🧾</span> Invoices
     </a>
 
-    <div class="nav-section-label" data-roles="ADMIN,MANAGER">Admin</div>
+    <div class="nav-section-label" data-roles="ADMIN,MANAGER,GROUP_ADMIN">Admin</div>
     <a href="/staff/list.html" class="nav-link" data-page="staff"
-       data-roles="ADMIN,MANAGER">
+       data-roles="ADMIN,MANAGER,GROUP_ADMIN">
         <span class="nav-icon">👥</span> Staff
     </a>
 

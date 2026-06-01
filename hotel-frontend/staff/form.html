@@ -66,7 +66,7 @@
 <script src="/assets/js/core.js"></script>
 <script src="/assets/js/layout.js"></script>
 <script>
-Auth.requireRole('ADMIN', 'MANAGER');
+Auth.requireRole('ADMIN', 'MANAGER', 'GROUP_ADMIN');
 const staffId = Utils.getParam('id');
 const isEdit  = !!staffId;
 

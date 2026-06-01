@@ -32,7 +32,7 @@
 <script src="/assets/js/core.js"></script>
 <script src="/assets/js/layout.js"></script>
 <script>
-Auth.requireRole('ADMIN', 'MANAGER');
+Auth.requireRole('ADMIN', 'MANAGER', 'GROUP_ADMIN');
 
 async function load() {
     const data = await API.staff.list({ size: 100 });

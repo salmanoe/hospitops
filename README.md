@@ -9,7 +9,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0-6DB33F?logo=springboot)](https://spring.io/projects/spring-boot)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
-Hotel management system for medium hotels (20–100 rooms). A full-stack platform covering staff identity, room management, guest profiles, reservations, housekeeping, and billing — built as a clean-architecture Spring Boot monolith designed to evolve into Spring Modulith and then microservices without structural rewrites.
+Hotel management platform for hotel groups and individual properties. Manages group-level administration and per-hotel operations — staff identity, room management, guest profiles, reservations, housekeeping, and billing — built as a clean-architecture Spring Boot monolith designed to evolve into Spring Modulith and then microservices without structural rewrites.
 
 ---
 
@@ -19,6 +19,8 @@ Hotel management system for medium hotels (20–100 rooms). A full-stack platfor
 hospitops/
 ├── hotel-backend/          ← Java 25 · Spring Boot 4.0.6 · GraalVM Native Image
 │   ├── shared/             ← Typed IDs, Money, TaxPolicy, Guard, Domain Events, API wrappers
+│   ├── group/              ← Group profile, GROUP_ADMIN accounts, self-service signup
+│   ├── hotel/              ← Hotel profile, lifecycle, setup wizard, hotel_summary
 │   ├── identity/           ← Staff auth, JWT access tokens, refresh tokens
 │   ├── room/               ← Rooms, room types, seasonal rate overrides
 │   ├── guest/              ← Guest profiles, search
@@ -163,15 +165,23 @@ open http://localhost
 # Backend health (proxied through Nginx)
 curl http://localhost/actuator/health
 
-# Login — returns an access token and a refresh token
-curl -X POST http://localhost/api/v1/auth/login \
+# Hotel staff login — returns an access token and a refresh token
+# Replace {hotelId} with the UUID of the hotel seeded by Flyway
+curl -X POST http://localhost/api/v1/hotels/{hotelId}/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"admin123"}'
+
+# GROUP_ADMIN login
+curl -X POST http://localhost/api/v1/group/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"groupadmin","password":"groupadmin123"}'
 ```
 
 ---
 
 ## Default Credentials
+
+### Hotel staff (scoped to the seed hotel)
 
 | Username      | Password        | Role         |
 |---------------|-----------------|--------------|
@@ -181,7 +191,17 @@ curl -X POST http://localhost/api/v1/auth/login \
 | `housekeeper` | `hk123456`      | Housekeeping |
 | `accountant`  | `acc12345`      | Accountant   |
 
-> ⚠️ Change all passwords before deploying to any shared environment: `PATCH /api/v1/staff/{id}/password`
+Login endpoint: `POST /api/v1/hotels/{hotelId}/auth/login`
+
+### Group admin
+
+| Username      | Password          | Role         |
+|---------------|-------------------|--------------|
+| `groupadmin`  | `groupadmin123`   | GROUP_ADMIN  |
+
+Login endpoint: `POST /api/v1/group/auth/login`
+
+> ⚠️ Change all passwords before deploying to any shared environment.
 
 ---
 

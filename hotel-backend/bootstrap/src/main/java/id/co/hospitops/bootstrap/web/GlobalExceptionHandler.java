@@ -4,6 +4,7 @@ import id.co.hospitops.shared.web.ApiResponse;
 import id.co.hospitops.shared.web.BaseApiExceptionHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -24,6 +25,20 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler extends BaseApiExceptionHandler {
+
+    /**
+     * Handles {@code AccessDeniedException} thrown by {@code @PreAuthorize} AOP advice.
+     *
+     * <p>Spring Security's {@code ExceptionTranslationFilter} handles access denial in the
+     * filter chain (e.g. SecurityConfig URL rules), but when {@code @PreAuthorize} throws
+     * inside the DispatcherServlet, the exception reaches {@code @ControllerAdvice} first.
+     * Without this handler the catch-all {@link #handleGeneric} would swallow it as HTTP 500.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ApiResponse<Void> handleAccessDenied(AccessDeniedException ex) {
+        return ApiResponse.error("Access denied");
+    }
 
     @ExceptionHandler(IllegalStateException.class)
     @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)

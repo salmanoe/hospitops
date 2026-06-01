@@ -25,7 +25,7 @@ public class RoomController {
     private final RoomAvailabilityUseCase availabilityUseCase;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','FRONT_DESK')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','FRONT_DESK','GROUP_ADMIN')")
     public ResponseEntity<ApiResponse<PageResult<RoomResponse>>> list(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "50") int size) {
@@ -33,7 +33,7 @@ public class RoomController {
     }
 
     @GetMapping("/available")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','FRONT_DESK')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','FRONT_DESK','GROUP_ADMIN')")
     public ResponseEntity<ApiResponse<List<AvailableRoomResponse>>> available(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut) {
@@ -41,13 +41,13 @@ public class RoomController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','FRONT_DESK')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','FRONT_DESK','GROUP_ADMIN')")
     public ResponseEntity<ApiResponse<RoomResponse>> get(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.ok(manageUseCase.findById(RoomId.of(id))));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','GROUP_ADMIN')")
     @SuppressWarnings("JvmTaintAnalysis")
     // @Valid enforces Bean Validation on all string inputs; response is JSON, not HTML
     public ResponseEntity<ApiResponse<RoomResponse>> create(@Valid @RequestBody CreateRoomRequest req) {
@@ -56,7 +56,7 @@ public class RoomController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','GROUP_ADMIN')")
     public ResponseEntity<ApiResponse<RoomResponse>> update(@PathVariable UUID id, @Valid @RequestBody UpdateRoomRequest req) {
         return ResponseEntity.ok(ApiResponse.ok(manageUseCase.updateRoom(RoomId.of(id), new UpdateRoomCommand(req.floor(), req.notes()))));
     }

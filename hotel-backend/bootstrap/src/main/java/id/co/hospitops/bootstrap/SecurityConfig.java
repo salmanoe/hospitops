@@ -102,43 +102,50 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
 
                         // Staff management
-                        .requestMatchers(HttpMethod.GET, "/api/v1/staff").hasAnyRole(ADMIN, MANAGER)
-                        .requestMatchers(HttpMethod.POST, "/api/v1/staff").hasRole(ADMIN)
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/staff/**").hasRole(ADMIN)
+                        // GROUP_ADMIN has full access: reads staff list, creates/edits staff during hotel setup
+                        .requestMatchers(HttpMethod.GET, "/api/v1/staff").hasAnyRole(ADMIN, MANAGER, GROUP_ADMIN)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/staff").hasAnyRole(ADMIN, GROUP_ADMIN)
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/staff/**").hasAnyRole(ADMIN, GROUP_ADMIN)
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/staff/*/password").hasAnyRole(ADMIN, MANAGER)
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/staff/*/toggle").hasAnyRole(ADMIN, MANAGER)
 
                         // ── Room & Room Types ────────────────────────────────────
-                        .requestMatchers(HttpMethod.GET, "/api/v1/rooms/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/rooms").hasAnyRole(ADMIN, MANAGER)
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/rooms/**").hasAnyRole(ADMIN, MANAGER)
+                        // GROUP_ADMIN has full access: setup wizard steps 3 & 4 require creating room types and rooms
+                        .requestMatchers(HttpMethod.GET, "/api/v1/rooms/**").hasAnyRole(ADMIN, MANAGER, FRONT_DESK, HOUSEKEEPING, ACCOUNTANT, GROUP_ADMIN)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/rooms").hasAnyRole(ADMIN, MANAGER, GROUP_ADMIN)
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/rooms/**").hasAnyRole(ADMIN, MANAGER, GROUP_ADMIN)
 
-                        .requestMatchers(HttpMethod.GET, "/api/v1/room-types/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/room-types").hasRole(ADMIN)
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/room-types/**").hasRole(ADMIN)
-                        .requestMatchers(HttpMethod.POST, "/api/v1/room-types/*/rates").hasAnyRole(ADMIN, MANAGER)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/room-types/**").hasAnyRole(ADMIN, MANAGER, FRONT_DESK, HOUSEKEEPING, ACCOUNTANT, GROUP_ADMIN)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/room-types").hasAnyRole(ADMIN, GROUP_ADMIN)
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/room-types/**").hasAnyRole(ADMIN, GROUP_ADMIN)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/room-types/*/rates").hasAnyRole(ADMIN, MANAGER, GROUP_ADMIN)
 
                         // ── Guests ───────────────────────────────────────────────
+                        // GROUP_ADMIN read-only; POST/PUT remain hotel-staff-only via the next rule
+                        .requestMatchers(HttpMethod.GET, "/api/v1/guests/**").hasAnyRole(ADMIN, MANAGER, FRONT_DESK, GROUP_ADMIN)
                         .requestMatchers("/api/v1/guests/**").hasAnyRole(ADMIN, MANAGER, FRONT_DESK)
 
                         // ── Reservations ─────────────────────────────────────────
-                        .requestMatchers("/api/v1/reservations/**").hasAnyRole(ADMIN, MANAGER, FRONT_DESK)
+                        // GROUP_ADMIN included: hotel-entered GROUP_ADMIN needs arrivals/departures on dashboard.html
+                        .requestMatchers("/api/v1/reservations/**").hasAnyRole(ADMIN, MANAGER, FRONT_DESK, GROUP_ADMIN)
 
                         // ── Housekeeping ─────────────────────────────────────────
-                        .requestMatchers("/api/v1/housekeeping/**")
-                        .hasAnyRole(ADMIN, MANAGER, HOUSEKEEPING)
+                        // GROUP_ADMIN read-only; POST/PUT remain hotel-staff-only via the next rule
+                        .requestMatchers(HttpMethod.GET, "/api/v1/housekeeping/**").hasAnyRole(ADMIN, MANAGER, HOUSEKEEPING, GROUP_ADMIN)
+                        .requestMatchers("/api/v1/housekeeping/**").hasAnyRole(ADMIN, MANAGER, HOUSEKEEPING)
 
                         // ── Billing ──────────────────────────────────────────────
+                        // GROUP_ADMIN read-only: view invoices, PDFs, reports
                         .requestMatchers(HttpMethod.GET, "/api/v1/invoices/*/pdf")
-                        .hasAnyRole(ADMIN, MANAGER, ACCOUNTANT)
+                        .hasAnyRole(ADMIN, MANAGER, ACCOUNTANT, GROUP_ADMIN)
                         .requestMatchers(HttpMethod.POST, "/api/v1/invoices/*/payments")
                         .hasAnyRole(ADMIN, MANAGER, ACCOUNTANT)
                         .requestMatchers(HttpMethod.GET, "/api/v1/invoices/*")
-                        .hasAnyRole(ADMIN, MANAGER, ACCOUNTANT, FRONT_DESK)
+                        .hasAnyRole(ADMIN, MANAGER, ACCOUNTANT, FRONT_DESK, GROUP_ADMIN)
                         .requestMatchers(HttpMethod.GET, "/api/v1/invoices")
-                        .hasAnyRole(ADMIN, MANAGER, ACCOUNTANT)
+                        .hasAnyRole(ADMIN, MANAGER, ACCOUNTANT, GROUP_ADMIN)
                         .requestMatchers(HttpMethod.GET, "/api/v1/reports/**")
-                        .hasAnyRole(ADMIN, MANAGER, ACCOUNTANT)
+                        .hasAnyRole(ADMIN, MANAGER, ACCOUNTANT, GROUP_ADMIN)
 
                         // Deny everything else by default
                         .anyRequest().authenticated()

@@ -22,20 +22,20 @@ public class RoomTypeController {
     private final ManageRoomTypeUseCase useCase;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','FRONT_DESK','ACCOUNTANT')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','FRONT_DESK','ACCOUNTANT','GROUP_ADMIN')")
     public ResponseEntity<ApiResponse<PageResult<RoomTypeResponse>>> list(
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(ApiResponse.ok(useCase.findAllRoomTypes(PageRequest.of(page, size, Sort.by("name")))));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','FRONT_DESK')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','FRONT_DESK','GROUP_ADMIN')")
     public ResponseEntity<ApiResponse<RoomTypeResponse>> get(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.ok(useCase.findRoomTypeById(RoomTypeId.of(id))));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','GROUP_ADMIN')")
     @SuppressWarnings("JvmTaintAnalysis")
     // @Valid enforces Bean Validation on all string inputs; response is JSON, not HTML
     public ResponseEntity<ApiResponse<RoomTypeResponse>> create(@Valid @RequestBody CreateRoomTypeRequest req) {
@@ -44,14 +44,14 @@ public class RoomTypeController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','GROUP_ADMIN')")
     public ResponseEntity<ApiResponse<RoomTypeResponse>> update(@PathVariable UUID id, @Valid @RequestBody UpdateRoomTypeRequest req) {
         return ResponseEntity.ok(ApiResponse.ok(
                 useCase.updateRoomType(RoomTypeId.of(id), new UpdateRoomTypeCommand(req.name(), req.capacity(), req.description(), req.basePrice()))));
     }
 
     @PostMapping("/{id}/rates")
-    @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','GROUP_ADMIN')")
     @SuppressWarnings("JvmTaintAnalysis")
     // @Valid enforces Bean Validation on all string inputs; UUID path var is type-safe; response is JSON, not HTML
     public ResponseEntity<ApiResponse<RoomTypeResponse>> addRate(@PathVariable UUID id, @Valid @RequestBody AddRateOverrideRequest req) {
