@@ -143,13 +143,16 @@ document.getElementById('type-save-btn').addEventListener('click', async () => {
             modal.hide(); load();
         } else {
             await API.roomTypes.create(data);
-            Utils.toast('Room type created');
-            modal.hide();
-            // In setup mode: return to wizard so GROUP_ADMIN can continue to step 4.
             if (setupWizardUrl) {
+                // Auto-complete the ROOM_TYPE setup step now that real data exists,
+                // then return to wizard so GROUP_ADMIN can continue to step 4.
+                await API.hotels.completeSetupStep(setupHotelId, 'ROOM_TYPE');
+                Utils.toast('Room type added — continuing setup…');
+                modal.hide();
                 window.location.href = setupWizardUrl;
             } else {
-                load();
+                Utils.toast('Room type created');
+                modal.hide(); load();
             }
         }
     } catch (e) { Utils.toast(e.message, 'danger'); }

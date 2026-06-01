@@ -124,9 +124,16 @@ document.getElementById('staff-form').addEventListener('submit', async (e) => {
         } else {
             await API.staff.create({ ...data, password });
         }
-        Utils.toast(isEdit ? 'Staff updated' : 'Staff created');
-        // In setup mode and creating: return to wizard — step 5 completes the setup.
-        window.location.href = (!isEdit && setupWizardUrl) ? setupWizardUrl : '/staff/list.html';
+        if (!isEdit && setupWizardUrl) {
+            // Auto-complete the STAFF_ACCOUNT setup step now that a real account exists.
+            // This is the final step — the wizard will transition the hotel to ACTIVE.
+            await API.hotels.completeSetupStep(setupHotelId, 'STAFF_ACCOUNT');
+            Utils.toast('Staff created — setup complete!');
+            window.location.href = setupWizardUrl;
+        } else {
+            Utils.toast(isEdit ? 'Staff updated' : 'Staff created');
+            window.location.href = '/staff/list.html';
+        }
     } catch (err) {
         Utils.setFormErrors(err.details || {});
         Utils.toast(err.message, 'danger');

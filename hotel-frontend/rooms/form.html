@@ -128,9 +128,16 @@ document.getElementById('room-form').addEventListener('submit', async (e) => {
         } else {
             await API.rooms.create(data);
         }
-        Utils.toast(isEdit ? 'Room updated' : 'Room added');
-        // In setup mode and creating (not editing): return to wizard for step 5.
-        window.location.href = (!isEdit && setupWizardUrl) ? setupWizardUrl : '/rooms/list.html';
+        if (!isEdit && setupWizardUrl) {
+            // Auto-complete the ROOM setup step now that a real room exists,
+            // then return to wizard so GROUP_ADMIN can continue to step 5.
+            await API.hotels.completeSetupStep(setupHotelId, 'ROOM');
+            Utils.toast('Room added — continuing setup…');
+            window.location.href = setupWizardUrl;
+        } else {
+            Utils.toast(isEdit ? 'Room updated' : 'Room added');
+            window.location.href = '/rooms/list.html';
+        }
     } catch (err) {
         Utils.setFormErrors(err.details || {});
         Utils.toast(err.message, 'danger');

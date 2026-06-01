@@ -305,22 +305,19 @@
             let actionHtml = '';
             if (!done) {
                 if (step.action === 'mark') {
+                    // PROFILE step: no backing data to check — manual acknowledgment is fine.
                     actionHtml = `
                         <button class="btn btn-gold btn-sm mark-btn" data-step="${step.key}">
                             Mark complete
                         </button>`;
                 } else {
-                    // Use a button that enters this hotel's context first, then navigates.
-                    // This guarantees HotelContext is bound to the correct hotel regardless
-                    // of which hotel (if any) the GROUP_ADMIN entered previously.
+                    // Steps 3–5: completion fires automatically once real data is created
+                    // on the destination page. There is no "Already done?" escape hatch —
+                    // steps cannot be marked complete without actual data being saved.
                     actionHtml = `
                         <button class="btn btn-outline-secondary btn-sm enter-then-go-btn"
                                 data-href="${escHtml(step.href())}">
                             ${step.linkText}
-                        </button>
-                        <button class="btn btn-link btn-sm text-muted p-0 ms-2 mark-btn" data-step="${step.key}"
-                                title="If you've already completed this action, mark it done">
-                            Already done?
                         </button>`;
                 }
             }
