@@ -1,5 +1,6 @@
 package id.co.hospitops.hotel.infrastructure.persistence;
 
+import id.co.hospitops.hotel.domain.model.HotelStatus;
 import id.co.hospitops.hotel.domain.model.HotelSummary;
 import id.co.hospitops.hotel.domain.port.out.HotelSummaryRepository;
 import id.co.hospitops.hotel.infrastructure.persistence.entity.HotelSummaryJpaEntity;
@@ -40,6 +41,7 @@ class HotelSummaryRepositoryImpl implements HotelSummaryRepository {
         return HotelSummaryJpaEntity.builder()
                 .hotelId(s.getHotelId().value())
                 .hotelName(s.getHotelName() != null ? s.getHotelName() : "")
+                .hotelStatus(s.getHotelStatus() != null ? s.getHotelStatus().name() : HotelStatus.SETUP.name())
                 .occupiedRooms(s.getOccupiedRooms())
                 .totalRooms(s.getTotalRooms())
                 .arrivalsToday(s.getArrivalsToday())
@@ -51,9 +53,13 @@ class HotelSummaryRepositoryImpl implements HotelSummaryRepository {
     }
 
     private HotelSummary toDomain(HotelSummaryJpaEntity e) {
+        HotelStatus status = e.getHotelStatus() != null
+                ? HotelStatus.valueOf(e.getHotelStatus())
+                : HotelStatus.SETUP;
         return HotelSummary.reconstitute(
                 HotelId.of(e.getHotelId()),
                 e.getHotelName() != null ? e.getHotelName() : "",
+                status,
                 e.getOccupiedRooms(), e.getTotalRooms(),
                 e.getArrivalsToday(), e.getDeparturesToday(),
                 e.getRevenueToday() != null ? e.getRevenueToday() : BigDecimal.ZERO,

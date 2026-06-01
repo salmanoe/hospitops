@@ -19,6 +19,7 @@ public class HotelSummary {
 
     private final HotelId hotelId;
     private String hotelName;
+    private HotelStatus hotelStatus;
     private int occupiedRooms;
     private int totalRooms;
     private int arrivalsToday;
@@ -29,28 +30,30 @@ public class HotelSummary {
     private LocalDateTime updatedAt;
 
     public static HotelSummary empty(HotelId hotelId, String hotelName) {
-        return new HotelSummary(hotelId, hotelName, 0, 0, 0, 0,
+        return new HotelSummary(hotelId, hotelName, HotelStatus.SETUP, 0, 0, 0, 0,
                 BigDecimal.ZERO, BigDecimal.ZERO, 0, LocalDateTime.now());
     }
 
     public static HotelSummary reconstitute(HotelId hotelId,
                                             String hotelName,
+                                            HotelStatus hotelStatus,
                                             int occupiedRooms, int totalRooms,
                                             int arrivalsToday, int departuresToday,
                                             BigDecimal revenueToday, BigDecimal revenueMonth,
                                             int dirtyRooms, LocalDateTime updatedAt) {
-        return new HotelSummary(hotelId, hotelName, occupiedRooms, totalRooms,
+        return new HotelSummary(hotelId, hotelName, hotelStatus, occupiedRooms, totalRooms,
                 arrivalsToday, departuresToday, revenueToday, revenueMonth,
                 dirtyRooms, updatedAt);
     }
 
-    private HotelSummary(HotelId hotelId, String hotelName,
+    private HotelSummary(HotelId hotelId, String hotelName, HotelStatus hotelStatus,
                          int occupiedRooms, int totalRooms,
                          int arrivalsToday, int departuresToday,
                          BigDecimal revenueToday, BigDecimal revenueMonth,
                          int dirtyRooms, LocalDateTime updatedAt) {
         this.hotelId = hotelId;
         this.hotelName = hotelName;
+        this.hotelStatus = hotelStatus;
         this.occupiedRooms = occupiedRooms;
         this.totalRooms = totalRooms;
         this.arrivalsToday = arrivalsToday;
@@ -104,16 +107,24 @@ public class HotelSummary {
         touch();
     }
 
+    /** Updates the status — called by event handlers on lifecycle transitions. */
+    public void updateStatus(HotelStatus status) {
+        this.hotelStatus = status;
+        touch();
+    }
+
     /**
      * Full recompute — replaces all values (used by the nightly reconciliation job).
-     * Also refreshes {@code hotelName} so it stays in sync if the name ever changes.
+     * Also refreshes {@code hotelName} and {@code hotelStatus} so they stay in sync.
      */
     public void recompute(String hotelName,
+                          HotelStatus hotelStatus,
                           int occupiedRooms, int totalRooms,
                           int arrivalsToday, int departuresToday,
                           BigDecimal revenueToday, BigDecimal revenueMonth,
                           int dirtyRooms) {
         this.hotelName = hotelName;
+        this.hotelStatus = hotelStatus;
         this.occupiedRooms = occupiedRooms;
         this.totalRooms = totalRooms;
         this.arrivalsToday = arrivalsToday;

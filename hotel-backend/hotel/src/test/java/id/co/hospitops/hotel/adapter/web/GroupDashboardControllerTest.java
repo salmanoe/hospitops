@@ -68,6 +68,7 @@ class GroupDashboardControllerTest {
         return new HotelSummaryResponse(
                 HOTEL_UUID,
                 "Test Hotel",
+                "ACTIVE",
                 5, 20, 3, 2,
                 new BigDecimal("1500000.00"), new BigDecimal("45000000.00"),
                 1, LocalDateTime.now()

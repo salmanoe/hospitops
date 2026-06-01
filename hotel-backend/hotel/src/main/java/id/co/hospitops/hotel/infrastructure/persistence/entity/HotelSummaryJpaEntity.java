@@ -26,6 +26,9 @@ public class HotelSummaryJpaEntity {
     @Column(nullable = false, length = 200)
     private String hotelName;
 
+    @Column(nullable = false, length = 20)
+    private String hotelStatus;
+
     @Column(nullable = false)
     private int occupiedRooms;
 

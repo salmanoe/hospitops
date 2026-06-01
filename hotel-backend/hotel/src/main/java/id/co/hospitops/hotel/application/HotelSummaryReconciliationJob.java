@@ -1,6 +1,7 @@
 package id.co.hospitops.hotel.application;
 
 import id.co.hospitops.hotel.domain.model.Hotel;
+import id.co.hospitops.hotel.domain.model.HotelStatus;
 import id.co.hospitops.hotel.domain.model.HotelSummary;
 import id.co.hospitops.hotel.domain.port.out.HotelRepository;
 import id.co.hospitops.hotel.domain.port.out.HotelSummaryRepository;
@@ -96,10 +97,16 @@ public class HotelSummaryReconciliationJob {
                 "SELECT name FROM hotel WHERE id = ?::uuid", String.class, id);
         final String hotelName = rawHotelName != null ? rawHotelName : "";
 
+        String rawStatus = jdbc.queryForObject(
+                "SELECT status FROM hotel WHERE id = ?::uuid", String.class, id);
+        final HotelStatus hotelStatus = rawStatus != null
+                ? HotelStatus.valueOf(rawStatus)
+                : HotelStatus.SETUP;
+
         HotelSummary summary = summaryRepo.findByHotelId(hotelId)
                 .orElseGet(() -> HotelSummary.empty(hotelId, hotelName));
 
-        summary.recompute(hotelName, occupiedRooms, totalRooms, arrivalsToday, departuresToday,
+        summary.recompute(hotelName, hotelStatus, occupiedRooms, totalRooms, arrivalsToday, departuresToday,
                 revenueToday, revenueMonth, dirtyRooms);
 
         summaryRepo.save(summary);

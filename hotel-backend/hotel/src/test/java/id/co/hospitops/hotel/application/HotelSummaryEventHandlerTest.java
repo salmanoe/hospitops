@@ -1,6 +1,7 @@
 package id.co.hospitops.hotel.application;
 
 import id.co.hospitops.hotel.domain.model.Hotel;
+import id.co.hospitops.hotel.domain.model.HotelStatus;
 import id.co.hospitops.hotel.domain.model.HotelSummary;
 import id.co.hospitops.hotel.domain.port.out.HotelRepository;
 import id.co.hospitops.hotel.domain.port.out.HotelSummaryRepository;
@@ -48,7 +49,7 @@ class HotelSummaryEventHandlerTest {
     private HotelSummary summaryWithValues(int occupied, int total, int dirty,
                                            int arrivals, int departures,
                                            BigDecimal revenueToday) {
-        return HotelSummary.reconstitute(hotelId, "Test Hotel", occupied, total,
+        return HotelSummary.reconstitute(hotelId, "Test Hotel", HotelStatus.ACTIVE, occupied, total,
                 arrivals, departures, revenueToday, BigDecimal.ZERO, dirty, java.time.LocalDateTime.now());
     }
 

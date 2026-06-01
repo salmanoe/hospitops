@@ -1,5 +1,6 @@
 package id.co.hospitops.hotel.application;
 
+import id.co.hospitops.hotel.domain.model.HotelStatus;
 import id.co.hospitops.hotel.domain.model.HotelSummary;
 import id.co.hospitops.hotel.domain.port.out.HotelRepository;
 import id.co.hospitops.hotel.domain.port.out.HotelSummaryRepository;
@@ -91,7 +92,7 @@ public class HotelSummaryEventHandler {
         log.debug("hotel_summary: dirtyRooms++ for hotel {}", event.getHotelId());
     }
 
-    // ── When a hotel is created, seed an empty summary row ───────────────────
+    // ── Hotel lifecycle — seed and status transitions ─────────────────────────
 
     @EventListener
     public void onHotelCreated(HotelCreatedEvent event) {
@@ -101,8 +102,33 @@ public class HotelSummaryEventHandler {
                 .map(h -> h.getName())
                 .orElse("");
         HotelSummary summary = HotelSummary.empty(event.getHotelId(), hotelName);
+        // empty() defaults to SETUP — correct for a newly created hotel.
         summaryRepo.save(summary);
-        log.debug("hotel_summary: seeded empty row for new hotel {}", event.getHotelId());
+        log.debug("hotel_summary: seeded SETUP row for new hotel {}", event.getHotelId());
+    }
+
+    @EventListener
+    public void onHotelActivated(HotelActivatedEvent event) {
+        HotelSummary summary = getOrCreate(event.getHotelId());
+        summary.updateStatus(HotelStatus.ACTIVE);
+        summaryRepo.save(summary);
+        log.debug("hotel_summary: status → ACTIVE for hotel {}", event.getHotelId());
+    }
+
+    @EventListener
+    public void onHotelSuspended(HotelSuspendedEvent event) {
+        HotelSummary summary = getOrCreate(event.getHotelId());
+        summary.updateStatus(HotelStatus.SUSPENDED);
+        summaryRepo.save(summary);
+        log.debug("hotel_summary: status → SUSPENDED for hotel {}", event.getHotelId());
+    }
+
+    @EventListener
+    public void onHotelReactivated(HotelReactivatedEvent event) {
+        HotelSummary summary = getOrCreate(event.getHotelId());
+        summary.updateStatus(HotelStatus.ACTIVE);
+        summaryRepo.save(summary);
+        log.debug("hotel_summary: status → ACTIVE (reactivated) for hotel {}", event.getHotelId());
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
