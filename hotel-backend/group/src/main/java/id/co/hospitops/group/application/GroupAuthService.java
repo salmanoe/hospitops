@@ -62,8 +62,8 @@ public class GroupAuthService implements GroupAuthUseCase {
         if (access == HotelAccessResult.NOT_FOUND_OR_WRONG_GROUP) {
             throw new BusinessRuleViolationException("Hotel does not belong to your group");
         }
-        if (access == HotelAccessResult.NOT_ACTIVE) {
-            throw new BusinessRuleViolationException("Hotel is not currently active");
+        if (access == HotelAccessResult.SUSPENDED) {
+            throw new BusinessRuleViolationException("Hotel is suspended and cannot be entered");
         }
 
         // Rule 3: hotel-scoped token carries the same expiry as the group token

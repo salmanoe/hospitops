@@ -35,9 +35,12 @@ public interface HotelLookupPort {
     enum HotelAccessResult {
         /** Hotel does not exist, or does not belong to the caller's group. */
         NOT_FOUND_OR_WRONG_GROUP,
-        /** Hotel belongs to the group but is not ACTIVE (e.g. SUSPENDED or SETUP). */
-        NOT_ACTIVE,
-        /** Hotel belongs to the group and is ACTIVE — access permitted. */
+        /** Hotel belongs to the group but is SUSPENDED — entry blocked. */
+        SUSPENDED,
+        /**
+         * Hotel belongs to the group and is ACTIVE or SETUP — entry permitted.
+         * SETUP hotels must be enterable so GROUP_ADMIN can complete the setup wizard.
+         */
         ALLOWED
     }
 }

@@ -258,7 +258,6 @@
             action: 'link',
             href:  () => `/rooms/types.html`,
             linkText: 'Add Room Type →',
-            note: 'You must be inside the hotel session to manage rooms. Enter the hotel first.',
         },
         {
             key:   'ROOM',
@@ -268,7 +267,6 @@
             action: 'link',
             href:  () => `/rooms/list.html`,
             linkText: 'Add Room →',
-            note: 'You must be inside the hotel session to manage rooms. Enter the hotel first.',
         },
         {
             key:   'STAFF_ACCOUNT',
@@ -278,7 +276,6 @@
             action: 'link',
             href:  () => `/staff/form.html`,
             linkText: 'Add Staff →',
-            note: 'You must be inside the hotel session to manage staff. Enter the hotel first.',
         },
     ];
 
@@ -313,18 +310,18 @@
                             Mark complete
                         </button>`;
                 } else {
-                    const note = step.note
-                        ? `<div class="text-muted mt-2" style="font-size:12px;">ℹ️ ${escHtml(step.note)}</div>`
-                        : '';
+                    // Use a button that enters this hotel's context first, then navigates.
+                    // This guarantees HotelContext is bound to the correct hotel regardless
+                    // of which hotel (if any) the GROUP_ADMIN entered previously.
                     actionHtml = `
-                        <a href="${escHtml(step.href())}" class="btn btn-outline-secondary btn-sm">
+                        <button class="btn btn-outline-secondary btn-sm enter-then-go-btn"
+                                data-href="${escHtml(step.href())}">
                             ${step.linkText}
-                        </a>
+                        </button>
                         <button class="btn btn-link btn-sm text-muted p-0 ms-2 mark-btn" data-step="${step.key}"
                                 title="If you've already completed this action, mark it done">
                             Already done?
-                        </button>
-                        ${note}`;
+                        </button>`;
                 }
             }
 
@@ -387,6 +384,24 @@
                     render(updated);
                 } catch (err) {
                     Utils.toast(err.message || 'Failed to complete step.', 'danger');
+                    Utils.loading(btn, false);
+                }
+            });
+        });
+
+        // Wire action buttons: enter this hotel's context first, then navigate.
+        // Prevents showing the wrong hotel's data if GROUP_ADMIN was previously
+        // in a different hotel's session (or in group-scoped mode).
+        document.querySelectorAll('.enter-then-go-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const dest = btn.dataset.href;
+                Utils.loading(btn, true);
+                try {
+                    const res = await API.groupAuth.enterHotel(hotelId);
+                    Auth.save(res);
+                    window.location.href = dest;
+                } catch (err) {
+                    Utils.toast(err.message || 'Failed to enter hotel session.', 'danger');
                     Utils.loading(btn, false);
                 }
             });

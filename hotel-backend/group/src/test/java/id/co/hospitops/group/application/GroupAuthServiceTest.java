@@ -142,14 +142,30 @@ class GroupAuthServiceTest {
         }
 
         @Test
-        @DisplayName("rejects when hotel belongs to group but is not ACTIVE")
-        void inactiveHotel() {
+        @DisplayName("issues a hotel-scoped token when hotel is in SETUP status (setup wizard flow)")
+        void setupHotelAllowed() {
+            // SETUP hotels return ALLOWED so GROUP_ADMIN can complete the setup wizard
+            given(hotelLookupPort.verifyAccess(HOTEL_ID, GROUP_ID)).willReturn(HotelAccessResult.ALLOWED);
+            given(tokenService.parseExpiry(rawGroupToken)).willReturn(expiry);
+            given(tokenService.issueHotelToken(ADMIN_ID, GROUP_ID, EMAIL, HOTEL_ID, expiry))
+                    .willReturn("setup-hotel-token");
+            given(tokenService.getExpirationSeconds()).willReturn(3600L);
+
+            GroupLoginResponse response = service.enterHotel(principal, HOTEL_ID, rawGroupToken);
+
+            assertThat(response.accessToken()).isEqualTo("setup-hotel-token");
+            assertThat(response.hotelId()).isEqualTo(HOTEL_ID);
+        }
+
+        @Test
+        @DisplayName("rejects when hotel is SUSPENDED")
+        void suspendedHotel() {
             given(hotelLookupPort.verifyAccess(HOTEL_ID, GROUP_ID))
-                    .willReturn(HotelAccessResult.NOT_ACTIVE);
+                    .willReturn(HotelAccessResult.SUSPENDED);
 
             assertThatThrownBy(() -> service.enterHotel(principal, HOTEL_ID, rawGroupToken))
                     .isInstanceOf(BusinessRuleViolationException.class)
-                    .hasMessageContaining("not currently active");
+                    .hasMessageContaining("suspended");
 
             then(tokenService).should(never()).issueHotelToken(ADMIN_ID, GROUP_ID, EMAIL, HOTEL_ID, expiry);
         }

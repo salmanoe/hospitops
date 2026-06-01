@@ -50,9 +50,9 @@ public class HotelLookupPortAdapter implements HotelLookupPort {
                     if (!groupId.equals(snapshot.groupId())) {
                         return HotelAccessResult.NOT_FOUND_OR_WRONG_GROUP;
                     }
-                    return snapshot.status() == HotelStatus.ACTIVE
-                            ? HotelAccessResult.ALLOWED
-                            : HotelAccessResult.NOT_ACTIVE;
+                    return snapshot.status() == HotelStatus.SUSPENDED
+                            ? HotelAccessResult.SUSPENDED
+                            : HotelAccessResult.ALLOWED; // ACTIVE or SETUP both permit entry
                 })
                 .orElse(HotelAccessResult.NOT_FOUND_OR_WRONG_GROUP);
     }

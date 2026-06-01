@@ -337,7 +337,7 @@ class SetupWizardIntegrationTest {
         mockMvc.perform(post("/api/v1/group/hotels/{id}/enter", hotelId)
                         .header(HttpHeaders.AUTHORIZATION, groupAdminToken))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.message").value("Hotel is not currently active"));
+                .andExpect(jsonPath("$.message").value("Hotel is suspended and cannot be entered"));
     }
 
     // ═════════════════════════════════════════════════════════════════════
