@@ -12,9 +12,15 @@ import java.util.UUID;
 
 @Entity
 @ConcreteProxy
-@Table(name = "room_type", indexes = {
-        @Index(name = "idx_room_type_name", columnList = "name")
-})
+@Table(name = "room_type",
+        indexes = {
+                @Index(name = "idx_room_type_name", columnList = "name"),
+                @Index(name = "idx_room_type_hotel_id", columnList = "hotel_id")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uq_room_type_name_hotel", columnNames = {"name", "hotel_id"})
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -26,7 +32,10 @@ public class RoomTypeJpaEntity {
     @Column(columnDefinition = "uuid")
     private UUID id;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Version
+    private Long version;
+
+    @Column(nullable = false, length = 100)
     private String name;
 
     @Column(nullable = false)

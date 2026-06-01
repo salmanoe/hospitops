@@ -14,11 +14,16 @@ import java.util.UUID;
 
 @Entity
 @ConcreteProxy
-@Table(name = "room", indexes = {
-        @Index(name = "idx_room_number", columnList = "room_number"),
-        @Index(name = "idx_room_status", columnList = "status"),
-        @Index(name = "idx_room_type_id", columnList = "room_type_id")
-})
+@Table(name = "room",
+        indexes = {
+                @Index(name = "idx_room_number", columnList = "room_number"),
+                @Index(name = "idx_room_status", columnList = "status"),
+                @Index(name = "idx_room_type_id", columnList = "room_type_id")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uq_room_number_hotel", columnNames = {"room_number", "hotel_id"})
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -30,7 +35,10 @@ public class RoomJpaEntity {
     @Column(columnDefinition = "uuid")
     private UUID id;
 
-    @Column(name = "room_number", nullable = false, unique = true, length = 10)
+    @Version
+    private Long version;
+
+    @Column(name = "room_number", nullable = false, length = 10)
     private String roomNumber;
 
     @Column(nullable = false)

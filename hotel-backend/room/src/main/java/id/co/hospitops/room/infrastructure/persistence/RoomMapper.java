@@ -12,6 +12,7 @@ public interface RoomMapper {
     @Mapping(target = "id", expression = "java(rt.getId().value())")
     @Mapping(target = "basePrice", expression = "java(rt.getBasePrice().amount())")
     @Mapping(target = "hotelId", expression = "java(rt.getHotelId().value())")
+    @Mapping(target = "version", ignore = true)
     RoomTypeJpaEntity toJpa(RoomType rt);
 
     default RoomType toDomain(RoomTypeJpaEntity e) {
@@ -39,6 +40,7 @@ public interface RoomMapper {
     @Mapping(target = "roomTypeId", expression = "java(room.getRoomTypeId().value())")
     @Mapping(target = "status", expression = "java(room.getStatus())")
     @Mapping(target = "hotelId", expression = "java(room.getHotelId().value())")
+    @Mapping(target = "version", ignore = true)
     RoomJpaEntity toJpa(Room room);
 
     default Room toDomain(RoomJpaEntity e) {
