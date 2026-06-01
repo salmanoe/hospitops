@@ -1,6 +1,7 @@
 package id.co.hospitops.hotel.application;
 
 import id.co.hospitops.hotel.domain.model.HotelSummary;
+import id.co.hospitops.hotel.domain.port.out.HotelRepository;
 import id.co.hospitops.hotel.domain.port.out.HotelSummaryRepository;
 import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.event.*;
@@ -33,6 +34,7 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class HotelSummaryEventHandler {
 
+    private final HotelRepository hotelRepo;
     private final HotelSummaryRepository summaryRepo;
 
     @EventListener
@@ -93,7 +95,12 @@ public class HotelSummaryEventHandler {
 
     @EventListener
     public void onHotelCreated(HotelCreatedEvent event) {
-        HotelSummary summary = HotelSummary.empty(event.getHotelId());
+        // Look up the hotel name so the dashboard can display it without a second query.
+        // This runs in the same transaction as the hotel insert, so the row is visible.
+        String hotelName = hotelRepo.findById(event.getHotelId())
+                .map(h -> h.getName())
+                .orElse("");
+        HotelSummary summary = HotelSummary.empty(event.getHotelId(), hotelName);
         summaryRepo.save(summary);
         log.debug("hotel_summary: seeded empty row for new hotel {}", event.getHotelId());
     }
@@ -110,7 +117,8 @@ public class HotelSummaryEventHandler {
                 .orElseGet(() -> {
                     log.warn("hotel_summary: no row for hotel {} — creating empty placeholder. " +
                             "Nightly reconciliation will correct the counts.", hotelId);
-                    return HotelSummary.empty(hotelId);
+                    // Name will be backfilled by the nightly reconciliation job.
+                    return HotelSummary.empty(hotelId, "");
                 });
     }
 }

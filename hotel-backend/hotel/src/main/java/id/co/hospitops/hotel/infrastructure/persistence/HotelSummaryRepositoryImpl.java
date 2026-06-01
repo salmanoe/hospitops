@@ -39,6 +39,7 @@ class HotelSummaryRepositoryImpl implements HotelSummaryRepository {
     private HotelSummaryJpaEntity toJpa(HotelSummary s) {
         return HotelSummaryJpaEntity.builder()
                 .hotelId(s.getHotelId().value())
+                .hotelName(s.getHotelName() != null ? s.getHotelName() : "")
                 .occupiedRooms(s.getOccupiedRooms())
                 .totalRooms(s.getTotalRooms())
                 .arrivalsToday(s.getArrivalsToday())
@@ -52,6 +53,7 @@ class HotelSummaryRepositoryImpl implements HotelSummaryRepository {
     private HotelSummary toDomain(HotelSummaryJpaEntity e) {
         return HotelSummary.reconstitute(
                 HotelId.of(e.getHotelId()),
+                e.getHotelName() != null ? e.getHotelName() : "",
                 e.getOccupiedRooms(), e.getTotalRooms(),
                 e.getArrivalsToday(), e.getDeparturesToday(),
                 e.getRevenueToday() != null ? e.getRevenueToday() : BigDecimal.ZERO,

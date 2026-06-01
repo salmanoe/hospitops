@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public record HotelSummaryResponse(
         UUID hotelId,
+        String hotelName,
         int occupiedRooms,
         int totalRooms,
         int arrivalsToday,
@@ -20,6 +21,7 @@ public record HotelSummaryResponse(
     public static HotelSummaryResponse from(HotelSummary s) {
         return new HotelSummaryResponse(
                 s.getHotelId().value(),
+                s.getHotelName(),
                 s.getOccupiedRooms(),
                 s.getTotalRooms(),
                 s.getArrivalsToday(),

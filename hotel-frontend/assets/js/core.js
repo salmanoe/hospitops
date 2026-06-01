@@ -362,6 +362,32 @@ const API = (() => {
             enterHotel: (hotelId)         => post(`/group/hotels/${hotelId}/enter`, {}),
         },
 
+        // ── Group profile ─────────────────────────────────────
+        // GET /api/v1/group/profile → GroupResponse (id, name, ownerEmail, createdAt)
+        group: {
+            profile: () => get('/group/profile'),
+        },
+
+        // ── Hotel management (GROUP_ADMIN) ────────────────────
+        // POST /api/v1/group/hotels              → HotelResponse (creates in SETUP status)
+        // GET  /api/v1/group/hotels              → HotelResponse[]
+        // GET  /api/v1/group/hotels/{id}         → HotelResponse
+        // POST /api/v1/group/hotels/{id}/setup/{step} → HotelResponse (marks step done)
+        hotels: {
+            create:            (name)           => post('/group/hotels', { name }),
+            list:              ()               => get('/group/hotels'),
+            get:               (hotelId)        => get(`/group/hotels/${hotelId}`),
+            completeSetupStep: (hotelId, step)  => post(`/group/hotels/${hotelId}/setup/${step}`, {}),
+        },
+
+        // ── Hotel policy (GROUP_ADMIN) ────────────────────────
+        // GET /api/v1/group/hotels/{id}/policy → PolicyConfigResponse
+        // PUT /api/v1/group/hotels/{id}/policy → PolicyConfigResponse
+        hotelPolicy: {
+            get:  (hotelId)        => get(`/group/hotels/${hotelId}/policy`),
+            save: (hotelId, data)  => put(`/group/hotels/${hotelId}/policy`, data),
+        },
+
         // ── Group dashboard ──────────────────────────────────
         // GET /api/v1/group/dashboard → HotelSummaryResponse[]
         groupDashboard: {

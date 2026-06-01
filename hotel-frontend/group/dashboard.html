@@ -111,6 +111,8 @@
         <small>GROUP DASHBOARD</small>
     </a>
     <div class="d-flex align-items-center gap-3">
+        <a href="/group/hotels/list.html" class="text-muted small">Hotels</a>
+        <a href="/group/profile.html"     class="text-muted small">Profile</a>
         <span id="admin-email" class="text-muted small"></span>
         <a href="#" id="logout-btn" class="text-danger small">Sign out</a>
     </div>
@@ -145,7 +147,8 @@
 
     <!-- Empty state -->
     <div id="empty-state" class="text-center py-5 text-muted d-none">
-        <p class="mb-0">No hotels found in this group.</p>
+        <p class="mb-1">No hotels found in this group.</p>
+        <a href="/group/hotels/form.html" class="btn btn-gold btn-sm mt-2">Create your first hotel</a>
     </div>
 
 </div>
@@ -210,20 +213,27 @@
     }
 
     function renderHotelCard(summary) {
-        const pct = occupancyPct(summary.occupiedRooms, summary.totalRooms);
+        const pct       = occupancyPct(summary.occupiedRooms, summary.totalRooms);
+        const hotelName = summary.hotelName || summary.hotelId;
         return `
             <div class="col-12 col-md-6 col-xl-4">
                 <div class="hotel-card">
                     <div class="p-4 pb-3">
                         <div class="d-flex align-items-start justify-content-between">
                             <div>
-                                <div class="text-muted" style="font-size:10px;letter-spacing:2px;text-transform:uppercase;">Hotel ID</div>
-                                <div class="fw-semibold" style="font-size:13px;">${escHtml(summary.hotelId)}</div>
+                                <div class="fw-semibold" style="font-size:15px;">${escHtml(hotelName)}</div>
+                                <div class="text-muted" style="font-size:11px;margin-top:2px;">
+                                    <a href="/group/hotels/policy.html?hotelId=${escHtml(summary.hotelId)}"
+                                       class="text-muted text-decoration-none">Policy</a>
+                                    &nbsp;·&nbsp;
+                                    <a href="/group/hotels/setup.html?hotelId=${escHtml(summary.hotelId)}"
+                                       class="text-muted text-decoration-none">Setup</a>
+                                </div>
                             </div>
                             <button
                                 class="btn btn-gold btn-sm enter-btn"
                                 data-hotel-id="${escHtml(summary.hotelId)}"
-                                data-hotel-name="${escHtml(summary.hotelId)}">
+                                data-hotel-name="${escHtml(hotelName)}">
                                 Enter →
                             </button>
                         </div>
@@ -281,7 +291,7 @@
                 return;
             }
 
-            gridEl.innerHTML = summaries.map(renderHotelCard).join('');
+            gridEl.innerHTML = summaries.map(s => renderHotelCard(s)).join('');
             document.getElementById('subtitle').textContent =
                 `${summaries.length} hotel${summaries.length !== 1 ? 's' : ''} · live summary`;
             Utils.show(gridEl);
@@ -294,7 +304,6 @@
     }
 
     loadDashboard();
-
     document.getElementById('refresh-btn').addEventListener('click', loadDashboard);
 
     // ── Enter hotel flow ──────────────────────────────────────

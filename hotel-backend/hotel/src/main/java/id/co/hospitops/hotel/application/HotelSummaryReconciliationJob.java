@@ -92,10 +92,14 @@ public class HotelSummaryReconciliationJob {
         int dirtyRooms = queryInt(
                 "SELECT COUNT(*) FROM room WHERE hotel_id = ?::uuid AND status = 'DIRTY'", id);
 
-        HotelSummary summary = summaryRepo.findByHotelId(hotelId)
-                .orElseGet(() -> HotelSummary.empty(hotelId));
+        String rawHotelName = jdbc.queryForObject(
+                "SELECT name FROM hotel WHERE id = ?::uuid", String.class, id);
+        final String hotelName = rawHotelName != null ? rawHotelName : "";
 
-        summary.recompute(occupiedRooms, totalRooms, arrivalsToday, departuresToday,
+        HotelSummary summary = summaryRepo.findByHotelId(hotelId)
+                .orElseGet(() -> HotelSummary.empty(hotelId, hotelName));
+
+        summary.recompute(hotelName, occupiedRooms, totalRooms, arrivalsToday, departuresToday,
                 revenueToday, revenueMonth, dirtyRooms);
 
         summaryRepo.save(summary);

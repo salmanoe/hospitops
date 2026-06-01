@@ -190,6 +190,8 @@ class HotelSummaryReconciliationJobIntegrationTest {
         assertThat(summary.getOccupiedRooms()).as("occupiedRooms").isEqualTo(1);
         // dirtyRooms = rooms with status DIRTY
         assertThat(summary.getDirtyRooms()).as("dirtyRooms").isEqualTo(1);
+        // hotelName must be populated from the hotel table
+        assertThat(summary.getHotelName()).as("hotelName").isEqualTo("Reconcile Hotel");
     }
 
     @Test

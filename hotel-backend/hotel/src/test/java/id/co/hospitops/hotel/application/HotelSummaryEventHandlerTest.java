@@ -1,6 +1,8 @@
 package id.co.hospitops.hotel.application;
 
+import id.co.hospitops.hotel.domain.model.Hotel;
 import id.co.hospitops.hotel.domain.model.HotelSummary;
+import id.co.hospitops.hotel.domain.port.out.HotelRepository;
 import id.co.hospitops.hotel.domain.port.out.HotelSummaryRepository;
 import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.Money;
@@ -34,6 +36,8 @@ import static org.mockito.Mockito.*;
 class HotelSummaryEventHandlerTest {
 
     @Mock
+    HotelRepository hotelRepo;
+    @Mock
     HotelSummaryRepository summaryRepo;
     @InjectMocks
     HotelSummaryEventHandler handler;
@@ -44,7 +48,7 @@ class HotelSummaryEventHandlerTest {
     private HotelSummary summaryWithValues(int occupied, int total, int dirty,
                                            int arrivals, int departures,
                                            BigDecimal revenueToday) {
-        return HotelSummary.reconstitute(hotelId, occupied, total,
+        return HotelSummary.reconstitute(hotelId, "Test Hotel", occupied, total,
                 arrivals, departures, revenueToday, BigDecimal.ZERO, dirty, java.time.LocalDateTime.now());
     }
 
@@ -58,7 +62,7 @@ class HotelSummaryEventHandlerTest {
      * Stubs a default empty summary for {@link #hotelId}. Call in tests that invoke getOrCreate().
      */
     private void stubExistingSummary() {
-        when(summaryRepo.findByHotelId(hotelId)).thenReturn(Optional.of(HotelSummary.empty(hotelId)));
+        when(summaryRepo.findByHotelId(hotelId)).thenReturn(Optional.of(HotelSummary.empty(hotelId, "Test Hotel")));
     }
 
     // ── RoomCreatedEvent ──────────────────────────────────────────────────────
@@ -262,15 +266,19 @@ class HotelSummaryEventHandlerTest {
     class OnHotelCreated {
 
         @Test
-        @DisplayName("seeds an empty summary row for the new hotel")
+        @DisplayName("seeds an empty summary row for the new hotel, including the hotel name")
         void seedsEmptySummary() {
             HotelId newHotel = HotelId.generate();
+            Hotel hotelStub = mock(Hotel.class);
+            when(hotelStub.getName()).thenReturn("Grand Test Hotel");
+            when(hotelRepo.findById(newHotel)).thenReturn(Optional.of(hotelStub));
 
             handler.onHotelCreated(new HotelCreatedEvent(newHotel, GroupId.generate()));
 
             ArgumentCaptor<HotelSummary> cap = ArgumentCaptor.forClass(HotelSummary.class);
             verify(summaryRepo).save(cap.capture());
             assertThat(cap.getValue().getHotelId()).isEqualTo(newHotel);
+            assertThat(cap.getValue().getHotelName()).isEqualTo("Grand Test Hotel");
             assertThat(cap.getValue().getTotalRooms()).isZero();
             assertThat(cap.getValue().getOccupiedRooms()).isZero();
         }

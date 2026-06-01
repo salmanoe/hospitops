@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 public class HotelSummary {
 
     private final HotelId hotelId;
+    private String hotelName;
     private int occupiedRooms;
     private int totalRooms;
     private int arrivalsToday;
@@ -27,26 +28,29 @@ public class HotelSummary {
     private int dirtyRooms;
     private LocalDateTime updatedAt;
 
-    public static HotelSummary empty(HotelId hotelId) {
-        return new HotelSummary(hotelId, 0, 0, 0, 0,
+    public static HotelSummary empty(HotelId hotelId, String hotelName) {
+        return new HotelSummary(hotelId, hotelName, 0, 0, 0, 0,
                 BigDecimal.ZERO, BigDecimal.ZERO, 0, LocalDateTime.now());
     }
 
     public static HotelSummary reconstitute(HotelId hotelId,
+                                            String hotelName,
                                             int occupiedRooms, int totalRooms,
                                             int arrivalsToday, int departuresToday,
                                             BigDecimal revenueToday, BigDecimal revenueMonth,
                                             int dirtyRooms, LocalDateTime updatedAt) {
-        return new HotelSummary(hotelId, occupiedRooms, totalRooms,
+        return new HotelSummary(hotelId, hotelName, occupiedRooms, totalRooms,
                 arrivalsToday, departuresToday, revenueToday, revenueMonth,
                 dirtyRooms, updatedAt);
     }
 
-    private HotelSummary(HotelId hotelId, int occupiedRooms, int totalRooms,
+    private HotelSummary(HotelId hotelId, String hotelName,
+                         int occupiedRooms, int totalRooms,
                          int arrivalsToday, int departuresToday,
                          BigDecimal revenueToday, BigDecimal revenueMonth,
                          int dirtyRooms, LocalDateTime updatedAt) {
         this.hotelId = hotelId;
+        this.hotelName = hotelName;
         this.occupiedRooms = occupiedRooms;
         this.totalRooms = totalRooms;
         this.arrivalsToday = arrivalsToday;
@@ -102,11 +106,14 @@ public class HotelSummary {
 
     /**
      * Full recompute — replaces all values (used by the nightly reconciliation job).
+     * Also refreshes {@code hotelName} so it stays in sync if the name ever changes.
      */
-    public void recompute(int occupiedRooms, int totalRooms,
+    public void recompute(String hotelName,
+                          int occupiedRooms, int totalRooms,
                           int arrivalsToday, int departuresToday,
                           BigDecimal revenueToday, BigDecimal revenueMonth,
                           int dirtyRooms) {
+        this.hotelName = hotelName;
         this.occupiedRooms = occupiedRooms;
         this.totalRooms = totalRooms;
         this.arrivalsToday = arrivalsToday;

@@ -23,6 +23,9 @@ public class HotelSummaryJpaEntity {
     @Column(columnDefinition = "uuid")
     private UUID hotelId;
 
+    @Column(nullable = false, length = 200)
+    private String hotelName;
+
     @Column(nullable = false)
     private int occupiedRooms;
 
