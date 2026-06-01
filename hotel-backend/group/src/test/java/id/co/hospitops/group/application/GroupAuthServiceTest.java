@@ -117,6 +117,7 @@ class GroupAuthServiceTest {
         @DisplayName("issues a hotel-scoped token when hotel belongs to group and is ACTIVE")
         void success() {
             given(hotelLookupPort.verifyAccess(HOTEL_ID, GROUP_ID)).willReturn(HotelAccessResult.ALLOWED);
+            given(hotelLookupPort.findHotelName(HOTEL_ID)).willReturn("Grand Hotel");
             given(tokenService.parseExpiry(rawGroupToken)).willReturn(expiry);
             given(tokenService.issueHotelToken(ADMIN_ID, GROUP_ID, EMAIL, HOTEL_ID, expiry))
                     .willReturn("hotel-token");
@@ -126,6 +127,7 @@ class GroupAuthServiceTest {
 
             assertThat(response.accessToken()).isEqualTo("hotel-token");
             assertThat(response.hotelId()).isEqualTo(HOTEL_ID);
+            assertThat(response.hotelName()).isEqualTo("Grand Hotel");
         }
 
         @Test
@@ -146,6 +148,7 @@ class GroupAuthServiceTest {
         void setupHotelAllowed() {
             // SETUP hotels return ALLOWED so GROUP_ADMIN can complete the setup wizard
             given(hotelLookupPort.verifyAccess(HOTEL_ID, GROUP_ID)).willReturn(HotelAccessResult.ALLOWED);
+            given(hotelLookupPort.findHotelName(HOTEL_ID)).willReturn("New Hotel");
             given(tokenService.parseExpiry(rawGroupToken)).willReturn(expiry);
             given(tokenService.issueHotelToken(ADMIN_ID, GROUP_ID, EMAIL, HOTEL_ID, expiry))
                     .willReturn("setup-hotel-token");

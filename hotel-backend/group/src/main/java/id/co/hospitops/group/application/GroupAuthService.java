@@ -71,8 +71,9 @@ public class GroupAuthService implements GroupAuthUseCase {
         String hotelToken = tokenService.issueHotelToken(
                 admin.id(), admin.groupId(), admin.email(), targetHotel, parentExpiry);
 
+        String hotelName = hotelLookupPort.findHotelName(targetHotel);
         log.info("GROUP_ADMIN {} entered hotel {}", admin.email(), targetHotel.value());
         return GroupLoginResponse.hotelScoped(hotelToken, tokenService.getExpirationSeconds(),
-                admin.id(), admin.groupId(), admin.email(), targetHotel);
+                admin.id(), admin.groupId(), admin.email(), targetHotel, hotelName);
     }
 }

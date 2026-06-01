@@ -61,6 +61,12 @@
 </nav>
 
 <div class="sidebar-footer">
+    <!-- Hotel name banner — shown only for hotel-scoped GROUP_ADMIN -->
+    <div id="sidebar-hotel-name"
+         style="display:none;font-size:11px;letter-spacing:.5px;color:var(--hospitops-gold);
+                font-weight:600;margin-bottom:8px;padding-bottom:8px;
+                border-bottom:1px solid var(--bs-border-color);word-break:break-word;">
+    </div>
     <strong id="sidebar-user-name">—</strong>
     <small id="sidebar-user-role">—</small>
     <div class="mt-2">
@@ -75,6 +81,13 @@
     if (user) {
         document.getElementById('sidebar-user-name').textContent = user.name;
         document.getElementById('sidebar-user-role').textContent = user.role.replace('_', ' ');
+
+        // Show hotel context banner for hotel-scoped GROUP_ADMIN
+        if (Auth.isHotelScoped() && user.hotelName) {
+            const banner = document.getElementById('sidebar-hotel-name');
+            banner.textContent = '🏨 ' + user.hotelName;
+            banner.style.display = 'block';
+        }
     }
 
     // Active link

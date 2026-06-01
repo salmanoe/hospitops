@@ -31,5 +31,5 @@ public interface HotelRepository {
      */
     Optional<HotelSnapshot> findSnapshotById(HotelId id);
 
-    record HotelSnapshot(HotelStatus status, GroupId groupId) {}
+    record HotelSnapshot(HotelStatus status, GroupId groupId, String name) {}
 }

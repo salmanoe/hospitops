@@ -47,12 +47,13 @@ const Auth = (() => {
         // via @JsonValue, so staffId / adminId / groupId / hotelId are strings.
         const isGroupAdmin = loginResponse.role === 'GROUP_ADMIN';
         localStorage.setItem(USER_KEY, JSON.stringify(isGroupAdmin ? {
-            id:       loginResponse.adminId,
-            name:     loginResponse.email,
-            username: loginResponse.email,
-            role:     loginResponse.role,
-            groupId:  loginResponse.groupId  ?? null,
-            hotelId:  loginResponse.hotelId  ?? null,
+            id:        loginResponse.adminId,
+            name:      loginResponse.email,
+            username:  loginResponse.email,
+            role:      loginResponse.role,
+            groupId:   loginResponse.groupId   ?? null,
+            hotelId:   loginResponse.hotelId   ?? null,
+            hotelName: loginResponse.hotelName ?? null,
         } : {
             id:       loginResponse.staffId,
             name:     loginResponse.fullName,

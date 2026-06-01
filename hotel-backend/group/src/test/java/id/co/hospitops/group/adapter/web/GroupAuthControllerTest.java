@@ -56,7 +56,7 @@ class GroupAuthControllerTest {
     }
 
     private GroupLoginResponse hotelScopedResponse() {
-        return GroupLoginResponse.hotelScoped("hotel-token", 28_800L, ADMIN_ID, GROUP_ID, EMAIL, HOTEL_ID);
+        return GroupLoginResponse.hotelScoped("hotel-token", 28_800L, ADMIN_ID, GROUP_ID, EMAIL, HOTEL_ID, "Grand Hotel");
     }
 
     /**
@@ -107,7 +107,7 @@ class GroupAuthControllerTest {
             mockMvc.perform(post("/api/v1/group/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"email\":\"admin@acme.com\",\"password\":\"wrong\"}"))
-                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.message").value("Invalid email or password"));
         }
     }
@@ -141,7 +141,7 @@ class GroupAuthControllerTest {
                             .header("Authorization", "Bearer group-token-here")
                             .contentType(MediaType.APPLICATION_JSON)
                             .with(authentication(groupAdminAuth())))
-                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.message").value("Hotel does not belong to your group"));
         }
     }

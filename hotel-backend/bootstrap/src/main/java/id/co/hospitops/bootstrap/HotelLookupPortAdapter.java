@@ -27,6 +27,13 @@ public class HotelLookupPortAdapter implements HotelLookupPort {
     private final HotelRepository hotelRepository;
 
     @Override
+    public String findHotelName(HotelId hotelId) {
+        return hotelRepository.findSnapshotById(hotelId)
+                .map(snapshot -> snapshot.name() != null ? snapshot.name() : "")
+                .orElse("");
+    }
+
+    @Override
     public boolean isActive(HotelId hotelId) {
         return hotelRepository.findSnapshotById(hotelId)
                 .map(snapshot -> snapshot.status() == HotelStatus.ACTIVE)

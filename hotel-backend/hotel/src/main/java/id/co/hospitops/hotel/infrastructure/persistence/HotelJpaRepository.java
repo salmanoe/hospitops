@@ -29,12 +29,13 @@ interface HotelJpaRepository extends JpaRepository<HotelJpaEntity, UUID> {
      * <p>Spring Data JPA closed projections are supported for JPQL multi-column results;
      * {@code Optional<Object[]>} is NOT supported and causes a context startup failure.
      */
-    @Query("SELECT h.status AS status, h.groupId AS groupId FROM HotelJpaEntity h WHERE h.id = :id")
+    @Query("SELECT h.status AS status, h.groupId AS groupId, h.name AS name FROM HotelJpaEntity h WHERE h.id = :id")
     Optional<HotelStatusView> findStatusAndGroupById(UUID id);
 
-    /** Closed projection — status + groupId only, no entity hydration. */
+    /** Closed projection — status + groupId + name, no entity hydration. */
     interface HotelStatusView {
         HotelStatus getStatus();
         UUID getGroupId();
+        String getName();
     }
 }

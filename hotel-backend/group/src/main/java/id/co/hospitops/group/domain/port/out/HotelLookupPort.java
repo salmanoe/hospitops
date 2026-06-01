@@ -23,6 +23,12 @@ public interface HotelLookupPort {
     boolean belongsToGroup(HotelId hotelId, GroupId groupId);
 
     /**
+     * Returns the hotel's display name, or an empty string if not found.
+     * Used to include the hotel name in the hotel-scoped token response.
+     */
+    String findHotelName(HotelId hotelId);
+
+    /**
      * Combined check used by the {@code /enter} endpoint.
      *
      * <p>Returns a result encoding both the group-membership check and the active-status

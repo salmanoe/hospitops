@@ -113,7 +113,8 @@ class HotelRepositoryImpl implements HotelRepository {
         return hotelJpa.findStatusAndGroupById(id.value())
                 .map(view -> new HotelSnapshot(
                         view.getStatus(),
-                        GroupId.of(view.getGroupId())
+                        GroupId.of(view.getGroupId()),
+                        view.getName()
                 ));
     }
 

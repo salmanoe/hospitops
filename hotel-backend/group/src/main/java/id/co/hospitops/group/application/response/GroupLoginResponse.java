@@ -22,19 +22,21 @@ public record GroupLoginResponse(
         GroupAdminId adminId,
         GroupId groupId,
         String email,
-        @Nullable HotelId hotelId
+        @Nullable HotelId hotelId,
+        @Nullable String hotelName
 ) {
     public static GroupLoginResponse groupScoped(String accessToken, long expiresIn,
                                                  GroupAdminId adminId, GroupId groupId,
                                                  String email) {
         return new GroupLoginResponse(accessToken, "Bearer", expiresIn,
-                "GROUP_ADMIN", adminId, groupId, email, null);
+                "GROUP_ADMIN", adminId, groupId, email, null, null);
     }
 
     public static GroupLoginResponse hotelScoped(String accessToken, long expiresIn,
                                                  GroupAdminId adminId, GroupId groupId,
-                                                 String email, HotelId hotelId) {
+                                                 String email, HotelId hotelId,
+                                                 String hotelName) {
         return new GroupLoginResponse(accessToken, "Bearer", expiresIn,
-                "GROUP_ADMIN", adminId, groupId, email, hotelId);
+                "GROUP_ADMIN", adminId, groupId, email, hotelId, hotelName);
     }
 }
