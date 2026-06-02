@@ -402,6 +402,7 @@ const API = (() => {
             list:              ()               => get('/group/hotels'),
             get:               (hotelId)        => get(`/group/hotels/${hotelId}`),
             completeSetupStep: (hotelId, step)  => post(`/group/hotels/${hotelId}/setup/${step}`, {}),
+            delete:            (hotelId)        => del(`/group/hotels/${hotelId}`),
         },
 
         // ── Hotel policy (GROUP_ADMIN) ────────────────────────

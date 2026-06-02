@@ -31,5 +31,8 @@ public interface HotelRepository {
      */
     Optional<HotelSnapshot> findSnapshotById(HotelId id);
 
+    /** Permanently deletes a hotel row. All hotel-scoped child rows cascade via DB constraint. */
+    void deleteById(HotelId id);
+
     record HotelSnapshot(HotelStatus status, GroupId groupId, String name) {}
 }

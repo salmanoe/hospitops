@@ -109,6 +109,11 @@ class HotelRepositoryImpl implements HotelRepository {
     }
 
     @Override
+    public void deleteById(HotelId id) {
+        hotelJpa.deleteById(id.value());
+    }
+
+    @Override
     public Optional<HotelSnapshot> findSnapshotById(HotelId id) {
         return hotelJpa.findStatusAndGroupById(id.value())
                 .map(view -> new HotelSnapshot(

@@ -2,6 +2,7 @@ package id.co.hospitops.hotel.application;
 
 import id.co.hospitops.hotel.application.command.CompleteSetupStepCommand;
 import id.co.hospitops.hotel.application.command.CreateHotelCommand;
+import id.co.hospitops.hotel.domain.model.HotelStatus;
 import id.co.hospitops.hotel.application.response.HotelResponse;
 import id.co.hospitops.hotel.domain.model.Hotel;
 import id.co.hospitops.hotel.domain.port.in.ManageHotelUseCase;
@@ -96,6 +97,17 @@ public class HotelService implements ManageHotelUseCase {
         Hotel saved = hotelRepo.save(hotel);
         eventPublisher.publishEvent(new HotelReactivatedEvent(saved.getId()));
         return HotelResponse.from(saved);
+    }
+
+    @Override
+    public void deleteHotel(HotelId id, GroupId callerGroupId) {
+        Hotel hotel = requireHotel(id, callerGroupId);
+        if (hotel.getStatus() != HotelStatus.SETUP) {
+            throw new BusinessRuleViolationException(
+                    "Only hotels in SETUP status can be deleted. " +
+                    "Suspend the hotel first if you need to take it offline.");
+        }
+        hotelRepo.deleteById(id);
     }
 
     /**

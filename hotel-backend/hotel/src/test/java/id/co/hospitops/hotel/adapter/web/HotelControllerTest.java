@@ -34,6 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -354,6 +355,58 @@ class HotelControllerTest {
             mockMvc.perform(post("/api/v1/group/hotels/{id}/reactivate", HOTEL_UUID))
                     .andExpect(status().isUnprocessableEntity())
                     .andExpect(jsonPath("$.message").value("Hotel does not belong to your group"));
+        }
+    }
+
+    // ── DELETE /api/v1/group/hotels/{hotelId} ─────────────────────────────
+
+    @Nested
+    @DisplayName("DELETE /{hotelId}")
+    class DeleteHotel {
+
+        @Test
+        @DisplayName("returns 200 when SETUP hotel is deleted successfully")
+        void deletesSetupHotel() throws Exception {
+            mockMvc.perform(delete("/api/v1/group/hotels/{id}", HOTEL_UUID))
+                    .andExpect(status().isOk());
+
+            then(hotelUseCase).should().deleteHotel(
+                    argThat(h -> h.value().equals(HOTEL_UUID)),
+                    argThat(g -> g.value().equals(GROUP_UUID)));
+        }
+
+        @Test
+        @DisplayName("returns 422 when hotel is not in SETUP status")
+        void rejectsNonSetupHotel() throws Exception {
+            org.mockito.Mockito.doThrow(new BusinessRuleViolationException(
+                    "Only hotels in SETUP status can be deleted"))
+                    .when(hotelUseCase).deleteHotel(any(), any());
+
+            mockMvc.perform(delete("/api/v1/group/hotels/{id}", HOTEL_UUID))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.message").value("Only hotels in SETUP status can be deleted"));
+        }
+
+        @Test
+        @DisplayName("returns 422 when hotel belongs to a different group (IDOR attempt)")
+        void rejectsWrongGroup() throws Exception {
+            org.mockito.Mockito.doThrow(new BusinessRuleViolationException(
+                    "Hotel does not belong to your group"))
+                    .when(hotelUseCase).deleteHotel(any(), any());
+
+            mockMvc.perform(delete("/api/v1/group/hotels/{id}", HOTEL_UUID))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.message").value("Hotel does not belong to your group"));
+        }
+
+        @Test
+        @DisplayName("returns 404 when hotel does not exist")
+        void returnsNotFound() throws Exception {
+            org.mockito.Mockito.doThrow(new ResourceNotFoundException("Hotel", HOTEL_UUID))
+                    .when(hotelUseCase).deleteHotel(any(), any());
+
+            mockMvc.perform(delete("/api/v1/group/hotels/{id}", HOTEL_UUID))
+                    .andExpect(status().isNotFound());
         }
     }
 }

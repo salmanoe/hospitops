@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -113,5 +114,22 @@ public class HotelController {
             @PathVariable UUID hotelId) {
         return ResponseEntity.ok(
                 ApiResponse.ok(hotelUseCase.reactivate(HotelId.of(hotelId), admin.groupId())));
+    }
+
+    /**
+     * Permanently delete a hotel in SETUP status.
+     *
+     * <p>Only SETUP hotels may be deleted — hotels that have gone ACTIVE contain
+     * operational data (reservations, invoices, guests) and must be suspended instead.
+     * All hotel-scoped child rows are removed via DB CASCADE.
+     *
+     * <p>The groupId is taken from the JWT claim to prevent cross-group deletion.
+     */
+    @DeleteMapping("/{hotelId}")
+    public ResponseEntity<ApiResponse<Void>> delete(
+            @AuthenticationPrincipal GroupAdminPrincipal admin,
+            @PathVariable UUID hotelId) {
+        hotelUseCase.deleteHotel(HotelId.of(hotelId), admin.groupId());
+        return ResponseEntity.ok(ApiResponse.ok(null));
     }
 }

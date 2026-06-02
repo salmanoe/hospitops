@@ -48,4 +48,17 @@ public interface ManageHotelUseCase {
      *         belongs to a different group or is not currently SUSPENDED
      */
     HotelResponse reactivate(HotelId id, GroupId callerGroupId);
+
+    /**
+     * Permanently deletes a hotel and all its hotel-scoped data via DB CASCADE.
+     *
+     * <p>Only hotels in {@code SETUP} status may be deleted. Deleting an ACTIVE or
+     * SUSPENDED hotel is rejected — use {@code suspend()} to take an active hotel offline.
+     * This restriction prevents accidental data loss on operational hotels.
+     *
+     * @throws id.co.hospitops.shared.exception.ResourceNotFoundException if the hotel does not exist
+     * @throws id.co.hospitops.shared.exception.BusinessRuleViolationException if the hotel is not
+     *         in SETUP status, or if it belongs to a different group
+     */
+    void deleteHotel(HotelId id, GroupId callerGroupId);
 }
