@@ -90,8 +90,7 @@ const setupWizardUrl = setupHotelId ? `/group/hotels/setup.html?hotelId=${setupH
 if (setupWizardUrl) {
     document.getElementById('setup-banner').classList.remove('d-none');
     document.getElementById('setup-back-link').href = setupWizardUrl;
-    document.getElementById('back-btn').href = setupWizardUrl;
-    document.getElementById('back-btn').textContent = '← Setup Wizard';
+    document.getElementById('back-btn').style.display = 'none';
 }
 
 async function load() {
