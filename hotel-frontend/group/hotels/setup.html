@@ -175,10 +175,9 @@
         <!-- Active banner (shown when hotel is already ACTIVE) -->
         <div class="active-banner" id="active-banner">
             <div class="fw-semibold text-success mb-1">✓ Hotel is ACTIVE</div>
-            <div class="text-muted small">All setup steps are complete. You can now enter the hotel or manage its policy.</div>
-            <div class="mt-3 d-flex gap-2 flex-wrap">
+            <div class="text-muted small">All setup steps are complete. Enter the hotel to start operations.</div>
+            <div class="mt-3">
                 <button id="enter-hotel-btn" class="btn btn-gold btn-sm">Enter Hotel →</button>
-                <a id="policy-link" href="#" class="btn btn-outline-secondary btn-sm">Manage Policy</a>
             </div>
         </div>
 
@@ -363,7 +362,6 @@
         const activeBanner = document.getElementById('active-banner');
         if (hotel.status === 'ACTIVE') {
             activeBanner.style.display = 'block';
-            document.getElementById('policy-link').href = `/group/hotels/policy.html?hotelId=${hotelId}`;
         } else {
             activeBanner.style.display = 'none';
         }
