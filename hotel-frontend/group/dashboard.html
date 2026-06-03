@@ -278,11 +278,8 @@
                                     ${escHtml(hotelName)} ${statusBadge}
                                 </div>
                                 <div class="text-muted" style="font-size:11px;margin-top:2px;">
-                                    <a href="/group/hotels/policy.html?hotelId=${escHtml(summary.hotelId)}"
-                                       class="text-muted text-decoration-none">Policy</a>
-                                    &nbsp;·&nbsp;
-                                    <a href="/group/hotels/setup.html?hotelId=${escHtml(summary.hotelId)}"
-                                       class="text-muted text-decoration-none">Setup</a>
+                                    ${!isSetup ? `<a href="/group/hotels/policy.html?hotelId=${escHtml(summary.hotelId)}"
+                                       class="text-muted text-decoration-none">Policy</a>` : ''}
                                 </div>
                             </div>
                             ${actionBtn}
