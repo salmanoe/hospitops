@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "../lib/api";
 import { useToast } from "../lib/toast";
@@ -12,6 +12,8 @@ export default function RoomForm() {
   const isEdit = !!id;
   const navigate = useNavigate();
   const toast = useToast();
+  const [params] = useSearchParams();
+  const setupId = params.get("setup");
 
   const [roomNumber, setRoomNumber] = useState("");
   const [floor, setFloor] = useState("");
@@ -51,6 +53,12 @@ export default function RoomForm() {
         toast("Room updated");
       } else {
         await api.rooms.create({ roomNumber, floor: Number(floor), roomTypeId, notes: notes || null });
+        if (setupId) {
+          try { await api.hotels.completeSetupStep(setupId, "ROOM"); } catch { /* step may already be done */ }
+          toast("Room added — continuing setup…");
+          navigate(`/group/hotels/${setupId}/setup`);
+          return;
+        }
         toast("Room added");
       }
       navigate("/rooms");

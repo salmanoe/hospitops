@@ -1,15 +1,21 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
+import GroupLayout from "./components/GroupLayout";
 import Billing from "./pages/Billing";
 import Dashboard from "./pages/Dashboard";
 import GroupDashboard from "./pages/GroupDashboard";
 import GroupLogin from "./pages/GroupLogin";
+import GroupProfile from "./pages/GroupProfile";
+import GroupSignup from "./pages/GroupSignup";
 import GuestForm from "./pages/GuestForm";
 import Guests from "./pages/Guests";
+import HotelForm from "./pages/HotelForm";
+import HotelPolicy from "./pages/HotelPolicy";
+import HotelSetup from "./pages/HotelSetup";
+import HotelsList from "./pages/HotelsList";
 import Housekeeping from "./pages/Housekeeping";
 import Login from "./pages/Login";
-import Placeholder from "./pages/Placeholder";
 import ReservationDetail from "./pages/ReservationDetail";
 import ReservationNew from "./pages/ReservationNew";
 import Reservations from "./pages/Reservations";
@@ -26,6 +32,7 @@ export default function App() {
         {/* Public */}
         <Route path="/login" element={<Login />} />
         <Route path="/group/login" element={<GroupLogin />} />
+        <Route path="/group/signup" element={<GroupSignup />} />
 
         {/* Hotel-scoped app shell */}
         <Route element={<ProtectedRoute mode="hotel" />}>
@@ -51,9 +58,14 @@ export default function App() {
 
         {/* Group-scoped (GROUP_ADMIN) */}
         <Route element={<ProtectedRoute mode="group" />}>
-          <Route path="/group/dashboard" element={<GroupDashboard />} />
-          <Route path="/group/hotels" element={<Placeholder title="Hotels" />} />
-          <Route path="/group/profile" element={<Placeholder title="Group Profile" />} />
+          <Route element={<GroupLayout />}>
+            <Route path="/group/dashboard" element={<GroupDashboard />} />
+            <Route path="/group/hotels" element={<HotelsList />} />
+            <Route path="/group/hotels/new" element={<HotelForm />} />
+            <Route path="/group/hotels/:id/setup" element={<HotelSetup />} />
+            <Route path="/group/hotels/:id/policy" element={<HotelPolicy />} />
+            <Route path="/group/profile" element={<GroupProfile />} />
+          </Route>
         </Route>
 
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

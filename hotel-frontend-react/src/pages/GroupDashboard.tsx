@@ -74,7 +74,7 @@ function HotelCard({ s, onEnter }: { s: HotelSummary; onEnter: (s: HotelSummary)
 }
 
 export default function GroupDashboard() {
-  const { user, setSession, logout } = useAuth();
+  const { setSession } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   const [pending, setPending] = useState<HotelSummary | null>(null);
@@ -99,44 +99,27 @@ export default function GroupDashboard() {
   const hotels = data ?? [];
 
   return (
-    <div className="bg-light" style={{ minHeight: "100vh" }}>
-      <div className="d-flex justify-content-between align-items-center px-4 py-3 bg-white border-bottom sticky-top">
-        <div className="fw-bold">
-          HospitOps <span className="text-muted small">· GROUP DASHBOARD</span>
-        </div>
-        <div className="d-flex align-items-center gap-3 small">
-          <span className="text-muted">{user?.username}</span>
-          <button
-            className="btn btn-link text-danger p-0 small text-decoration-none"
-            onClick={async () => { await logout(); navigate("/group/login"); }}
-          >
-            Sign out
-          </button>
+    <div>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 className="h4 mb-0">Portfolio Overview</h2>
+          <p className="text-muted small mb-0">
+            {hotels.length} hotel{hotels.length !== 1 ? "s" : ""} · live summary
+          </p>
         </div>
       </div>
 
-      <div className="p-4">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <div>
-            <h2 className="h4 mb-0">Portfolio Overview</h2>
-            <p className="text-muted small mb-0">
-              {hotels.length} hotel{hotels.length !== 1 ? "s" : ""} · live summary
-            </p>
-          </div>
-        </div>
+      {isLoading && <div className="text-muted">Loading hotels…</div>}
+      {error && <div className="alert alert-danger">{error instanceof ApiError ? error.message : "Failed to load hotels."}</div>}
 
-        {isLoading && <div className="text-muted">Loading hotels…</div>}
-        {error && <div className="alert alert-danger">{error instanceof ApiError ? error.message : "Failed to load hotels."}</div>}
+      {!isLoading && hotels.length === 0 && (
+        <div className="text-center text-muted py-5">No hotels found in this group.</div>
+      )}
 
-        {!isLoading && hotels.length === 0 && (
-          <div className="text-center text-muted py-5">No hotels found in this group.</div>
-        )}
-
-        <div className="row g-4">
-          {hotels.map((s) => (
-            <HotelCard key={s.hotelId} s={s} onEnter={setPending} />
-          ))}
-        </div>
+      <div className="row g-4">
+        {hotels.map((s) => (
+          <HotelCard key={s.hotelId} s={s} onEnter={setPending} />
+        ))}
       </div>
 
       {pending && (

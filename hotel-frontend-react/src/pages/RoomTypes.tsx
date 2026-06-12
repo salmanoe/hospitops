@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "../lib/api";
 import { useToast } from "../lib/toast";
@@ -20,6 +20,9 @@ const EMPTY: TypeForm = { id: null, name: "", capacity: 2, basePrice: 0, descrip
 export default function RoomTypes() {
   const toast = useToast();
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const setupId = params.get("setup");
   const [form, setForm] = useState<TypeForm | null>(null);
 
   const { data } = useQuery({
@@ -37,9 +40,16 @@ export default function RoomTypes() {
       };
       return f.id ? api.roomTypes.update(f.id, payload) : api.roomTypes.create(payload);
     },
-    onSuccess: (_res, f) => {
-      toast(f.id ? "Room type updated" : "Room type created");
+    onSuccess: async (_res, f) => {
       setForm(null);
+      // In the setup wizard, creating the first room type completes ROOM_TYPE.
+      if (!f.id && setupId) {
+        try { await api.hotels.completeSetupStep(setupId, "ROOM_TYPE"); } catch { /* step may already be done */ }
+        toast("Room type added — continuing setup…");
+        navigate(`/group/hotels/${setupId}/setup`);
+        return;
+      }
+      toast(f.id ? "Room type updated" : "Room type created");
       void qc.invalidateQueries({ queryKey: ["room-types", { size: 100 }] });
     },
     onError: (e) => toast(e instanceof ApiError ? e.message : "Save failed", "danger"),

@@ -15,8 +15,11 @@ import type {
   CreateReservationInput,
   Guest,
   GroupLoginResponse,
+  GroupProfile,
+  Hotel,
   HotelSummary,
   HousekeepingFloor,
+  PolicyConfig,
   Invoice,
   PageResult,
   PaymentMethod,
@@ -165,8 +168,22 @@ export const api = {
   },
 
   hotels: {
+    list: () => get<Hotel[]>("/group/hotels"),
+    get: (hotelId: string) => get<Hotel>(`/group/hotels/${hotelId}`),
+    create: (name: string) => post<Hotel>("/group/hotels", { name }),
+    delete: (hotelId: string) => del<unknown>(`/group/hotels/${hotelId}`),
     completeSetupStep: (hotelId: string, step: SetupStep) =>
-      post<unknown>(`/group/hotels/${hotelId}/setup/${step}`, {}),
+      post<Hotel>(`/group/hotels/${hotelId}/setup/${step}`, {}),
+  },
+
+  hotelPolicy: {
+    get: (hotelId: string) => get<PolicyConfig>(`/group/hotels/${hotelId}/policy`),
+    save: (hotelId: string, data: PolicyConfig) =>
+      put<PolicyConfig>(`/group/hotels/${hotelId}/policy`, data),
+  },
+
+  group: {
+    profile: () => get<GroupProfile>("/group/profile"),
   },
 
   guests: {

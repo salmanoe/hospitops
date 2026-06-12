@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, ApiError } from "../lib/api";
 import { useToast } from "../lib/toast";
@@ -19,6 +19,8 @@ export default function StaffForm() {
   const isEdit = !!id;
   const navigate = useNavigate();
   const toast = useToast();
+  const [params] = useSearchParams();
+  const setupId = params.get("setup");
 
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
@@ -52,6 +54,12 @@ export default function StaffForm() {
         toast("Staff updated");
       } else {
         await api.staff.create({ fullName, username, password, role });
+        if (setupId) {
+          try { await api.hotels.completeSetupStep(setupId, "STAFF_ACCOUNT"); } catch { /* step may already be done */ }
+          toast("Staff created — setup complete!");
+          navigate(`/group/hotels/${setupId}/setup`);
+          return;
+        }
         toast("Staff created");
       }
       navigate("/staff");

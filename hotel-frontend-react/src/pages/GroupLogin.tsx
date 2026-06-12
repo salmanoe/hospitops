@@ -60,6 +60,8 @@ export default function GroupLogin() {
           </form>
           <div className="text-center mt-3">
             <a href="/login" className="small">Hotel staff login</a>
+            <span className="text-muted small mx-2">·</span>
+            <a href="/group/signup" className="small">Create group account</a>
           </div>
         </div>
       </div>

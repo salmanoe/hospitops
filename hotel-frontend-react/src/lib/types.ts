@@ -129,6 +129,32 @@ export interface HousekeepingFloor {
 }
 
 export type HotelStatus = "SETUP" | "ACTIVE" | "SUSPENDED";
+
+export interface Hotel {
+  id: string;
+  name: string;
+  status: HotelStatus;
+  timezone?: string;
+  currency?: string;
+  starRating?: number;
+  remainingSetupSteps?: SetupStep[];
+}
+
+export interface PolicyConfig {
+  taxPercent: number;
+  taxName: string;
+  invoiceHotelName: string;
+  invoiceAddress?: string | null;
+  invoiceFooterNote?: string | null;
+}
+
+export interface GroupProfile {
+  id: string;
+  name: string;
+  ownerEmail: string;
+  createdAt?: string;
+}
+
 export interface HotelSummary {
   hotelId: string;
   hotelName?: string;
