@@ -32,7 +32,11 @@ Thumbs.db
 
 # Environment — never commit secrets
 .env
+.env.prod
 *.env.local
+# …but keep the templates tracked
+!.env.example
+!.env.prod.example
 *.md
 !README.md
 /*.docx
