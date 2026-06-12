@@ -134,7 +134,7 @@ services:
   # First login: admin / admin (SonarQube will prompt you to change it)
   # Then generate a token under My Account → Security and run:
   #   cd hotel-backend
-  #   mvn sonar:sonar -Psonar \
+  #   ./gradlew build sonar \
   #     -Dsonar.host.url=http://localhost:9000 \
   #     -Dsonar.token=<YOUR_TOKEN>
   sonarqube:

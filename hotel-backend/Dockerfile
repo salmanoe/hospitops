@@ -5,39 +5,38 @@
 #           GitHub Actions ci.yml (smoke test)
 #
 # Production uses the GraalVM native image built in build.yml:
-#   mvn -Pnative spring-boot:build-image -pl bootstrap -am
+#   ./gradlew :bootstrap:bootBuildImage   (or :bootstrap:nativeCompile)
 # ═══════════════════════════════════════════════════════════════
 
 # ── Stage 1: Build ──────────────────────────────────────────────
-FROM maven:3.9-eclipse-temurin-25 AS build
+FROM eclipse-temurin:25-jdk AS build
 
 WORKDIR /workspace
 
-# Copy all POM files before the source tree so that Docker (BuildKit)
-# can cache the dependency download layer independently of source changes.
-# Rebuild only re-downloads when a pom.xml actually changes.
-COPY pom.xml                    .
-COPY shared/pom.xml             shared/pom.xml
-COPY identity/pom.xml           identity/pom.xml
-COPY room/pom.xml               room/pom.xml
-COPY guest/pom.xml              guest/pom.xml
-COPY reservation/pom.xml        reservation/pom.xml
-COPY housekeeping/pom.xml       housekeeping/pom.xml
-COPY billing/pom.xml            billing/pom.xml
-COPY group/pom.xml              group/pom.xml
-COPY hotel/pom.xml              hotel/pom.xml
-COPY bootstrap/pom.xml          bootstrap/pom.xml
-COPY coverage-aggregate/pom.xml coverage-aggregate/pom.xml
+# Copy the Gradle wrapper + build scripts before the source tree so the
+# dependency-resolution layer is cached independently of source changes.
+# Rebuild only re-resolves when a build script changes.
+COPY gradlew settings.gradle.kts build.gradle.kts gradle.properties ./
+COPY gradle/ gradle/
+COPY shared/build.gradle.kts        shared/build.gradle.kts
+COPY group/build.gradle.kts         group/build.gradle.kts
+COPY hotel/build.gradle.kts         hotel/build.gradle.kts
+COPY identity/build.gradle.kts      identity/build.gradle.kts
+COPY room/build.gradle.kts          room/build.gradle.kts
+COPY guest/build.gradle.kts         guest/build.gradle.kts
+COPY reservation/build.gradle.kts   reservation/build.gradle.kts
+COPY housekeeping/build.gradle.kts  housekeeping/build.gradle.kts
+COPY billing/build.gradle.kts       billing/build.gradle.kts
+COPY bootstrap/build.gradle.kts     bootstrap/build.gradle.kts
 
-# Download all dependencies (cached unless a pom.xml changes)
-RUN --mount=type=cache,target=/root/.m2 \
-    mvn dependency:go-offline --no-transfer-progress -q
+# Warm the dependency cache (best-effort — succeeds even before sources exist).
+RUN chmod +x gradlew && \
+    ./gradlew --no-daemon -q :bootstrap:dependencies > /dev/null 2>&1 || true
 
-# Copy the full source tree and build the fat JAR (tests skipped here;
-# CI runs them in a dedicated step before the image build)
+# Copy the full source tree and build the fat JAR (tests run in a dedicated
+# CI step before the image build, so they are skipped here).
 COPY . .
-RUN --mount=type=cache,target=/root/.m2 \
-    mvn package -pl bootstrap -am -Dmaven.test.skip=true --no-transfer-progress -q
+RUN ./gradlew --no-daemon :bootstrap:bootJar -x test
 
 # ── Stage 2: Run ─────────────────────────────────────────────────
 FROM eclipse-temurin:25-jre
@@ -50,7 +49,7 @@ RUN groupadd --system --gid 10001 hotel \
 WORKDIR /app
 
 COPY --from=build --chown=hotel:hotel \
-    /workspace/bootstrap/target/bootstrap-*.jar app.jar
+    /workspace/bootstrap/build/libs/bootstrap-*.jar app.jar
 
 USER hotel
 

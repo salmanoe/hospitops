@@ -9,6 +9,14 @@ target/
 *.jar
 *.war
 
+# Gradle
+.gradle/
+build/
+# The wrapper jar/properties MUST be committed (overrides *.jar above).
+# Use **/ so the negation matches the nested hotel-backend/gradle/wrapper/ path.
+!**/gradle/wrapper/gradle-wrapper.jar
+!**/gradle/wrapper/gradle-wrapper.properties
+
 # Native image
 *.so
 *.dll

@@ -60,9 +60,9 @@ Docker Compose is the **only tool you need** to run the full stack locally. Run 
 # Docker Desktop 4.x+ or Docker Engine + Compose plugin v2.x
 docker compose version   # must be v2.x
 
-# Java + Maven (only needed to run Maven commands directly outside Docker)
+# Java (only needed to run Gradle commands directly outside Docker).
+# Gradle itself is provided by the wrapper (./gradlew) — no separate install.
 sdk install java 25.r25-nik   # GraalVM 25 via SDKMAN (Liberica NIK)
-sdk install maven
 ```
 
 ### Start the full stack
@@ -103,10 +103,10 @@ docker compose restart app       # reload backend after a code change
 # Open a psql shell in the running postgres container
 docker compose exec postgres psql -U hotel_user -d hotel_db
 
-# Run Maven commands directly (requires postgres running via Compose)
+# Run Gradle commands directly (requires postgres running via Compose)
 cd hotel-backend
-mvn test -pl bootstrap -am -Pdev
-mvn spring-boot:run -pl bootstrap -am -Pdev
+./gradlew test
+./gradlew :bootstrap:bootRun
 ```
 
 ### SonarQube (optional)
@@ -119,7 +119,7 @@ docker compose --profile sonar up -d sonarqube
 
 # First login: admin / admin (SonarQube will prompt to change it)
 # Then generate a token under My Account → Security, and run from hotel-backend/:
-mvn sonar:sonar -Psonar \
+./gradlew build sonar \
   -Dsonar.host.url=http://localhost:9000 \
   -Dsonar.token=YOUR_LOCAL_TOKEN
 ```
@@ -210,9 +210,9 @@ Login endpoint: `POST /api/v1/group/auth/login`
 ```bash
 cd hotel-backend
 
-mvn test                          # unit tests (domain + application + web slice)
-mvn clean verify -Pcoverage       # tests + JaCoCo coverage report
-mvn sonar:sonar -Psonar \         # SonarQube analysis (requires running instance)
+./gradlew test                    # all module tests (domain + application + web slice + integration)
+./gradlew build                   # compile, test, and JaCoCo coverage reports
+./gradlew build sonar \           # SonarQube analysis (requires running instance)
   -Dsonar.host.url=... \
   -Dsonar.token=...
 ```
@@ -227,10 +227,10 @@ Coverage targets enforced by SonarQube Quality Gate:
 ```bash
 cd hotel-backend
 
-mvn package -pl bootstrap -am -DskipTests                   # fat JAR
-mvn -Pnative native:compile -pl bootstrap -am              # native binary (~5–15 min)
-mvn -Pnative spring-boot:build-image -pl bootstrap -am \   # native Docker image
-  -Dspring-boot.build-image.imageName=ghcr.io/<owner>/hotel-backend:<tag>
+./gradlew :bootstrap:bootJar                  # fat JAR (build/libs/bootstrap-*.jar)
+./gradlew :bootstrap:nativeCompile            # native binary (~5–15 min)
+./gradlew :bootstrap:bootBuildImage \         # native Docker image
+  --imageName=ghcr.io/<owner>/hotel-backend:<tag>
 ```
 
 | Mode                  | Startup  | Memory  | Notes                     |
