@@ -19,6 +19,7 @@ dependencies {
     implementation(project(":reservation"))
     implementation(project(":housekeeping"))
     implementation(project(":billing"))
+    implementation(project(":channel"))
 
     // ── Infrastructure ──────────────────────────────────────────────────
     implementation("org.springframework.boot:spring-boot-starter-web")

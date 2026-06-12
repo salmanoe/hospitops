@@ -27,5 +27,6 @@ include(
     "reservation",
     "housekeeping",
     "billing",
+    "channel",
     "bootstrap",
 )
