@@ -90,6 +90,59 @@ export interface Room {
   status: RoomStatus;
   floor?: string;
   roomTypeId?: string;
+  roomTypeName?: string;
+  capacity?: number;
+  basePrice?: number;
+  notes?: string;
+}
+
+export interface Staff {
+  id: string;
+  fullName: string;
+  username: string;
+  role: Role;
+  active: boolean;
+  createdAt?: string;
+}
+
+export interface HkRoom {
+  roomId: string;
+  roomNumber: string;
+  roomTypeName?: string;
+  status: RoomStatus;
+}
+export interface HousekeepingFloor {
+  floor: string;
+  rooms: HkRoom[];
+}
+
+export type HotelStatus = "SETUP" | "ACTIVE" | "SUSPENDED";
+export interface HotelSummary {
+  hotelId: string;
+  hotelName?: string;
+  hotelStatus: HotelStatus;
+  occupiedRooms: number;
+  totalRooms: number;
+  arrivalsToday: number;
+  departuresToday: number;
+  revenueToday: number;
+  revenueMonth: number;
+  dirtyRooms: number;
+}
+
+export type PaymentMethod = "CASH" | "CREDIT_CARD" | "DEBIT_CARD" | "BANK_TRANSFER";
+export type PaymentStatus = "UNPAID" | "PARTIAL" | "PAID";
+
+export interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  reservationNumber?: string;
+  guestName?: string;
+  totalAmount: number;
+  totalPaid: number;
+  balance: number;
+  paymentStatus: PaymentStatus;
+  issuedAt?: string;
 }
 
 export type ReservationStatus =
@@ -99,13 +152,27 @@ export type ReservationStatus =
   | "CHECKED_OUT"
   | "CANCELLED";
 
-/** Reservation summary used by the dashboard arrivals/departures lists. */
+/** Reservation summary — covers dashboard arrivals/departures and the list view. */
 export interface ReservationSummary {
   id: string;
+  reservationNumber?: string;
   guestId: string;
   guestFullName?: string;
   roomId: string;
   roomNumber?: string;
+  checkInDate?: string;
+  checkOutDate?: string;
   nights: number;
   status: ReservationStatus;
+}
+
+export interface Guest {
+  id: string;
+  fullName: string;
+  idNumber?: string;
+  nationality?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  createdAt?: string;
 }

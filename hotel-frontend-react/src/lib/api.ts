@@ -12,12 +12,25 @@ import { clearSession, getRefreshToken, getToken, saveSession } from "./session"
 import type {
   AnyLoginResponse,
   ApiEnvelope,
+  Guest,
   GroupLoginResponse,
+  HotelSummary,
+  HousekeepingFloor,
+  Invoice,
   PageResult,
+  PaymentMethod,
   ReservationSummary,
   Room,
+  RoomStatus,
+  Staff,
   StaffLoginResponse,
 } from "./types";
+
+export interface PaymentInput {
+  amount: number;
+  method: PaymentMethod;
+  referenceNo?: string | null;
+}
 
 export class ApiError extends Error {
   status: number;
@@ -138,6 +151,14 @@ export const api = {
       get<Room[]>("/rooms/available", { checkIn, checkOut }),
   },
 
+  guests: {
+    list: (params?: Record<string, unknown>) => get<PageResult<Guest>>("/guests", params),
+    get: (id: string) => get<Guest>(`/guests/${id}`),
+    search: (q: string) => get<Guest[]>("/guests/search", { q }),
+    register: (data: Partial<Guest>) => post<Guest>("/guests", data),
+    update: (id: string, data: Partial<Guest>) => put<Guest>(`/guests/${id}`, data),
+  },
+
   reservations: {
     list: (params?: Record<string, unknown>) =>
       get<PageResult<ReservationSummary>>("/reservations", params),
@@ -149,7 +170,29 @@ export const api = {
   },
 
   invoices: {
+    list: (params?: Record<string, unknown>) => get<PageResult<Invoice>>("/invoices", params),
+    get: (id: string) => get<Invoice>(`/invoices/${id}`),
+    recordPayment: (id: string, data: PaymentInput) =>
+      post<Invoice>(`/invoices/${id}/payments`, data),
     pdf: (id: string) => getPdf(`/invoices/${id}/pdf`),
+  },
+
+  staff: {
+    list: (params?: Record<string, unknown>) => get<PageResult<Staff>>("/staff", params),
+    get: (id: string) => get<Staff>(`/staff/${id}`),
+    create: (data: Record<string, unknown>) => post<Staff>("/staff", data),
+    update: (id: string, data: Record<string, unknown>) => put<Staff>(`/staff/${id}`, data),
+    toggle: (id: string) => patch<Staff>(`/staff/${id}/toggle`),
+  },
+
+  housekeeping: {
+    board: () => get<HousekeepingFloor[]>("/housekeeping/board"),
+    updateRoomStatus: (id: string, data: { status: RoomStatus; notes?: string | null }) =>
+      patch<unknown>(`/housekeeping/rooms/${id}/status`, data),
+  },
+
+  groupDashboard: {
+    get: () => get<HotelSummary[]>("/group/dashboard"),
   },
 
   // Raw verbs for screens not yet ported.

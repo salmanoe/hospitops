@@ -40,3 +40,15 @@ export const statusColor = (status: string): string => {
 };
 
 export const statusLabel = (status: string): string => status.replace(/_/g, " ");
+
+/** Trigger a browser download for a Blob (e.g. an invoice PDF). */
+export const downloadBlob = (blob: Blob, filename: string): void => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
