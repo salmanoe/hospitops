@@ -41,6 +41,12 @@ RUN ./gradlew --no-daemon :bootstrap:bootJar -x test
 # ── Stage 2: Run ─────────────────────────────────────────────────
 FROM eclipse-temurin:25-jre
 
+# curl — the eclipse-temurin (Ubuntu) base ships no http client, so the
+# compose / Docker HEALTHCHECK needs one to poll the readiness probe.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/*
+
 # Non-root user — GID/UID 10001 avoids the ubuntu:1000 that ships in
 # eclipse-temurin base images. K8s securityContext uses the same value.
 RUN groupadd --system --gid 10001 hotel \

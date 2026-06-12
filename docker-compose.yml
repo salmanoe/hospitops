@@ -6,7 +6,7 @@
 #   postgres   PostgreSQL 17          → internal only
 #   redis      Redis 7 (token BL)     → internal only
 #   app        Spring Boot backend    → internal (via nginx)
-#   frontend   Nginx + static HTML    → http://localhost
+#   frontend   Nginx + React SPA      → http://localhost
 #
 # Common commands:
 #   docker compose up              # start everything, stream logs
@@ -103,23 +103,22 @@ services:
       # Polls the Spring Boot readiness probe — UP only after Flyway migrations
       # and all beans are initialised. start_period gives Spring Boot time to
       # compile AOT sources and run migrations before the first check.
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health/readiness 2>/dev/null | grep -q '\"status\":\"UP\"' || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health/readiness | grep -q '\"status\":\"UP\"' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 30
       start_period: 90s
     restart: unless-stopped
 
-  # ── Nginx — Frontend + API proxy ────────────────────────────
-  # Serves static HTML/CSS/JS from hotel-frontend/ and proxies
-  # /api/* → http://app:8080 (matches core.js: BASE = '/api/v1').
-  # Files are volume-mounted so edits to HTML/CSS/JS are live
-  # without rebuilding the container.
+  # ── Nginx — React SPA + API proxy ───────────────────────────
+  # Builds the Vite React app (hotel-frontend-react/) and serves the
+  # static bundle, proxying /api/* → http://app:8080 (matches
+  # src/lib/api.ts: BASE = '/api/v1'). Rebuild after a frontend change:
+  #   docker compose up -d --build frontend
   frontend:
-    image: nginx:alpine
-    volumes:
-      - ./hotel-frontend:/usr/share/nginx/html:ro
-      - ./hotel-frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    build:
+      context: ./hotel-frontend-react
+      dockerfile: Dockerfile
     ports:
       - "80:80"     # App is at http://localhost
     depends_on:
