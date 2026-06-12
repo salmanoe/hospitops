@@ -94,6 +94,16 @@ export interface Room {
   capacity?: number;
   basePrice?: number;
   notes?: string;
+  /** Date-range price returned by GET /rooms/available. */
+  effectiveRate?: number;
+}
+
+export interface RoomType {
+  id: string;
+  name: string;
+  capacity: number;
+  basePrice: number;
+  description?: string;
 }
 
 export interface Staff {
@@ -104,6 +114,8 @@ export interface Staff {
   active: boolean;
   createdAt?: string;
 }
+
+export type SetupStep = "PROFILE" | "POLICY" | "ROOM_TYPE" | "ROOM" | "STAFF_ACCOUNT";
 
 export interface HkRoom {
   roomId: string;
@@ -152,7 +164,7 @@ export type ReservationStatus =
   | "CHECKED_OUT"
   | "CANCELLED";
 
-/** Reservation summary — covers dashboard arrivals/departures and the list view. */
+/** Reservation — covers dashboard arrivals/departures, the list, and the detail view. */
 export interface ReservationSummary {
   id: string;
   reservationNumber?: string;
@@ -164,6 +176,24 @@ export interface ReservationSummary {
   checkOutDate?: string;
   nights: number;
   status: ReservationStatus;
+  // Detail-only fields:
+  adults?: number;
+  children?: number;
+  ratePerNight?: number;
+  subtotal?: number;
+  specialRequests?: string;
+  createdAt?: string;
+}
+
+/** Payload for creating a reservation (POST /reservations). */
+export interface CreateReservationInput {
+  guestId: string;
+  roomId: string;
+  checkIn: string;
+  checkOut: string;
+  adults: number;
+  children: number;
+  specialRequests?: string | null;
 }
 
 export interface Guest {

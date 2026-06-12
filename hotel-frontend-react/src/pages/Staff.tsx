@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "../lib/api";
 import { useToast } from "../lib/toast";
@@ -35,7 +36,7 @@ export default function Staff() {
     <div>
       <PageHeader
         title="Staff"
-        action={<span className="btn btn-primary btn-sm disabled">＋ Add Staff</span>}
+        action={<Link to="/staff/new" className="btn btn-primary btn-sm">＋ Add Staff</Link>}
       />
       <div className="p-4">
         <div className="card">
@@ -57,13 +58,16 @@ export default function Staff() {
                     </td>
                     <td>{formatDate(s.createdAt)}</td>
                     <td>
-                      <button
-                        className={"btn btn-sm " + (s.active ? "btn-outline-danger" : "btn-outline-success")}
-                        disabled={toggle.isPending}
-                        onClick={() => onToggle(s)}
-                      >
-                        {s.active ? "Deactivate" : "Activate"}
-                      </button>
+                      <div className="d-flex gap-1">
+                        <Link to={`/staff/${s.id}/edit`} className="btn btn-outline-secondary btn-sm">Edit</Link>
+                        <button
+                          className={"btn btn-sm " + (s.active ? "btn-outline-danger" : "btn-outline-success")}
+                          disabled={toggle.isPending}
+                          onClick={() => onToggle(s)}
+                        >
+                          {s.active ? "Deactivate" : "Activate"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

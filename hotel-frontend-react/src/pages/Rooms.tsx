@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { formatRp } from "../lib/utils";
@@ -41,7 +42,12 @@ export default function Rooms() {
     <div>
       <PageHeader
         title="Rooms"
-        action={<span className="btn btn-primary btn-sm disabled">＋ Add Room</span>}
+        action={
+          <div className="d-flex gap-2">
+            <Link to="/room-types" className="btn btn-outline-secondary btn-sm">Manage Room Types →</Link>
+            <Link to="/rooms/new" className="btn btn-primary btn-sm">＋ Add Room</Link>
+          </div>
+        }
       />
       <div className="p-4">
         <div className="row g-3 mb-4">
@@ -73,7 +79,7 @@ export default function Rooms() {
               <thead>
                 <tr>
                   <th>Room</th><th>Floor</th><th>Type</th>
-                  <th>Capacity</th><th>Rate/Night</th><th>Status</th><th>Notes</th>
+                  <th>Capacity</th><th>Rate/Night</th><th>Status</th><th>Notes</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -86,10 +92,13 @@ export default function Rooms() {
                     <td>{formatRp(r.basePrice)}</td>
                     <td><StatusBadge status={r.status} /></td>
                     <td className="text-muted small">{r.notes || "—"}</td>
+                    <td>
+                      <Link to={`/rooms/${r.id}/edit`} className="btn btn-outline-secondary btn-sm">Edit</Link>
+                    </td>
                   </tr>
                 ))}
                 {!isLoading && rows.length === 0 && (
-                  <tr><td colSpan={7} className="text-center text-muted py-4">No rooms found</td></tr>
+                  <tr><td colSpan={8} className="text-center text-muted py-4">No rooms found</td></tr>
                 )}
               </tbody>
             </table>

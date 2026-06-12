@@ -10,9 +10,14 @@ import Guests from "./pages/Guests";
 import Housekeeping from "./pages/Housekeeping";
 import Login from "./pages/Login";
 import Placeholder from "./pages/Placeholder";
+import ReservationDetail from "./pages/ReservationDetail";
+import ReservationNew from "./pages/ReservationNew";
 import Reservations from "./pages/Reservations";
+import RoomForm from "./pages/RoomForm";
 import Rooms from "./pages/Rooms";
+import RoomTypes from "./pages/RoomTypes";
 import Staff from "./pages/Staff";
+import StaffForm from "./pages/StaffForm";
 
 export default function App() {
   return (
@@ -27,15 +32,20 @@ export default function App() {
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/reservations" element={<Reservations />} />
-            <Route path="/reservations/new" element={<Placeholder title="New Booking" />} />
-            <Route path="/reservations/:id" element={<Placeholder title="Reservation Detail" />} />
+            <Route path="/reservations/new" element={<ReservationNew />} />
+            <Route path="/reservations/:id" element={<ReservationDetail />} />
             <Route path="/guests" element={<Guests />} />
             <Route path="/guests/new" element={<GuestForm />} />
             <Route path="/guests/:id/edit" element={<GuestForm />} />
             <Route path="/rooms" element={<Rooms />} />
+            <Route path="/rooms/new" element={<RoomForm />} />
+            <Route path="/rooms/:id/edit" element={<RoomForm />} />
+            <Route path="/room-types" element={<RoomTypes />} />
             <Route path="/housekeeping" element={<Housekeeping />} />
             <Route path="/billing" element={<Billing />} />
             <Route path="/staff" element={<Staff />} />
+            <Route path="/staff/new" element={<StaffForm />} />
+            <Route path="/staff/:id/edit" element={<StaffForm />} />
           </Route>
         </Route>
 

@@ -17,6 +17,17 @@ export const formatDate = (dateStr?: string | null): string => {
   });
 };
 
+export const formatDateTime = (dateStr?: string | null): string => {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 export const formatNights = (n: number): string => `${n} night${n !== 1 ? "s" : ""}`;
 
 /** Bootstrap contextual colour for a domain status (rooms, reservations, invoices). */

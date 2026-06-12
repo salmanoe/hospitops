@@ -12,6 +12,7 @@ import { clearSession, getRefreshToken, getToken, saveSession } from "./session"
 import type {
   AnyLoginResponse,
   ApiEnvelope,
+  CreateReservationInput,
   Guest,
   GroupLoginResponse,
   HotelSummary,
@@ -22,6 +23,8 @@ import type {
   ReservationSummary,
   Room,
   RoomStatus,
+  RoomType,
+  SetupStep,
   Staff,
   StaffLoginResponse,
 } from "./types";
@@ -147,8 +150,23 @@ export const api = {
 
   rooms: {
     list: (params?: Record<string, unknown>) => get<PageResult<Room>>("/rooms", params),
+    get: (id: string) => get<Room>(`/rooms/${id}`),
+    create: (data: Record<string, unknown>) => post<Room>("/rooms", data),
+    update: (id: string, data: Record<string, unknown>) => put<Room>(`/rooms/${id}`, data),
     available: (checkIn: string, checkOut: string) =>
       get<Room[]>("/rooms/available", { checkIn, checkOut }),
+  },
+
+  roomTypes: {
+    list: (params?: Record<string, unknown>) => get<PageResult<RoomType>>("/room-types", params),
+    get: (id: string) => get<RoomType>(`/room-types/${id}`),
+    create: (data: Record<string, unknown>) => post<RoomType>("/room-types", data),
+    update: (id: string, data: Record<string, unknown>) => put<RoomType>(`/room-types/${id}`, data),
+  },
+
+  hotels: {
+    completeSetupStep: (hotelId: string, step: SetupStep) =>
+      post<unknown>(`/group/hotels/${hotelId}/setup/${step}`, {}),
   },
 
   guests: {
@@ -162,6 +180,8 @@ export const api = {
   reservations: {
     list: (params?: Record<string, unknown>) =>
       get<PageResult<ReservationSummary>>("/reservations", params),
+    get: (id: string) => get<ReservationSummary>(`/reservations/${id}`),
+    create: (data: CreateReservationInput) => post<ReservationSummary>("/reservations", data),
     arrivals: () => get<ReservationSummary[]>("/reservations/today/arrivals"),
     departures: () => get<ReservationSummary[]>("/reservations/today/departures"),
     checkIn: (id: string) => patch<ReservationSummary>(`/reservations/${id}/checkin`),
@@ -182,6 +202,8 @@ export const api = {
     get: (id: string) => get<Staff>(`/staff/${id}`),
     create: (data: Record<string, unknown>) => post<Staff>("/staff", data),
     update: (id: string, data: Record<string, unknown>) => put<Staff>(`/staff/${id}`, data),
+    changePassword: (id: string, data: { currentPassword: string; newPassword: string }) =>
+      patch<unknown>(`/staff/${id}/password`, data),
     toggle: (id: string) => patch<Staff>(`/staff/${id}/toggle`),
   },
 
