@@ -92,7 +92,7 @@
             even when your build agent already has the project's LTS JDK installed.
             Fixed with sonar.scanner.skipJreProvisioning=true in the sonar profile.
         -->
-        <sonar.maven.plugin.version>5.6.0.6792</sonar.maven.plugin.version>
+        <sonar.maven.plugin.version>5.7.0.6970</sonar.maven.plugin.version>
 
         <!-- ── SonarQube project properties ────────────────────── -->
         <sonar.projectKey>hospitops-backend</sonar.projectKey>
