@@ -18,6 +18,7 @@ import type {
   ChannelSyncMessage,
   CreateReservationInput,
   Guest,
+  RoomCalendarRow,
   GroupLoginResponse,
   GroupProfile,
   Hotel,
@@ -162,6 +163,8 @@ export const api = {
     update: (id: string, data: Record<string, unknown>) => put<Room>(`/rooms/${id}`, data),
     available: (checkIn: string, checkOut: string) =>
       get<Room[]>("/rooms/available", { checkIn, checkOut }),
+    calendar: (from: string, to: string) =>
+      get<RoomCalendarRow[]>("/rooms/calendar", { from, to }),
   },
 
   roomTypes: {
@@ -169,6 +172,8 @@ export const api = {
     get: (id: string) => get<RoomType>(`/room-types/${id}`),
     create: (data: Record<string, unknown>) => post<RoomType>("/room-types", data),
     update: (id: string, data: Record<string, unknown>) => put<RoomType>(`/room-types/${id}`, data),
+    addRate: (id: string, data: { name: string; priceOverride: number; validFrom: string; validUntil: string }) =>
+      post<RoomType>(`/room-types/${id}/rates`, data),
   },
 
   hotels: {

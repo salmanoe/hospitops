@@ -11,7 +11,9 @@ interface NavItem {
 // Hotel-staff navigation, role-gated (mirrors the legacy sidebar [data-roles]).
 const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", roles: ["GROUP_ADMIN", "ADMIN", "MANAGER", "FRONT_DESK", "ACCOUNTANT", "HOUSEKEEPING"] },
+  { to: "/calendar", label: "Calendar", roles: ["GROUP_ADMIN", "ADMIN", "MANAGER", "FRONT_DESK"] },
   { to: "/reservations", label: "Reservations", roles: ["GROUP_ADMIN", "ADMIN", "MANAGER", "FRONT_DESK"] },
+  { to: "/rates", label: "Rates", roles: ["GROUP_ADMIN", "ADMIN", "MANAGER"] },
   { to: "/guests", label: "Guests", roles: ["GROUP_ADMIN", "ADMIN", "MANAGER", "FRONT_DESK"] },
   { to: "/rooms", label: "Rooms", roles: ["GROUP_ADMIN", "ADMIN", "MANAGER"] },
   { to: "/housekeeping", label: "Housekeeping", roles: ["GROUP_ADMIN", "ADMIN", "MANAGER", "HOUSEKEEPING"] },

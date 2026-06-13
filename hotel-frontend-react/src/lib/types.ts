@@ -233,6 +233,20 @@ export interface Guest {
   createdAt?: string;
 }
 
+// ── Rate / availability calendar ───────────────────────────────────────────
+export interface RoomCalendarDay {
+  date: string;
+  available: number;
+  rate: number;
+}
+
+export interface RoomCalendarRow {
+  roomTypeId: string;
+  name: string;
+  capacity: number;
+  days: RoomCalendarDay[];
+}
+
 // ── Channel manager (Channex) ──────────────────────────────────────────────
 export interface ChannelProperty {
   id: string;

@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.Optional;
 
 /**
@@ -41,9 +42,11 @@ public class RoomAvailabilitySnapshotProviderImpl implements RoomAvailabilitySna
 
     @Override
     public Money ratePerNight(RoomTypeId roomTypeId, LocalDate night) {
+        // Prefer the most specific active override (narrowest date span), so a
+        // single-day rate set from the calendar wins over a broad seasonal one.
         return overrideRepository.findByRoomTypeId(roomTypeId).stream()
                 .filter(o -> o.isActiveOn(night))
-                .findFirst()
+                .min(Comparator.comparingLong(o -> o.validUntil().toEpochDay() - o.validFrom().toEpochDay()))
                 .map(RoomRateOverride::priceOverride)
                 .orElseGet(() -> roomTypeRepository.findById(roomTypeId)
                         .map(RoomType::getBasePrice)

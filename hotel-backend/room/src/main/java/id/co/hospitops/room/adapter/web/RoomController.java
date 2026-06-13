@@ -23,6 +23,7 @@ import java.util.*;
 public class RoomController {
     private final ManageRoomUseCase manageUseCase;
     private final RoomAvailabilityUseCase availabilityUseCase;
+    private final RoomCalendarUseCase calendarUseCase;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER','FRONT_DESK','GROUP_ADMIN')")
@@ -38,6 +39,14 @@ public class RoomController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut) {
         return ResponseEntity.ok(ApiResponse.ok(availabilityUseCase.findAvailable(checkIn, checkOut)));
+    }
+
+    @GetMapping("/calendar")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','FRONT_DESK','GROUP_ADMIN')")
+    public ResponseEntity<ApiResponse<List<RoomCalendarResponse>>> calendar(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(ApiResponse.ok(calendarUseCase.calendar(from, to)));
     }
 
     @GetMapping("/{id}")
