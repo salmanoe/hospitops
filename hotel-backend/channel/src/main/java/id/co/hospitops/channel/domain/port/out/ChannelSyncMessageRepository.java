@@ -19,4 +19,7 @@ public interface ChannelSyncMessageRepository {
      * up to {@code limit}. Used by the relay.
      */
     List<ChannelSyncMessage> findProcessable(LocalDateTime now, int limit);
+
+    /** Recent messages for the current hotel, newest first (sync-status board). */
+    List<ChannelSyncMessage> findRecentForCurrentHotel(int limit);
 }

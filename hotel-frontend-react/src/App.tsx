@@ -3,6 +3,7 @@ import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import GroupLayout from "./components/GroupLayout";
 import Billing from "./pages/Billing";
+import Channels from "./pages/Channels";
 import Dashboard from "./pages/Dashboard";
 import GroupDashboard from "./pages/GroupDashboard";
 import GroupLogin from "./pages/GroupLogin";
@@ -50,6 +51,7 @@ export default function App() {
             <Route path="/room-types" element={<RoomTypes />} />
             <Route path="/housekeeping" element={<Housekeeping />} />
             <Route path="/billing" element={<Billing />} />
+            <Route path="/channels" element={<Channels />} />
             <Route path="/staff" element={<Staff />} />
             <Route path="/staff/new" element={<StaffForm />} />
             <Route path="/staff/:id/edit" element={<StaffForm />} />

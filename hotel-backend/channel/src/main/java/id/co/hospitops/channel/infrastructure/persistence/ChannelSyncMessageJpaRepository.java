@@ -15,4 +15,7 @@ public interface ChannelSyncMessageJpaRepository
     /** Due messages across all hotels, oldest first (relay is not hotel-scoped). */
     List<ChannelSyncMessageJpaEntity> findByStatusAndNextAttemptAtLessThanEqualOrderByCreatedAtAsc(
             SyncStatus status, LocalDateTime now, Pageable pageable);
+
+    /** Recent messages for one hotel, newest first (sync-status board). */
+    List<ChannelSyncMessageJpaEntity> findByHotelIdOrderByCreatedAtDesc(UUID hotelId, Pageable pageable);
 }

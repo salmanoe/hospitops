@@ -232,3 +232,48 @@ export interface Guest {
   address?: string;
   createdAt?: string;
 }
+
+// ── Channel manager (Channex) ──────────────────────────────────────────────
+export interface ChannelProperty {
+  id: string;
+  provider: string;
+  externalPropertyId: string;
+  enabled: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ChannelRoomTypeMapping {
+  id: string;
+  roomTypeId: string;
+  externalRoomTypeId: string;
+  externalRatePlanId: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type SyncStatus = "PENDING" | "SENT" | "FAILED";
+
+export interface ChannelSyncMessage {
+  id: string;
+  type: string;
+  status: SyncStatus;
+  attempts: number;
+  lastError?: string | null;
+  nextAttemptAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type InboundStatus = "BOOKED" | "CANCELLED" | "CONFLICT";
+
+export interface ChannelInboundBooking {
+  externalBookingId: string;
+  status: InboundStatus;
+  otaName?: string | null;
+  otaReservationCode?: string | null;
+  reservationId?: string | null;
+  lastRevisionId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}

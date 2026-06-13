@@ -46,6 +46,11 @@ export const statusColor = (status: string): string => {
     UNPAID: "danger",
     PARTIAL: "warning",
     PAID: "success",
+    // Channel sync / inbound statuses
+    SENT: "success",
+    FAILED: "danger",
+    BOOKED: "success",
+    CONFLICT: "warning",
   };
   return map[status] ?? "secondary";
 };

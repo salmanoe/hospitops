@@ -12,6 +12,10 @@ import { clearSession, getRefreshToken, getToken, saveSession } from "./session"
 import type {
   AnyLoginResponse,
   ApiEnvelope,
+  ChannelInboundBooking,
+  ChannelProperty,
+  ChannelRoomTypeMapping,
+  ChannelSyncMessage,
   CreateReservationInput,
   Guest,
   GroupLoginResponse,
@@ -232,6 +236,24 @@ export const api = {
 
   groupDashboard: {
     get: () => get<HotelSummary[]>("/group/dashboard"),
+  },
+
+  channel: {
+    getProperty: () => get<ChannelProperty>("/channel/property"),
+    configureProperty: (externalPropertyId: string) =>
+      put<ChannelProperty>("/channel/property", { externalPropertyId }),
+    enable: () => post<ChannelProperty>("/channel/property/enable", {}),
+    disable: () => post<ChannelProperty>("/channel/property/disable", {}),
+    listRoomTypeMappings: () => get<ChannelRoomTypeMapping[]>("/channel/room-types"),
+    mapRoomType: (roomTypeId: string, externalRoomTypeId: string, externalRatePlanId: string) =>
+      put<ChannelRoomTypeMapping>(`/channel/room-types/${roomTypeId}`, {
+        externalRoomTypeId,
+        externalRatePlanId,
+      }),
+    syncMessages: (limit = 20) =>
+      get<ChannelSyncMessage[]>("/channel/sync-messages", { limit }),
+    inbound: (limit = 20) =>
+      get<ChannelInboundBooking[]>("/channel/inbound", { limit }),
   },
 
   // Raw verbs for screens not yet ported.

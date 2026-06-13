@@ -2,6 +2,7 @@ package id.co.hospitops.channel.domain.port.out;
 
 import id.co.hospitops.channel.domain.model.ChannelInboundBooking;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -14,4 +15,7 @@ public interface ChannelInboundBookingRepository {
     ChannelInboundBooking save(ChannelInboundBooking booking);
 
     Optional<ChannelInboundBooking> findByExternalBookingId(String externalBookingId);
+
+    /** Recent inbound bookings for the current hotel, newest first. */
+    List<ChannelInboundBooking> findRecentForCurrentHotel(int limit);
 }

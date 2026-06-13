@@ -3,8 +3,11 @@ package id.co.hospitops.channel.adapter.web;
 import id.co.hospitops.channel.application.command.ConfigureChannelPropertyCommand;
 import id.co.hospitops.channel.application.command.MapRoomTypeCommand;
 import id.co.hospitops.channel.application.command.PushAriCommand;
+import id.co.hospitops.channel.application.response.ChannelInboundBookingResponse;
 import id.co.hospitops.channel.application.response.ChannelPropertyMappingResponse;
 import id.co.hospitops.channel.application.response.ChannelRoomTypeMappingResponse;
+import id.co.hospitops.channel.application.response.ChannelSyncMessageResponse;
+import id.co.hospitops.channel.domain.port.in.ChannelStatusUseCase;
 import id.co.hospitops.channel.domain.port.in.ManageChannelMappingUseCase;
 import id.co.hospitops.channel.domain.port.in.SyncChannelUseCase;
 import id.co.hospitops.shared.RoomTypeId;
@@ -31,6 +34,7 @@ public class ChannelController {
 
     private final ManageChannelMappingUseCase useCase;
     private final SyncChannelUseCase syncUseCase;
+    private final ChannelStatusUseCase statusUseCase;
 
     // ── Property hookup ─────────────────────────────────────────────────
 
@@ -93,5 +97,21 @@ public class ChannelController {
                         .toList()));
         return ResponseEntity.accepted().body(
                 ApiResponse.<Void>ok("Channel sync enqueued", null));
+    }
+
+    // ── Sync-status board ───────────────────────────────────────────────
+
+    @GetMapping("/sync-messages")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','GROUP_ADMIN')")
+    public ResponseEntity<ApiResponse<List<ChannelSyncMessageResponse>>> recentSyncMessages(
+            @RequestParam(defaultValue = "20") int limit) {
+        return ResponseEntity.ok(ApiResponse.ok(statusUseCase.recentSyncMessages(limit)));
+    }
+
+    @GetMapping("/inbound")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','GROUP_ADMIN')")
+    public ResponseEntity<ApiResponse<List<ChannelInboundBookingResponse>>> recentInboundBookings(
+            @RequestParam(defaultValue = "20") int limit) {
+        return ResponseEntity.ok(ApiResponse.ok(statusUseCase.recentInboundBookings(limit)));
     }
 }

@@ -7,8 +7,10 @@ import id.co.hospitops.shared.HotelContext;
 import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.ReservationId;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -36,6 +38,13 @@ public class ChannelInboundBookingRepositoryImpl implements ChannelInboundBookin
     public Optional<ChannelInboundBooking> findByExternalBookingId(String externalBookingId) {
         return jpa.findByHotelIdAndExternalBookingId(HotelContext.current().value(), externalBookingId)
                 .map(this::toDomain);
+    }
+
+    @Override
+    public List<ChannelInboundBooking> findRecentForCurrentHotel(int limit) {
+        return jpa.findByHotelIdOrderByUpdatedAtDesc(
+                        HotelContext.current().value(), PageRequest.of(0, limit))
+                .stream().map(this::toDomain).toList();
     }
 
     // ── Mapping ─────────────────────────────────────────────────────────

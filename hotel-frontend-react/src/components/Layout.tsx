@@ -16,6 +16,7 @@ const NAV: NavItem[] = [
   { to: "/rooms", label: "Rooms", roles: ["GROUP_ADMIN", "ADMIN", "MANAGER"] },
   { to: "/housekeeping", label: "Housekeeping", roles: ["GROUP_ADMIN", "ADMIN", "MANAGER", "HOUSEKEEPING"] },
   { to: "/billing", label: "Billing", roles: ["GROUP_ADMIN", "ADMIN", "MANAGER", "ACCOUNTANT"] },
+  { to: "/channels", label: "Channels", roles: ["GROUP_ADMIN", "ADMIN", "MANAGER"] },
   { to: "/staff", label: "Staff", roles: ["GROUP_ADMIN", "ADMIN"] },
 ];
 

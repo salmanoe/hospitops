@@ -5,6 +5,7 @@ import id.co.hospitops.channel.domain.model.SyncStatus;
 import id.co.hospitops.channel.domain.port.out.ChannelSyncMessageRepository;
 import id.co.hospitops.channel.infrastructure.persistence.entity.ChannelSyncMessageJpaEntity;
 import id.co.hospitops.shared.ChannelSyncMessageId;
+import id.co.hospitops.shared.HotelContext;
 import id.co.hospitops.shared.HotelId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -39,6 +40,13 @@ public class ChannelSyncMessageRepositoryImpl implements ChannelSyncMessageRepos
     public List<ChannelSyncMessage> findProcessable(LocalDateTime now, int limit) {
         return jpa.findByStatusAndNextAttemptAtLessThanEqualOrderByCreatedAtAsc(
                         SyncStatus.PENDING, now, PageRequest.of(0, limit))
+                .stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<ChannelSyncMessage> findRecentForCurrentHotel(int limit) {
+        return jpa.findByHotelIdOrderByCreatedAtDesc(
+                        HotelContext.current().value(), PageRequest.of(0, limit))
                 .stream().map(this::toDomain).toList();
     }
 
