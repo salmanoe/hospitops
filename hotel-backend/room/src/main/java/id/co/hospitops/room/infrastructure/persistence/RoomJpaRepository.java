@@ -17,6 +17,26 @@ public interface RoomJpaRepository extends JpaRepository<RoomJpaEntity, UUID> {
     // Hotel-scoped queries — use these in all hotel-context operations
     Optional<RoomJpaEntity> findByIdAndHotelId(UUID id, UUID hotelId);
 
+    /**
+     * Sellable units of a room type on one night: rooms of the type with no
+     * active reservation covering that night. Physical-inventory based (no
+     * housekeeping-status filter) — a room dirty today is still sellable for a
+     * future date. Used by the channel availability SPI for outbound ARI.
+     *
+     * <p>Cross-module subquery on {@code reservation}; same Stage-3 OccupancyPort
+     * note as {@link #findAvailable} applies.
+     */
+    @Query(value = "SELECT COUNT(r.id) FROM room r" +
+            " WHERE r.room_type_id = :roomTypeId" +
+            "   AND r.id NOT IN (" +
+            "     SELECT res.room_id FROM reservation res" +
+            "     WHERE res.status IN ('CONFIRMED','CHECKED_IN')" +
+            "       AND res.check_in_date  <= :night" +
+            "       AND res.check_out_date >  :night" +
+            "   )",
+            nativeQuery = true)
+    long countSellableByRoomType(@Param("roomTypeId") UUID roomTypeId, @Param("night") LocalDate night);
+
     boolean existsByRoomNumberAndHotelId(String roomNumber, UUID hotelId);
 
     List<RoomJpaEntity> findByHotelId(UUID hotelId, Pageable pageable);

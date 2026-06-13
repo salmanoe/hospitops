@@ -89,7 +89,7 @@ public class ReservationService implements ReservationUseCase {
         Reservation saved = reservationRepo.save(res);
         eventPublisher.publishEvent(new ReservationCheckedOutEvent(
                 saved.getHotelId(), saved.getId(), saved.getRoomId(), saved.getGuestId(),
-                saved.getNights()));
+                saved.getNights(), saved.getCheckInDate(), saved.getCheckOutDate()));
         log.info("Reservation {} checked out", saved.getReservationNumber());
         return enrich(saved);
     }
@@ -100,7 +100,8 @@ public class ReservationService implements ReservationUseCase {
         res.cancel();
         Reservation saved = reservationRepo.save(res);
         eventPublisher.publishEvent(new ReservationCancelledEvent(
-                saved.getHotelId(), saved.getId(), saved.getRoomId()));
+                saved.getHotelId(), saved.getId(), saved.getRoomId(),
+                saved.getCheckInDate(), saved.getCheckOutDate()));
         return enrich(saved);
     }
 
