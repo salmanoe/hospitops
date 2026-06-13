@@ -3,6 +3,7 @@ package id.co.hospitops.identity.adapter.web;
 import id.co.hospitops.identity.application.response.LoginResponse;
 import id.co.hospitops.identity.domain.model.StaffRole;
 import id.co.hospitops.identity.domain.port.in.AuthUseCase;
+import id.co.hospitops.identity.domain.port.in.HotelAuthUseCase;
 import id.co.hospitops.identity.domain.port.in.ManageStaffUseCase;
 import id.co.hospitops.identity.domain.port.out.StaffRepository;
 import id.co.hospitops.identity.domain.port.out.TokenBlacklist;
@@ -37,6 +38,10 @@ class IdentityControllerTest {
     @MockitoBean
     ManageStaffUseCase staffUseCase;
 
+    // HotelAuthController is in the same adapter.web scan scope.
+    @MockitoBean
+    HotelAuthUseCase hotelAuthUseCase;
+
     // JwtAuthFilter (@Component Filter) is included in the @WebMvcTest slice;
     // its dependencies must be mocked so the context loads.
     @MockitoBean
@@ -46,7 +51,9 @@ class IdentityControllerTest {
     @MockitoBean
     StaffRepository staffRepository;
 
-    /** Builds a LoginResponse with both access and refresh token fields populated. */
+    /**
+     * Builds a LoginResponse with both access and refresh token fields populated.
+     */
     private static LoginResponse mockLoginResponse() {
         return new LoginResponse(
                 "jwt-token", "Bearer", 28800L,

@@ -12,13 +12,16 @@ import id.co.hospitops.billing.domain.model.Invoice;
 import id.co.hospitops.billing.domain.model.PaymentStatus;
 import id.co.hospitops.shared.exception.BusinessRuleViolationException;
 import id.co.hospitops.billing.domain.port.in.BillingUseCase;
+import id.co.hospitops.billing.domain.port.out.HotelPolicyPort;
 import id.co.hospitops.billing.domain.port.out.InvoiceNumberGenerator;
 import id.co.hospitops.billing.domain.port.out.InvoiceRepository;
 import id.co.hospitops.billing.domain.port.out.ReservationDetailPort;
 import id.co.hospitops.billing.infrastructure.pdf.InvoicePdfGenerator;
+import id.co.hospitops.shared.HotelContext;
 import id.co.hospitops.shared.InvoiceId;
 import id.co.hospitops.shared.Money;
 import id.co.hospitops.shared.ReservationId;
+import id.co.hospitops.shared.TaxPolicy;
 import id.co.hospitops.shared.event.PaymentReceivedEvent;
 import id.co.hospitops.shared.exception.ResourceNotFoundException;
 import id.co.hospitops.shared.web.PageResult;
@@ -40,6 +43,7 @@ public class BillingService implements BillingUseCase {
     private final InvoiceRepository invoiceRepo;
     private final InvoiceNumberGenerator numberGenerator;
     private final ReservationDetailPort reservationDetail;
+    private final HotelPolicyPort hotelPolicyPort;
     private final InvoicePdfGenerator pdfGenerator;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -55,10 +59,16 @@ public class BillingService implements BillingUseCase {
         ReservationDetailPort.ReservationDetail detail =
                 reservationDetail.findById(reservationId);
 
+        HotelPolicyPort.HotelPolicy policy =
+                hotelPolicyPort.findByHotelId(HotelContext.current());
+        TaxPolicy taxPolicy = TaxPolicy.of(policy.taxPercent());
+
         String number = numberGenerator.generate();
-        Invoice invoice = Invoice.create(number, reservationId,
+        Invoice invoice = Invoice.create(
+                HotelContext.current(), number, reservationId,
                 detail.reservationNumber(), detail.guestFullName(),
-                nights, detail.ratePerNight(), detail.roomTypeName());
+                nights, detail.ratePerNight(), detail.roomTypeName(),
+                taxPolicy);
 
         Invoice saved = invoiceRepo.save(invoice);
         log.info("Invoice {} created for reservation {}",
@@ -111,7 +121,7 @@ public class BillingService implements BillingUseCase {
 
         boolean fullyPaid = saved.getPaymentStatus() == PaymentStatus.PAID;
         eventPublisher.publishEvent(new PaymentReceivedEvent(
-                saved.getId(), saved.getReservationId(),
+                saved.getHotelId(), saved.getId(), saved.getReservationId(),
                 Money.of(cmd.amount()), fullyPaid));
 
         log.info("Payment of {} recorded for invoice {}", cmd.amount(),
@@ -125,7 +135,9 @@ public class BillingService implements BillingUseCase {
         Invoice invoice = findInvoice(id);
         ReservationDetailPort.ReservationDetail detail =
                 reservationDetail.findById(invoice.getReservationId());
-        return pdfGenerator.generate(invoice, detail);
+        HotelPolicyPort.HotelPolicy policy =
+                hotelPolicyPort.findByHotelId(invoice.getHotelId());
+        return pdfGenerator.generate(invoice, detail, policy);
     }
 
     private Invoice findInvoice(InvoiceId id) {

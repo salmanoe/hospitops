@@ -1,0 +1,172 @@
+# ═══════════════════════════════════════════════════════════════
+# docker-compose.prod.yml — Production stack for a single VPS
+#
+# Topology (only Caddy is exposed to the internet):
+#
+#   internet ──443/80──> caddy ──> frontend (nginx, React SPA)
+#                                      │  /api/* ──> app (Spring Boot)
+#                                      ▼
+#                          app ──> postgres  (internal)
+#                          app ──> redis     (internal)
+#                          postgres ──> postgres-backup (daily pg_dump)
+#
+# Caddy terminates TLS with automatic Let's Encrypt certificates.
+# Everything else is on the internal Compose network — no host ports.
+#
+# Prerequisites:
+#   1. A VPS with Docker + Docker Compose, ports 80 and 443 open.
+#   2. DNS A/AAAA record for $DOMAIN pointing at the VPS public IP.
+#   3. cp .env.prod.example .env.prod   and fill in real secrets.
+#
+# Bring up:
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+# Logs:
+#   docker compose -f docker-compose.prod.yml logs -f app
+# Update backend to a new image tag:
+#   APP_IMAGE_TAG=<sha> docker compose --env-file .env.prod \
+#     -f docker-compose.prod.yml up -d app
+#
+# See docs/DEPLOY.md for the full runbook (backups, restore, rotation).
+# ═══════════════════════════════════════════════════════════════
+
+services:
+
+  # ── Caddy — TLS edge / reverse proxy ─────────────────────────
+  # Automatic HTTPS via Let's Encrypt. The only service bound to host
+  # ports. Forwards all traffic to the frontend nginx, which serves the
+  # SPA and proxies /api/* to the backend.
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    environment:
+      DOMAIN:     ${DOMAIN:?set DOMAIN in .env.prod}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env.prod}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data       # certificates + ACME account (persist!)
+      - caddy-config:/config
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
+  # ── Frontend — React SPA (nginx) ─────────────────────────────
+  # Not exposed to the host; reached only through Caddy. Builds the
+  # Vite bundle and proxies /api/* to app:8080 (see nginx.conf).
+  frontend:
+    build:
+      context: ./hotel-frontend-react
+      dockerfile: Dockerfile
+    expose:
+      - "80"
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  # ── Spring Boot backend (GraalVM native image from GHCR) ─────
+  # Published by .github/workflows/build.yml on main. Override the tag
+  # with APP_IMAGE_TAG (defaults to :latest). To build locally instead,
+  # comment out `image:` and uncomment the `build:` block.
+  app:
+    image: ghcr.io/${GHCR_OWNER:-salmanoe}/hotel-backend:${APP_IMAGE_TAG:-latest}
+    # build:
+    #   context: ./hotel-backend
+    #   dockerfile: Dockerfile
+    environment:
+      # No `dev`/`k8s` profile — the default config is production-grade
+      # (INFO logging, health probes, CORS from FRONTEND_URL).
+      DB_URL:      jdbc:postgresql://postgres:5432/${POSTGRES_DB:?set POSTGRES_DB}
+      DB_USER:     ${POSTGRES_USER:?set POSTGRES_USER}
+      DB_PASS:     ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      DB_POOL_MAX: ${DB_POOL_MAX:-15}
+
+      JWT_SECRET:        ${JWT_SECRET:?set JWT_SECRET (openssl rand -base64 48)}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-28800000}
+
+      # Same-origin in prod (Caddy serves SPA + API under one host), so
+      # CORS is not exercised — set correctly anyway.
+      FRONTEND_URL: https://${DOMAIN}
+
+      # Shared token blacklist — required for safe multi-request logout.
+      REDIS_ENABLED:  "true"
+      REDIS_HOST:     redis
+      REDIS_PORT:     "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+      REDIS_SSL:      "false"   # plaintext is fine on the internal network
+
+      LOG_LEVEL:          ${LOG_LEVEL:-INFO}
+      PROMETHEUS_ENABLED: ${PROMETHEUS_ENABLED:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # No container healthcheck: the GraalVM/Paketo runtime image is
+    # minimal (no shell/curl). Liveness is covered by restart policy;
+    # monitor /actuator/health/readiness externally (see docs/DEPLOY.md).
+    restart: unless-stopped
+
+  # ── PostgreSQL 17 ────────────────────────────────────────────
+  # Internal only — never bind to a host port in production.
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:?set POSTGRES_DB}
+      POSTGRES_USER:     ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+  # ── Redis 7 — token blacklist ────────────────────────────────
+  # Internal only, password-protected, append-only persistence.
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD}"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  # ── Automated PostgreSQL backups ─────────────────────────────
+  # Daily pg_dump with rotation to the postgres-backups volume.
+  # Restore drill documented in docs/DEPLOY.md.
+  postgres-backup:
+    image: prodrigestivill/postgres-backup-local:17-alpine
+    environment:
+      POSTGRES_HOST:      postgres
+      POSTGRES_DB:        ${POSTGRES_DB}
+      POSTGRES_USER:      ${POSTGRES_USER}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD}
+      SCHEDULE:           ${BACKUP_SCHEDULE:-@daily}
+      BACKUP_KEEP_DAYS:   ${BACKUP_KEEP_DAYS:-7}
+      BACKUP_KEEP_WEEKS:  ${BACKUP_KEEP_WEEKS:-4}
+      BACKUP_KEEP_MONTHS: ${BACKUP_KEEP_MONTHS:-6}
+      HEALTHCHECK_PORT:   "8080"
+    volumes:
+      - postgres-backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+# ── Named volumes ─────────────────────────────────────────────
+volumes:
+  postgres-data:
+  postgres-backups:
+  redis-data:
+  caddy-data:
+  caddy-config:

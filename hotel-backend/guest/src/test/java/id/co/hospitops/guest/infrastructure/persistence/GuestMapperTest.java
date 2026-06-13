@@ -3,6 +3,7 @@ package id.co.hospitops.guest.infrastructure.persistence;
 import id.co.hospitops.guest.domain.model.Guest;
 import id.co.hospitops.guest.infrastructure.persistence.entity.GuestJpaEntity;
 import id.co.hospitops.shared.GuestId;
+import id.co.hospitops.shared.HotelId;
 import org.junit.jupiter.api.*;
 
 import java.time.LocalDateTime;
@@ -36,7 +37,7 @@ class GuestMapperTest {
         @Test
         @DisplayName("maps all fields from Guest to GuestJpaEntity")
         void mapsAllFields() {
-            Guest guest = Guest.create(
+            Guest guest = Guest.create(HotelId.generate(),
                     "Budi Santoso", "3201010101800001",
                     "Indonesian", "+628111000001",
                     "budi@example.com", "Jl. Merdeka No. 1, Jakarta");
@@ -55,7 +56,7 @@ class GuestMapperTest {
         @Test
         @DisplayName("maps null optional fields without NPE")
         void mapsNullOptionalFields() {
-            Guest guest = Guest.create("Anonim", null, null, null, null, null);
+            Guest guest = Guest.create(HotelId.generate(), "Anonim", null, null, null, null, null);
 
             GuestJpaEntity entity = mapper.toJpa(guest);
 
@@ -89,6 +90,7 @@ class GuestMapperTest {
                     .address("Jl. Sudirman No. 5, Bandung")
                     .createdAt(now)
                     .updatedAt(now)
+                    .hotelId(java.util.UUID.randomUUID())
                     .build();
 
             Guest guest = mapper.toDomain(entity);
@@ -117,6 +119,7 @@ class GuestMapperTest {
                     .address(null)
                     .createdAt(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
+                    .hotelId(java.util.UUID.randomUUID())
                     .build();
 
             Guest guest = mapper.toDomain(entity);
@@ -138,7 +141,7 @@ class GuestMapperTest {
         @Test
         @DisplayName("all fields survive a full round-trip")
         void allFieldsSurviveRoundTrip() {
-            Guest original = Guest.create(
+            Guest original = Guest.create(HotelId.generate(),
                     "Dewi Lestari", "3201030304750003",
                     "Indonesian", "+628333000003",
                     "dewi@example.com", "Jl. Gatot Subroto No. 10, Jakarta");
@@ -157,7 +160,7 @@ class GuestMapperTest {
         @Test
         @DisplayName("round-trip preserves null optional fields")
         void roundTripPreservesNulls() {
-            Guest original = Guest.create("Anonim", null, null, null, null, null);
+            Guest original = Guest.create(HotelId.generate(), "Anonim", null, null, null, null, null);
 
             Guest restored = mapper.toDomain(mapper.toJpa(original));
 
@@ -180,11 +183,14 @@ class GuestMapperTest {
                     knownId, "Raka Wijaya", "3201040405800004",
                     "Indonesian", "+628444000004",
                     "raka@example.com", "Jl. Thamrin No. 20, Jakarta",
-                    ts, ts);
+                    HotelId.generate(), ts, ts);
 
             Guest restored = mapper.toDomain(mapper.toJpa(original));
 
             assertThat(restored.getId().value()).isEqualTo(knownId.value());
+            assertThat(restored.getFullName()).isEqualTo("Raka Wijaya");
+            assertThat(restored.getCreatedAt()).isEqualTo(ts);
+            assertThat(restored.getUpdatedAt()).isEqualTo(ts);
         }
     }
 }

@@ -1,0 +1,31 @@
+# ═══════════════════════════════════════════════════════════════
+# Caddyfile — production TLS edge for HospitOps
+#
+# Caddy obtains and renews Let's Encrypt certificates automatically for
+# $DOMAIN and reverse-proxies everything to the frontend nginx, which
+# serves the React SPA and proxies /api/* to the backend.
+#
+# $DOMAIN and $ACME_EMAIL are injected from .env.prod by docker-compose.
+# ═══════════════════════════════════════════════════════════════
+
+{
+	# Account email for Let's Encrypt expiry / recovery notices.
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Single upstream: the frontend container already routes SPA vs /api.
+	reverse_proxy frontend:80
+
+	# Sensible security headers for an authenticated web app.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options    "nosniff"
+		X-Frame-Options           "DENY"
+		Referrer-Policy           "strict-origin-when-cross-origin"
+		# Caddy adds the Server header; drop it.
+		-Server
+	}
+}

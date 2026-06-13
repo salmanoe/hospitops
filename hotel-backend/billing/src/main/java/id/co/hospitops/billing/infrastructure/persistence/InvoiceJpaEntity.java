@@ -63,6 +63,9 @@ public class InvoiceJpaEntity {
     @Column(columnDefinition = "text")
     private String notes;
 
+    @Column(nullable = false, columnDefinition = "uuid")
+    private UUID hotelId;
+
     @CreationTimestamp
     private LocalDateTime issuedAt;
 

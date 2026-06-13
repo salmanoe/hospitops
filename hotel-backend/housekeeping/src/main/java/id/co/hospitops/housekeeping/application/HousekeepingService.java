@@ -7,12 +7,16 @@ import id.co.hospitops.housekeeping.domain.model.HousekeepingTask;
 import id.co.hospitops.housekeeping.domain.port.in.HousekeepingUseCase;
 import id.co.hospitops.housekeeping.domain.port.out.HousekeepingTaskRepository;
 import id.co.hospitops.housekeeping.domain.port.out.RoomStatusPort;
+import id.co.hospitops.shared.HotelContext;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.ReservationId;
 import id.co.hospitops.shared.RoomId;
 import id.co.hospitops.shared.StaffId;
+import id.co.hospitops.shared.event.HousekeepingTaskCreatedEvent;
 import id.co.hospitops.shared.exception.ResourceNotFoundException;
 import id.co.hospitops.shared.web.PageResult;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +34,7 @@ public class HousekeepingService implements HousekeepingUseCase {
 
     private final HousekeepingTaskRepository taskRepo;
     private final RoomStatusPort roomStatusPort;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public HousekeepingTaskResponse assignTask(UUID taskId, StaffId staffId) {
@@ -73,7 +78,7 @@ public class HousekeepingService implements HousekeepingUseCase {
 
     @Override
     public HousekeepingTaskResponse createManualTask(RoomId roomId, String notes) {
-        HousekeepingTask task = HousekeepingTask.createManual(roomId, notes);
+        HousekeepingTask task = HousekeepingTask.createManual(HotelContext.current(), roomId, notes);
         return HousekeepingTaskResponse.from(taskRepo.save(task));
     }
 
@@ -83,18 +88,25 @@ public class HousekeepingService implements HousekeepingUseCase {
         roomStatusPort.updateRoomStatus(rid, status, notes);
         if ("SERVICE_REQUESTED".equalsIgnoreCase(status)) {
             String taskNotes = (notes != null && !notes.isBlank()) ? notes : "Guest requested cleaning service";
-            HousekeepingTask task = HousekeepingTask.createManual(rid, taskNotes);
+            HousekeepingTask task = HousekeepingTask.createManual(HotelContext.current(), rid, taskNotes);
             taskRepo.save(task);
         }
     }
 
     /**
-     * Called by the checkout event listener.
+     * Called by the checkout event listener. The hotelId is passed explicitly from the
+     * event rather than reading HotelContext, because AFTER_COMMIT listeners run after
+     * the transaction completes and the ScopedValue binding may no longer be active.
      */
     @Transactional
-    public HousekeepingTask createCheckoutTask(RoomId roomId, ReservationId reservationId) {
-        HousekeepingTask task = HousekeepingTask.createForCheckout(roomId, reservationId);
-        return taskRepo.save(task);
+    public HousekeepingTask createCheckoutTask(HotelId hotelId,
+                                               RoomId roomId,
+                                               ReservationId reservationId) {
+        HousekeepingTask task = HousekeepingTask.createForCheckout(hotelId, roomId, reservationId);
+        HousekeepingTask saved = taskRepo.save(task);
+        eventPublisher.publishEvent(
+                new HousekeepingTaskCreatedEvent(hotelId, saved.getId(), roomId));
+        return saved;
     }
 
     private HousekeepingTask findTask(UUID id) {

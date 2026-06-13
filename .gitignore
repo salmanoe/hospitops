@@ -9,6 +9,14 @@ target/
 *.jar
 *.war
 
+# Gradle
+.gradle/
+build/
+# The wrapper jar/properties MUST be committed (overrides *.jar above).
+# Use **/ so the negation matches the nested hotel-backend/gradle/wrapper/ path.
+!**/gradle/wrapper/gradle-wrapper.jar
+!**/gradle/wrapper/gradle-wrapper.properties
+
 # Native image
 *.so
 *.dll
@@ -24,10 +32,17 @@ Thumbs.db
 
 # Environment — never commit secrets
 .env
+.env.prod
 *.env.local
-/*.md
+# …but keep the templates tracked
+!.env.example
+!.env.prod.example
+*.md
 !README.md
 /*.docx
 
 # SonarQube scanner cache
 .scannerwork/
+
+# Playwright MCP scratch output
+.playwright-mcp/

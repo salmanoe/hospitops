@@ -24,6 +24,6 @@ public class HousekeepingEventListener {
         log.info("Creating housekeeping task for room {} after checkout of reservation {}",
                 event.getRoomId(), event.getReservationId());
         housekeepingService.createCheckoutTask(
-                event.getRoomId(), event.getReservationId());
+                event.getHotelId(), event.getRoomId(), event.getReservationId());
     }
 }

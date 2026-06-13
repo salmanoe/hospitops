@@ -6,6 +6,7 @@ import id.co.hospitops.reservation.domain.model.*;
 import id.co.hospitops.reservation.domain.port.in.ReservationUseCase;
 import id.co.hospitops.reservation.domain.port.out.*;
 import id.co.hospitops.shared.*;
+import id.co.hospitops.shared.HotelContext;
 import id.co.hospitops.shared.event.*;
 import id.co.hospitops.shared.exception.*;
 import id.co.hospitops.shared.web.PageResult;
@@ -44,9 +45,9 @@ public class ReservationService implements ReservationUseCase {
         Money rate = roomAvailability.resolveRate(cmd.roomId(), cmd.checkIn());
         String number = numberGenerator.generate();
 
-        Reservation reservation = Reservation.create(number, cmd.guestId(), cmd.roomId(),
-                cmd.checkIn(), cmd.checkOut(), rate, cmd.adults(), cmd.children(),
-                cmd.specialRequests(), cmd.createdBy());
+        Reservation reservation = Reservation.create(HotelContext.current(), number,
+                cmd.guestId(), cmd.roomId(), cmd.checkIn(), cmd.checkOut(), rate,
+                cmd.adults(), cmd.children(), cmd.specialRequests(), cmd.createdBy());
 
         // R-03 FIX: The GIST exclusion constraint (V8 migration) is the authoritative
         // guard against concurrent double-bookings. If two requests race past the
@@ -61,7 +62,7 @@ public class ReservationService implements ReservationUseCase {
         }
 
         eventPublisher.publishEvent(new ReservationCreatedEvent(
-                saved.getId(), saved.getRoomId(), saved.getGuestId(),
+                saved.getHotelId(), saved.getId(), saved.getRoomId(), saved.getGuestId(),
                 saved.getCheckInDate(), saved.getCheckOutDate()));
 
         log.info("Reservation {} created for guest {} in room {}",
@@ -76,7 +77,7 @@ public class ReservationService implements ReservationUseCase {
         res.checkIn();
         Reservation saved = reservationRepo.save(res);
         eventPublisher.publishEvent(new ReservationCheckedInEvent(
-                saved.getId(), saved.getRoomId(), saved.getGuestId()));
+                saved.getHotelId(), saved.getId(), saved.getRoomId(), saved.getGuestId()));
         log.info("Reservation {} checked in", saved.getReservationNumber());
         return enrich(saved);
     }
@@ -87,8 +88,8 @@ public class ReservationService implements ReservationUseCase {
         res.checkOut();
         Reservation saved = reservationRepo.save(res);
         eventPublisher.publishEvent(new ReservationCheckedOutEvent(
-                saved.getId(), saved.getRoomId(), saved.getGuestId(),
-                saved.getNights()));
+                saved.getHotelId(), saved.getId(), saved.getRoomId(), saved.getGuestId(),
+                saved.getNights(), saved.getCheckInDate(), saved.getCheckOutDate()));
         log.info("Reservation {} checked out", saved.getReservationNumber());
         return enrich(saved);
     }
@@ -99,7 +100,8 @@ public class ReservationService implements ReservationUseCase {
         res.cancel();
         Reservation saved = reservationRepo.save(res);
         eventPublisher.publishEvent(new ReservationCancelledEvent(
-                saved.getId(), saved.getRoomId()));
+                saved.getHotelId(), saved.getId(), saved.getRoomId(),
+                saved.getCheckInDate(), saved.getCheckOutDate()));
         return enrich(saved);
     }
 
@@ -163,7 +165,9 @@ public class ReservationService implements ReservationUseCase {
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation", id.value()));
     }
 
-    /** Builds an enriched response by resolving display names from guest and room modules. */
+    /**
+     * Builds an enriched response by resolving display names from guest and room modules.
+     */
     private ReservationResponse enrich(Reservation r) {
         String guestFullName = displayEnrichment.findGuestDisplay(r.getGuestId()).fullName();
         String roomNumber = displayEnrichment.findRoomDisplay(r.getRoomId()).roomNumber();

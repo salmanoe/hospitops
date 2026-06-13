@@ -7,6 +7,8 @@ import id.co.hospitops.reservation.domain.model.ReservationStatus;
 import id.co.hospitops.reservation.domain.port.out.*;
 import id.co.hospitops.reservation.domain.port.out.DisplayEnrichmentPort.GuestDisplay;
 import id.co.hospitops.reservation.domain.port.out.DisplayEnrichmentPort.RoomDisplay;
+import id.co.hospitops.shared.HotelContext;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.*;
 import id.co.hospitops.shared.event.*;
 import id.co.hospitops.shared.exception.*;
@@ -33,30 +35,39 @@ import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for ReservationService.
- *
+ * <p>
  * Covers:
- *   - create()            : guest-not-found, room-not-available, happy path + event published
- *   - checkIn()           : not-found, wrong-status guard, happy path + event published
- *   - checkOut()          : not-found, wrong-status guard, happy path + event (nights) published
- *   - cancel()            : not-found, already-checked-in guard, PENDING path, happy path + event
- *   - findAll()           : null/blank filter, valid statuses, invalid → BusinessRuleViolation (W-12 / C-2 fix)
- *   - findByGuest()       : real countByGuestId delegation (W-6 fix)
- *   - todayArrivals/Departures: repository delegation
+ * - create()            : guest-not-found, room-not-available, happy path + event published
+ * - checkIn()           : not-found, wrong-status guard, happy path + event published
+ * - checkOut()          : not-found, wrong-status guard, happy path + event (nights) published
+ * - cancel()            : not-found, already-checked-in guard, PENDING path, happy path + event
+ * - findAll()           : null/blank filter, valid statuses, invalid → BusinessRuleViolation (W-12 / C-2 fix)
+ * - findByGuest()       : real countByGuestId delegation (W-6 fix)
+ * - todayArrivals/Departures: repository delegation
  */
 @DisplayName("ReservationService")
 @ExtendWith(MockitoExtension.class)
 class ReservationServiceTest {
 
-    @Mock ReservationRepository      reservationRepo;
-    @Mock RoomAvailabilityPort       roomAvailability;
-    @Mock GuestValidationPort        guestValidation;
-    @Mock ReservationNumberGenerator numberGenerator;
-    @Mock ApplicationEventPublisher  eventPublisher;
-    @Mock DisplayEnrichmentPort      displayEnrichment;
+    @Mock
+    ReservationRepository reservationRepo;
+    @Mock
+    RoomAvailabilityPort roomAvailability;
+    @Mock
+    GuestValidationPort guestValidation;
+    @Mock
+    ReservationNumberGenerator numberGenerator;
+    @Mock
+    ApplicationEventPublisher eventPublisher;
+    @Mock
+    DisplayEnrichmentPort displayEnrichment;
 
-    @InjectMocks ReservationService service;
+    @InjectMocks
+    ReservationService service;
 
-    /** Minimal display stubs used by all tests that reach enrich() and return a ReservationResponse. */
+    /**
+     * Minimal display stubs used by all tests that reach enrich() and return a ReservationResponse.
+     */
     private void stubEnrichment() {
         when(displayEnrichment.findGuestDisplay(any())).thenReturn(new GuestDisplay("Test Guest", "1234567890"));
         when(displayEnrichment.findRoomDisplay(any())).thenReturn(new RoomDisplay("101", "Deluxe"));
@@ -64,12 +75,12 @@ class ReservationServiceTest {
 
     // ── helpers ────────────────────────────────────────────────────
 
-    private static final LocalDate CHECK_IN  = LocalDate.now().plusDays(1);
+    private static final LocalDate CHECK_IN = LocalDate.now().plusDays(1);
     private static final LocalDate CHECK_OUT = LocalDate.now().plusDays(3); // 2 nights
-    private static final Money     RATE      = Money.of(new BigDecimal("200000"));
+    private static final Money RATE = Money.of(new BigDecimal("200000"));
 
     private static Reservation stubConfirmed() {
-        return Reservation.create("RES-001", GuestId.generate(), RoomId.generate(),
+        return Reservation.create(HotelId.generate(), "RES-001", GuestId.generate(), RoomId.generate(),
                 CHECK_IN, CHECK_OUT, RATE, 2, 0, null, StaffId.generate());
     }
 
@@ -96,7 +107,7 @@ class ReservationServiceTest {
         @DisplayName("throws ResourceNotFoundException when guest does not exist")
         void throwsWhenGuestNotFound() {
             GuestId guestId = GuestId.generate();
-            RoomId  roomId  = RoomId.generate();
+            RoomId roomId = RoomId.generate();
             when(guestValidation.exists(guestId)).thenReturn(false);
 
             assertThatThrownBy(() -> service.create(stubCommand(guestId, roomId)))
@@ -109,7 +120,7 @@ class ReservationServiceTest {
         @DisplayName("throws BusinessRuleViolationException when room is not available")
         void throwsWhenRoomNotAvailable() {
             GuestId guestId = GuestId.generate();
-            RoomId  roomId  = RoomId.generate();
+            RoomId roomId = RoomId.generate();
             when(guestValidation.exists(guestId)).thenReturn(true);
             when(roomAvailability.isAvailable(roomId, CHECK_IN, CHECK_OUT)).thenReturn(false);
 
@@ -123,9 +134,9 @@ class ReservationServiceTest {
         @Test
         @DisplayName("saves reservation and publishes ReservationCreatedEvent on success")
         void savesAndPublishesCreatedEvent() {
-            GuestId    guestId = GuestId.generate();
-            RoomId     roomId  = RoomId.generate();
-            Reservation saved   = stubConfirmed();
+            GuestId guestId = GuestId.generate();
+            RoomId roomId = RoomId.generate();
+            Reservation saved = stubConfirmed();
 
             when(guestValidation.exists(guestId)).thenReturn(true);
             when(roomAvailability.isAvailable(roomId, CHECK_IN, CHECK_OUT)).thenReturn(true);
@@ -134,9 +145,11 @@ class ReservationServiceTest {
             when(reservationRepo.save(any(Reservation.class))).thenReturn(saved);
             stubEnrichment();
 
-            ReservationResponse result = service.create(stubCommand(guestId, roomId));
+            ReservationResponse[] holder = new ReservationResponse[1];
+            ScopedValue.where(HotelContext.HOTEL_ID, HotelId.generate())
+                    .run(() -> holder[0] = service.create(stubCommand(guestId, roomId)));
 
-            assertThat(result).isNotNull();
+            assertThat(holder[0]).isNotNull();
             verify(reservationRepo).save(any(Reservation.class));
             verify(eventPublisher).publishEvent(any(ReservationCreatedEvent.class));
         }
@@ -145,7 +158,7 @@ class ReservationServiceTest {
         @DisplayName("does not call repository when room availability check fails")
         void noRepoCallWhenRoomUnavailable() {
             GuestId guestId = GuestId.generate();
-            RoomId  roomId  = RoomId.generate();
+            RoomId roomId = RoomId.generate();
             when(guestValidation.exists(guestId)).thenReturn(true);
             when(roomAvailability.isAvailable(roomId, CHECK_IN, CHECK_OUT)).thenReturn(false);
 
@@ -163,7 +176,7 @@ class ReservationServiceTest {
             // insert. The service must surface a ConflictException (HTTP 409) rather than
             // letting a raw DataIntegrityViolationException propagate as HTTP 500.
             GuestId guestId = GuestId.generate();
-            RoomId  roomId  = RoomId.generate();
+            RoomId roomId = RoomId.generate();
             when(guestValidation.exists(guestId)).thenReturn(true);
             when(roomAvailability.isAvailable(roomId, CHECK_IN, CHECK_OUT)).thenReturn(true);
             when(roomAvailability.resolveRate(eq(roomId), any())).thenReturn(RATE);
@@ -171,7 +184,9 @@ class ReservationServiceTest {
             when(reservationRepo.save(any(Reservation.class)))
                     .thenThrow(new DataIntegrityViolationException("uq_room_no_overlap"));
 
-            assertThatThrownBy(() -> service.create(stubCommand(guestId, roomId)))
+            assertThatThrownBy(() ->
+                    ScopedValue.where(HotelContext.HOTEL_ID, HotelId.generate())
+                            .run(() -> service.create(stubCommand(guestId, roomId))))
                     .isInstanceOf(ConflictException.class)
                     .hasMessageContaining("no longer available");
 
@@ -200,8 +215,8 @@ class ReservationServiceTest {
         @Test
         @DisplayName("throws IllegalStateException when reservation is not CONFIRMED")
         void throwsForWrongStatus() {
-            ReservationId id        = ReservationId.generate();
-            Reservation   checkedIn = stubCheckedIn(); // already CHECKED_IN — cannot check in again
+            ReservationId id = ReservationId.generate();
+            Reservation checkedIn = stubCheckedIn(); // already CHECKED_IN — cannot check in again
             when(reservationRepo.findById(id)).thenReturn(Optional.of(checkedIn));
 
             assertThatThrownBy(() -> service.checkIn(id))
@@ -211,8 +226,8 @@ class ReservationServiceTest {
         @Test
         @DisplayName("saves updated reservation and publishes ReservationCheckedInEvent")
         void savesAndPublishesCheckedInEvent() {
-            ReservationId id        = ReservationId.generate();
-            Reservation   confirmed = stubConfirmed();
+            ReservationId id = ReservationId.generate();
+            Reservation confirmed = stubConfirmed();
             when(reservationRepo.findById(id)).thenReturn(Optional.of(confirmed));
             when(reservationRepo.save(confirmed)).thenReturn(confirmed);
             stubEnrichment();
@@ -246,8 +261,8 @@ class ReservationServiceTest {
         @Test
         @DisplayName("throws IllegalStateException when reservation is CONFIRMED (not CHECKED_IN)")
         void throwsForWrongStatus() {
-            ReservationId id        = ReservationId.generate();
-            Reservation   confirmed = stubConfirmed(); // CONFIRMED, not CHECKED_IN
+            ReservationId id = ReservationId.generate();
+            Reservation confirmed = stubConfirmed(); // CONFIRMED, not CHECKED_IN
             when(reservationRepo.findById(id)).thenReturn(Optional.of(confirmed));
 
             assertThatThrownBy(() -> service.checkOut(id))
@@ -257,8 +272,8 @@ class ReservationServiceTest {
         @Test
         @DisplayName("publishes ReservationCheckedOutEvent with correct nights value")
         void publishesEventWithCorrectNights() {
-            ReservationId id    = ReservationId.generate();
-            Reservation   ready = stubCheckedIn(); // CHECK_OUT - CHECK_IN = 2 nights
+            ReservationId id = ReservationId.generate();
+            Reservation ready = stubCheckedIn(); // CHECK_OUT - CHECK_IN = 2 nights
             when(reservationRepo.findById(id)).thenReturn(Optional.of(ready));
             when(reservationRepo.save(ready)).thenReturn(ready);
             stubEnrichment();
@@ -293,8 +308,8 @@ class ReservationServiceTest {
         @Test
         @DisplayName("throws IllegalStateException when reservation is CHECKED_IN (canCancel = false)")
         void throwsForCheckedInStatus() {
-            ReservationId id        = ReservationId.generate();
-            Reservation   checkedIn = stubCheckedIn();
+            ReservationId id = ReservationId.generate();
+            Reservation checkedIn = stubCheckedIn();
             when(reservationRepo.findById(id)).thenReturn(Optional.of(checkedIn));
 
             assertThatThrownBy(() -> service.cancel(id))
@@ -304,8 +319,8 @@ class ReservationServiceTest {
         @Test
         @DisplayName("saves and publishes ReservationCancelledEvent for CONFIRMED reservation")
         void cancelsConfirmedReservation() {
-            ReservationId id        = ReservationId.generate();
-            Reservation   confirmed = stubConfirmed();
+            ReservationId id = ReservationId.generate();
+            Reservation confirmed = stubConfirmed();
             when(reservationRepo.findById(id)).thenReturn(Optional.of(confirmed));
             when(reservationRepo.save(confirmed)).thenReturn(confirmed);
             stubEnrichment();
@@ -319,12 +334,12 @@ class ReservationServiceTest {
         @Test
         @DisplayName("can cancel a PENDING reservation")
         void cancelsPendingReservation() {
-            ReservationId id      = ReservationId.generate();
-            Reservation   pending = Reservation.reconstitute(
+            ReservationId id = ReservationId.generate();
+            Reservation pending = Reservation.reconstitute(
                     ReservationId.generate(), "RES-002",
                     GuestId.generate(), RoomId.generate(),
                     CHECK_IN, CHECK_OUT, ReservationStatus.PENDING,
-                    RATE, 1, 0, null, StaffId.generate(),
+                    RATE, 1, 0, null, StaffId.generate(), HotelId.generate(),
                     LocalDateTime.now(), LocalDateTime.now());
             when(reservationRepo.findById(id)).thenReturn(Optional.of(pending));
             when(reservationRepo.save(pending)).thenReturn(pending);

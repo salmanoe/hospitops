@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@RequiresHotelContext
 @RestController
 @RequestMapping("/api/v1/guests")
 @RequiredArgsConstructor
@@ -43,7 +44,8 @@ public class GuestController {
     }
 
     @PostMapping
-    @SuppressWarnings("JvmTaintAnalysis") // @Valid enforces Bean Validation on all string inputs; response is JSON, not HTML
+    @SuppressWarnings("JvmTaintAnalysis")
+    // @Valid enforces Bean Validation on all string inputs; response is JSON, not HTML
     public ResponseEntity<ApiResponse<GuestResponse>> register(
             @Valid @RequestBody RegisterGuestRequest req) {
         var cmd = new RegisterGuestCommand(req.fullName(), req.idNumber(),

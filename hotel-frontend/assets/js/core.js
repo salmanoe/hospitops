@@ -24,20 +24,44 @@ const Auth = (() => {
     const USER_KEY          = 'hospitops_user';
     const REFRESH_TOKEN_KEY = 'hospitops_refresh_token';
 
+    /**
+     * Persists a login response from either the staff login endpoint
+     * (LoginResponse: token, staffId, fullName, username, role) or the
+     * GROUP_ADMIN endpoints (GroupLoginResponse: accessToken, adminId,
+     * groupId, email, role='GROUP_ADMIN', hotelId).
+     *
+     * Both shapes are normalised to the same stored user object so the
+     * rest of the app can use Auth.getUser() uniformly.
+     */
     const save = (loginResponse) => {
-        localStorage.setItem(TOKEN_KEY, loginResponse.token);
-        localStorage.setItem(USER_KEY, JSON.stringify({
+        // GroupLoginResponse uses 'accessToken'; LoginResponse uses 'token'.
+        const token = loginResponse.accessToken || loginResponse.token;
+        localStorage.setItem(TOKEN_KEY, token);
+
+        // Persist refresh token when supplied (staff logins only).
+        if (loginResponse.refreshToken) {
+            localStorage.setItem(REFRESH_TOKEN_KEY, loginResponse.refreshToken);
+        }
+
+        // Normalise user shape. All DomainId types serialise to plain UUIDs
+        // via @JsonValue, so staffId / adminId / groupId / hotelId are strings.
+        const isGroupAdmin = loginResponse.role === 'GROUP_ADMIN';
+        localStorage.setItem(USER_KEY, JSON.stringify(isGroupAdmin ? {
+            id:        loginResponse.adminId,
+            name:      loginResponse.email,
+            username:  loginResponse.email,
+            role:      loginResponse.role,
+            groupId:   loginResponse.groupId   ?? null,
+            hotelId:   loginResponse.hotelId   ?? null,
+            hotelName: loginResponse.hotelName ?? null,
+        } : {
             id:       loginResponse.staffId,
             name:     loginResponse.fullName,
             username: loginResponse.username,
             role:     loginResponse.role,
+            groupId:  null,
+            hotelId:  null,
         }));
-        // Persist refresh token only when the server supplies one.
-        // On a token-rotation response the server always provides a new value;
-        // this guard prevents accidentally wiping an existing token on a partial update.
-        if (loginResponse.refreshToken) {
-            localStorage.setItem(REFRESH_TOKEN_KEY, loginResponse.refreshToken);
-        }
     };
 
     const clear = () => {
@@ -68,10 +92,58 @@ const Auth = (() => {
     // never:
     //   Auth.isAtLeast('FRONT_DESK')  ← misleading, removed
 
+    /** True when the current session is a GROUP_ADMIN (group-scoped or hotel-scoped). */
+    const isGroupAdmin = () => hasRole('GROUP_ADMIN');
+
+    /**
+     * True when a GROUP_ADMIN has entered a hotel — i.e. the stored token is
+     * hotel-scoped (hotelId is non-null) rather than group-scoped.
+     */
+    const isHotelScoped = () => {
+        const user = getUser();
+        return user?.role === 'GROUP_ADMIN' && !!user.hotelId;
+    };
+
     // Guard: redirect to login if not authenticated
     const requireAuth = () => {
         if (!isLoggedIn()) {
             window.location.href = '/login.html';
+            return false;
+        }
+        return true;
+    };
+
+    /**
+     * Guard for hotel-scoped pages (dashboard.html and all hotel-staff pages).
+     *
+     * Passes for:
+     *   - Any hotel staff role (ADMIN, MANAGER, FRONT_DESK, etc.)
+     *   - GROUP_ADMIN who has entered a hotel (hotelId is non-null in the stored user)
+     *
+     * Redirects to /group/dashboard.html if the user is a group-scoped GROUP_ADMIN
+     * (no hotelId) — they must use "Enter Hotel" first.
+     * Redirects to /login.html if not logged in at all.
+     */
+    const requireHotelSession = () => {
+        if (!isLoggedIn()) {
+            window.location.href = '/login.html';
+            return false;
+        }
+        if (isGroupAdmin() && !isHotelScoped()) {
+            window.location.href = '/group/dashboard.html';
+            return false;
+        }
+        return true;
+    };
+
+    // Guard: redirect to group login if not authenticated as GROUP_ADMIN
+    const requireGroupAdmin = () => {
+        if (!isLoggedIn()) {
+            window.location.href = '/group/login.html';
+            return false;
+        }
+        if (!isGroupAdmin()) {
+            window.location.href = '/group/login.html';
             return false;
         }
         return true;
@@ -99,7 +171,8 @@ const Auth = (() => {
     };
 
     return { save, clear, getToken, getRefreshToken, getUser, isLoggedIn,
-             hasRole, requireAuth, requireRole,    // R21: isAtLeast removed
+             hasRole, isGroupAdmin, isHotelScoped,
+             requireAuth, requireHotelSession, requireGroupAdmin, requireRole,
              applyRoleVisibility };
 })();
 
@@ -174,8 +247,10 @@ const API = (() => {
         }
 
         if (res.status === 401) {
+            // Redirect GROUP_ADMIN sessions to their own login page.
+            const wasGroupAdmin = Auth.isGroupAdmin();
             Auth.clear();
-            window.location.href = '/login.html';
+            window.location.href = wasGroupAdmin ? '/group/login.html' : '/login.html';
             throw new Error('Unauthorized');
         }
 
@@ -299,6 +374,49 @@ const API = (() => {
             update:         (id, d)  => put(`/staff/${id}`, d),
             changePassword: (id, d)  => patch(`/staff/${id}/password`, d),
             toggle:         (id)     => patch(`/staff/${id}/toggle`),
+        },
+
+        // ── Group admin auth ─────────────────────────────────
+        // POST /api/v1/group/auth/signup → SignupResponse (groupId, adminId, adminEmail)
+        // POST /api/v1/group/auth/login  → GroupLoginResponse (group-scoped token)
+        // POST /api/v1/group/hotels/{id}/enter → GroupLoginResponse (hotel-scoped token)
+        groupAuth: {
+            signup:     (groupName, adminEmail, password) => post('/group/auth/signup', { groupName, adminEmail, password }),
+            login:      (email, password) => post('/group/auth/login', { email, password }),
+            enterHotel: (hotelId)         => post(`/group/hotels/${hotelId}/enter`, {}),
+        },
+
+        // ── Group profile ─────────────────────────────────────
+        // GET /api/v1/group/profile → GroupResponse (id, name, ownerEmail, createdAt)
+        group: {
+            profile: () => get('/group/profile'),
+        },
+
+        // ── Hotel management (GROUP_ADMIN) ────────────────────
+        // POST /api/v1/group/hotels              → HotelResponse (creates in SETUP status)
+        // GET  /api/v1/group/hotels              → HotelResponse[]
+        // GET  /api/v1/group/hotels/{id}         → HotelResponse
+        // POST /api/v1/group/hotels/{id}/setup/{step} → HotelResponse (marks step done)
+        hotels: {
+            create:            (name)           => post('/group/hotels', { name }),
+            list:              ()               => get('/group/hotels'),
+            get:               (hotelId)        => get(`/group/hotels/${hotelId}`),
+            completeSetupStep: (hotelId, step)  => post(`/group/hotels/${hotelId}/setup/${step}`, {}),
+            delete:            (hotelId)        => del(`/group/hotels/${hotelId}`),
+        },
+
+        // ── Hotel policy (GROUP_ADMIN) ────────────────────────
+        // GET /api/v1/group/hotels/{id}/policy → PolicyConfigResponse
+        // PUT /api/v1/group/hotels/{id}/policy → PolicyConfigResponse
+        hotelPolicy: {
+            get:  (hotelId)        => get(`/group/hotels/${hotelId}/policy`),
+            save: (hotelId, data)  => put(`/group/hotels/${hotelId}/policy`, data),
+        },
+
+        // ── Group dashboard ──────────────────────────────────
+        // GET /api/v1/group/dashboard → HotelSummaryResponse[]
+        groupDashboard: {
+            get: () => get('/group/dashboard'),
         },
 
         // expose raw methods for edge cases

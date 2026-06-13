@@ -71,6 +71,9 @@ public class ReservationJpaEntity {
     @Column(columnDefinition = "text")
     private String specialRequests;
 
+    @Column(nullable = false, columnDefinition = "uuid")
+    private UUID hotelId;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

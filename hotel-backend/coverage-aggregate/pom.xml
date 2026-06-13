@@ -43,6 +43,16 @@
         </dependency>
         <dependency>
             <groupId>id.co.hospitops</groupId>
+            <artifactId>group</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>id.co.hospitops</groupId>
+            <artifactId>hotel</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>id.co.hospitops</groupId>
             <artifactId>identity</artifactId>
             <version>${project.version}</version>
         </dependency>

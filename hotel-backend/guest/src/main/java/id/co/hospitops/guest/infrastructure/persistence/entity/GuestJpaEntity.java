@@ -46,6 +46,9 @@ public class GuestJpaEntity {
     @Column(columnDefinition = "text")
     private String address;
 
+    @Column(nullable = false, columnDefinition = "uuid")
+    private UUID hotelId;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
     @UpdateTimestamp

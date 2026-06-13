@@ -11,9 +11,17 @@
 <div id="main-content">
     <div class="topbar">
         <h2 class="page-title" id="page-title">Add Staff</h2>
-        <a href="/staff/list.html" class="btn btn-outline-secondary btn-sm">← Back</a>
+        <a id="back-btn" href="/staff/list.html" class="btn btn-outline-secondary btn-sm">← Back</a>
     </div>
     <div class="page-body">
+        <!-- Setup wizard context banner -->
+        <div id="setup-banner" class="alert alert-info d-flex align-items-center gap-3 mb-3 d-none">
+            <div class="flex-grow-1">
+                <strong>Setup Step 5 of 5 — First Staff Account</strong><br>
+                <span class="small">Create an ADMIN or MANAGER account, then the hotel will go ACTIVE automatically.</span>
+            </div>
+            <a id="setup-back-link" href="#" class="btn btn-outline-primary btn-sm">← Back to Setup</a>
+        </div>
         <div style="max-width:520px">
             <form id="staff-form" novalidate>
 
@@ -54,7 +62,7 @@
                 </div>
 
                 <div class="d-flex gap-2 justify-content-end">
-                    <a href="/staff/list.html" class="btn btn-outline-secondary">Cancel</a>
+                    <a id="cancel-btn" href="/staff/list.html" class="btn btn-outline-secondary">Cancel</a>
                     <button type="submit" id="submit-btn" class="btn btn-gold">Save Staff</button>
                 </div>
             </form>
@@ -66,9 +74,20 @@
 <script src="/assets/js/core.js"></script>
 <script src="/assets/js/layout.js"></script>
 <script>
-Auth.requireRole('ADMIN', 'MANAGER');
+Auth.requireRole('ADMIN', 'MANAGER', 'GROUP_ADMIN');
 const staffId = Utils.getParam('id');
 const isEdit  = !!staffId;
+
+// Setup wizard context — present when arriving from setup.html
+const setupHotelId = Utils.getParam('setupHotelId');
+const setupWizardUrl = setupHotelId ? `/group/hotels/setup.html?hotelId=${setupHotelId}` : null;
+
+if (setupWizardUrl) {
+    document.getElementById('setup-banner').classList.remove('d-none');
+    document.getElementById('setup-back-link').href = setupWizardUrl;
+    document.getElementById('back-btn').style.display = 'none';
+    document.getElementById('cancel-btn').href = setupWizardUrl;
+}
 
 async function init() {
     document.getElementById('page-title').textContent = isEdit ? 'Edit Staff' : 'Add Staff';
@@ -104,8 +123,16 @@ document.getElementById('staff-form').addEventListener('submit', async (e) => {
         } else {
             await API.staff.create({ ...data, password });
         }
-        Utils.toast(isEdit ? 'Staff updated' : 'Staff created');
-        window.location.href = '/staff/list.html';
+        if (!isEdit && setupWizardUrl) {
+            // Auto-complete the STAFF_ACCOUNT setup step now that a real account exists.
+            // This is the final step — the wizard will transition the hotel to ACTIVE.
+            await API.hotels.completeSetupStep(setupHotelId, 'STAFF_ACCOUNT');
+            Utils.toast('Staff created — setup complete!');
+            window.location.href = setupWizardUrl;
+        } else {
+            Utils.toast(isEdit ? 'Staff updated' : 'Staff created');
+            window.location.href = '/staff/list.html';
+        }
     } catch (err) {
         Utils.setFormErrors(err.details || {});
         Utils.toast(err.message, 'danger');

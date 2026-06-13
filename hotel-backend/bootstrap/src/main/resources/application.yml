@@ -192,6 +192,23 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{spanId}] %logger{36} - %msg%n"
 
+# ── Channel manager (Channex) ────────────────────────────────────
+# OTA distribution via the Channex aggregator. Defaults target the free
+# staging sandbox and keep the connector + relay OFF until an API key is
+# set, so the module is inert until configured.
+#   base-url:  https://staging.channex.io/api/v1 (sandbox) | prod URL
+#   api-key:   from staging.channex.io profile (empty = disabled)
+channex:
+  base-url: ${CHANNEX_BASE_URL:https://staging.channex.io/api/v1}
+  api-key:  ${CHANNEX_API_KEY:}
+  enabled:  ${CHANNEX_ENABLED:false}
+  relay:
+    enabled: ${CHANNEX_RELAY_ENABLED:false}
+    poll-ms: ${CHANNEX_RELAY_POLL_MS:15000}
+  inbound:
+    enabled: ${CHANNEX_INBOUND_ENABLED:false}
+    poll-ms: ${CHANNEX_INBOUND_POLL_MS:20000}
+
 ---
 # ── Dev profile (local, non-K8s) ────────────────────────────────
 spring:

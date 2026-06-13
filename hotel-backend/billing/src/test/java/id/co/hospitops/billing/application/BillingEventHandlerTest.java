@@ -2,6 +2,7 @@ package id.co.hospitops.billing.application;
 
 import id.co.hospitops.billing.domain.port.in.BillingUseCase;
 import id.co.hospitops.shared.GuestId;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.ReservationId;
 import id.co.hospitops.shared.RoomId;
 import id.co.hospitops.shared.event.ReservationCheckedOutEvent;
@@ -20,19 +21,22 @@ import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for BillingEventHandler (R3-03 fix).
- *
+ * <p>
  * BillingEventHandler was extracted from BillingService to separate the
+ *
  * @EventListener concern from business logic (SRP). These tests verify that:
- *   - onCheckout() delegates to BillingUseCase.createInvoiceForCheckout()
- *   - The correct reservationId and nights are passed through
- *   - No business logic is performed inside the handler itself
+ * - onCheckout() delegates to BillingUseCase.createInvoiceForCheckout()
+ * - The correct reservationId and nights are passed through
+ * - No business logic is performed inside the handler itself
  */
 @DisplayName("BillingEventHandler")
 @ExtendWith(MockitoExtension.class)
 class BillingEventHandlerTest {
 
-    @Mock  BillingUseCase billingUseCase;
-    @InjectMocks BillingEventHandler handler;
+    @Mock
+    BillingUseCase billingUseCase;
+    @InjectMocks
+    BillingEventHandler handler;
 
     // ── annotation metadata ───────────────────────────────────────
 
@@ -68,8 +72,7 @@ class BillingEventHandlerTest {
         void delegatesWithCorrectArguments() {
             ReservationId reservationId = ReservationId.generate();
             long nights = 3L;
-            ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(
-                    reservationId, RoomId.generate(), GuestId.generate(), nights);
+            ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(HotelId.generate(), reservationId, RoomId.generate(), GuestId.generate(), nights);
 
             handler.onCheckout(event);
 
@@ -80,8 +83,7 @@ class BillingEventHandlerTest {
         @DisplayName("passes nights = 1 for a single-night stay")
         void passesOneNightStay() {
             ReservationId reservationId = ReservationId.generate();
-            ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(
-                    reservationId, RoomId.generate(), GuestId.generate(), 1L);
+            ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(HotelId.generate(), reservationId, RoomId.generate(), GuestId.generate(), 1L);
 
             handler.onCheckout(event);
 
@@ -92,8 +94,7 @@ class BillingEventHandlerTest {
         @DisplayName("passes nights = 30 for a long stay")
         void passesLongStay() {
             ReservationId reservationId = ReservationId.generate();
-            ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(
-                    reservationId, RoomId.generate(), GuestId.generate(), 30L);
+            ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(HotelId.generate(), reservationId, RoomId.generate(), GuestId.generate(), 30L);
 
             handler.onCheckout(event);
 
@@ -103,8 +104,7 @@ class BillingEventHandlerTest {
         @Test
         @DisplayName("calls createInvoiceForCheckout() exactly once per event")
         void callsServiceExactlyOnce() {
-            ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(
-                    ReservationId.generate(), RoomId.generate(), GuestId.generate(), 2L);
+            ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(HotelId.generate(), ReservationId.generate(), RoomId.generate(), GuestId.generate(), 2L);
 
             handler.onCheckout(event);
 
@@ -116,8 +116,7 @@ class BillingEventHandlerTest {
         @Test
         @DisplayName("does NOT call any other BillingUseCase method")
         void doesNotCallOtherMethods() {
-            ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(
-                    ReservationId.generate(), RoomId.generate(), GuestId.generate(), 2L);
+            ReservationCheckedOutEvent event = new ReservationCheckedOutEvent(HotelId.generate(), ReservationId.generate(), RoomId.generate(), GuestId.generate(), 2L);
 
             handler.onCheckout(event);
 

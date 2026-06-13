@@ -5,6 +5,8 @@ import id.co.hospitops.identity.application.response.StaffResponse;
 import id.co.hospitops.identity.domain.model.Staff;
 import id.co.hospitops.identity.domain.model.StaffRole;
 import id.co.hospitops.identity.domain.port.out.StaffRepository;
+import id.co.hospitops.shared.HotelContext;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.StaffId;
 import id.co.hospitops.shared.exception.*;
 import org.junit.jupiter.api.*;
@@ -44,7 +46,16 @@ class StaffServiceTest {
             var command = new CreateStaffCommand("Budi Santoso", "budi", "secret123", StaffRole.FRONT_DESK);
             given(staffRepository.existsByUsername("budi")).willReturn(false);
             given(staffRepository.save(any(Staff.class))).willAnswer(inv -> inv.getArgument(0));
-            StaffResponse response = staffService.createStaff(command);
+
+            // createStaff() reads HotelContext.current() to stamp the new staff with the
+            // current hotel. In production the HotelContextInterceptor binds the ScopedValue;
+            // in unit tests we bind it manually around the call under test.
+            HotelId hotelId = HotelId.generate();
+            StaffResponse[] holder = new StaffResponse[1];
+            ScopedValue.where(HotelContext.HOTEL_ID, hotelId)
+                    .run(() -> holder[0] = staffService.createStaff(command));
+            StaffResponse response = holder[0];
+
             assertThat(response.fullName()).isEqualTo("Budi Santoso");
             assertThat(response.username()).isEqualTo("budi");
             assertThat(response.role()).isEqualTo(StaffRole.FRONT_DESK);
@@ -70,8 +81,8 @@ class StaffServiceTest {
         void updatesExistingStaff() {
             StaffId id = StaffId.generate();
             Staff existing = Staff.reconstitute(id, "Old Name", "user", "$2a$hash",
-                    StaffRole.FRONT_DESK, true, LocalDateTime.now(), LocalDateTime.now());
-            given(staffRepository.findById(id)).willReturn(Optional.of(existing));
+                    StaffRole.FRONT_DESK, true, HotelId.generate(), LocalDateTime.now(), LocalDateTime.now());
+            given(staffRepository.findByIdInCurrentHotel(id)).willReturn(Optional.of(existing));
             given(staffRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
             StaffResponse response = staffService.updateStaff(id, new UpdateStaffCommand("New Name", StaffRole.MANAGER));
             assertThat(response.fullName()).isEqualTo("New Name");
@@ -82,7 +93,7 @@ class StaffServiceTest {
         @DisplayName("throws ResourceNotFoundException when staff not found")
         void throwsNotFoundWhenMissing() {
             StaffId id = StaffId.generate();
-            given(staffRepository.findById(id)).willReturn(Optional.empty());
+            given(staffRepository.findByIdInCurrentHotel(id)).willReturn(Optional.empty());
             assertThatThrownBy(() -> staffService.updateStaff(id, new UpdateStaffCommand("Name", StaffRole.MANAGER)))
                     .isInstanceOf(ResourceNotFoundException.class);
         }
@@ -96,8 +107,8 @@ class StaffServiceTest {
         void deactivatesActive() {
             StaffId id = StaffId.generate();
             Staff active = Staff.reconstitute(id, "Name", "user", "$h",
-                    StaffRole.FRONT_DESK, true, LocalDateTime.now(), LocalDateTime.now());
-            given(staffRepository.findById(id)).willReturn(Optional.of(active));
+                    StaffRole.FRONT_DESK, true, HotelId.generate(), LocalDateTime.now(), LocalDateTime.now());
+            given(staffRepository.findByIdInCurrentHotel(id)).willReturn(Optional.of(active));
             given(staffRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
             staffService.toggleActive(id);
             then(staffRepository).should().save(argThat(s -> !s.isActive()));
@@ -108,8 +119,8 @@ class StaffServiceTest {
         void activatesInactive() {
             StaffId id = StaffId.generate();
             Staff inactive = Staff.reconstitute(id, "Name", "user", "$h",
-                    StaffRole.FRONT_DESK, false, LocalDateTime.now(), LocalDateTime.now());
-            given(staffRepository.findById(id)).willReturn(Optional.of(inactive));
+                    StaffRole.FRONT_DESK, false, HotelId.generate(), LocalDateTime.now(), LocalDateTime.now());
+            given(staffRepository.findByIdInCurrentHotel(id)).willReturn(Optional.of(inactive));
             given(staffRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
             staffService.toggleActive(id);
             then(staffRepository).should().save(argThat(Staff::isActive));

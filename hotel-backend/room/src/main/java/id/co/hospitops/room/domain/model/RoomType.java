@@ -1,5 +1,6 @@
 package id.co.hospitops.room.domain.model;
 
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.Money;
 import id.co.hospitops.shared.RoomTypeId;
 import lombok.Getter;
@@ -10,40 +11,50 @@ import java.time.LocalDateTime;
 @Getter
 public class RoomType {
 
-    private final RoomTypeId  id;
-    private String            name;
-    private int               capacity;
-    private String            description;
-    private Money             basePrice;
+    private final RoomTypeId id;
+    private String name;
+    private int capacity;
+    private String description;
+    private Money basePrice;
+    private final HotelId hotelId;
     private final LocalDateTime createdAt;
-    private LocalDateTime     updatedAt;
+    private LocalDateTime updatedAt;
 
-    public static RoomType create(String name, int capacity,
+    public static RoomType create(HotelId hotelId, String name, int capacity,
                                   String description, Money basePrice) {
         validate(name, capacity, basePrice);
         return new RoomType(RoomTypeId.generate(), name, capacity,
-                            description, basePrice,
-                            LocalDateTime.now(), LocalDateTime.now());
+                description, basePrice, hotelId,
+                LocalDateTime.now(), LocalDateTime.now());
     }
 
     public static RoomType reconstitute(RoomTypeId id, String name, int capacity,
                                         String description, Money basePrice,
+                                        HotelId hotelId,
                                         LocalDateTime createdAt, LocalDateTime updatedAt) {
         return new RoomType(id, name, capacity, description,
-                            basePrice, createdAt, updatedAt);
+                basePrice, hotelId, createdAt, updatedAt);
     }
 
     private RoomType(RoomTypeId id, String name, int capacity, String description,
-                     Money basePrice, LocalDateTime createdAt, LocalDateTime updatedAt) {
-        this.id = id; this.name = name; this.capacity = capacity;
-        this.description = description; this.basePrice = basePrice;
-        this.createdAt = createdAt; this.updatedAt = updatedAt;
+                     Money basePrice, HotelId hotelId,
+                     LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this.id = id;
+        this.name = name;
+        this.capacity = capacity;
+        this.description = description;
+        this.basePrice = basePrice;
+        this.hotelId = hotelId;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
     public void update(String name, int capacity, String description, Money basePrice) {
         validate(name, capacity, basePrice);
-        this.name = name; this.capacity = capacity;
-        this.description = description; this.basePrice = basePrice;
+        this.name = name;
+        this.capacity = capacity;
+        this.description = description;
+        this.basePrice = basePrice;
         this.updatedAt = LocalDateTime.now();
     }
 

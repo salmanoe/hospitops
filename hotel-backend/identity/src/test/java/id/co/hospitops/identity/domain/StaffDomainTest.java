@@ -2,6 +2,7 @@ package id.co.hospitops.identity.domain;
 
 import id.co.hospitops.identity.domain.model.Staff;
 import id.co.hospitops.identity.domain.model.StaffRole;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.StaffId;
 import org.junit.jupiter.api.*;
 
@@ -13,7 +14,7 @@ import static org.assertj.core.api.Assertions.*;
 class StaffDomainTest {
 
     private Staff activeAdmin() {
-        return Staff.create("John Admin", "jadmin",
+        return Staff.create(HotelId.generate(), "John Admin", "jadmin",
                 "$2a$12$hashedpassword", StaffRole.ADMIN);
     }
 
@@ -21,7 +22,7 @@ class StaffDomainTest {
         return Staff.reconstitute(
                 StaffId.generate(), "Jane Staff", "jstaff",
                 "$2a$12$hash", StaffRole.FRONT_DESK,
-                active, LocalDateTime.now(), LocalDateTime.now()
+                active, HotelId.generate(), LocalDateTime.now(), LocalDateTime.now()
         );
     }
 
@@ -44,7 +45,7 @@ class StaffDomainTest {
         @Test
         @DisplayName("stores the provided role")
         void storesRole() {
-            Staff staff = Staff.create("Name", "user", "$2a$12$hash", StaffRole.ACCOUNTANT);
+            Staff staff = Staff.create(HotelId.generate(), "Name", "user", "$2a$12$hash", StaffRole.ACCOUNTANT);
             assertThat(staff.getRole()).isEqualTo(StaffRole.ACCOUNTANT);
         }
 
@@ -112,7 +113,7 @@ class StaffDomainTest {
         @Test
         @DisplayName("hasRole() matches exact role")
         void hasRoleMatchesExact() {
-            Staff manager = Staff.create("M", "m", "$h", StaffRole.MANAGER);
+            Staff manager = Staff.create(HotelId.generate(), "M", "m", "$h", StaffRole.MANAGER);
             assertThat(manager.hasRole(StaffRole.MANAGER)).isTrue();
             assertThat(manager.hasRole(StaffRole.ADMIN)).isFalse();
         }
@@ -120,7 +121,7 @@ class StaffDomainTest {
         @Test
         @DisplayName("canAccess() matches any of multiple allowed roles")
         void canAccessMatchesAnyRole() {
-            Staff frontDesk = Staff.create("F", "f", "$h", StaffRole.FRONT_DESK);
+            Staff frontDesk = Staff.create(HotelId.generate(), "F", "f", "$h", StaffRole.FRONT_DESK);
             assertThat(frontDesk.canAccess(StaffRole.ADMIN, StaffRole.MANAGER, StaffRole.FRONT_DESK)).isTrue();
             assertThat(frontDesk.canAccess(StaffRole.ADMIN, StaffRole.MANAGER)).isFalse();
         }

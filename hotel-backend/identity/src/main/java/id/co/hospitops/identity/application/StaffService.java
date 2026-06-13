@@ -5,6 +5,7 @@ import id.co.hospitops.identity.application.response.StaffResponse;
 import id.co.hospitops.identity.domain.model.Staff;
 import id.co.hospitops.identity.domain.port.in.ManageStaffUseCase;
 import id.co.hospitops.identity.domain.port.out.StaffRepository;
+import id.co.hospitops.shared.HotelContext;
 import id.co.hospitops.shared.StaffId;
 import id.co.hospitops.shared.exception.*;
 import id.co.hospitops.shared.web.PageResult;
@@ -30,6 +31,7 @@ public class StaffService implements ManageStaffUseCase {
             throw new ConflictException("Username already exists: " + command.username());
 
         Staff staff = Staff.create(
+                HotelContext.current(),
                 command.fullName(),
                 command.username(),
                 passwordEncoder.encode(command.password()),
@@ -82,7 +84,8 @@ public class StaffService implements ManageStaffUseCase {
     }
 
     private Staff findStaff(StaffId id) {
-        return staffRepository.findById(id)
+        // Hotel-scoped: returns 404 if the staff member doesn't belong to the caller's hotel.
+        return staffRepository.findByIdInCurrentHotel(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff", id.value()));
     }
 }

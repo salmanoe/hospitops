@@ -1,6 +1,7 @@
 package id.co.hospitops.billing.application;
 
 import id.co.hospitops.billing.domain.model.PaymentStatus;
+import id.co.hospitops.billing.domain.port.out.HotelPolicyPort;
 import id.co.hospitops.billing.domain.port.out.InvoiceNumberGenerator;
 import id.co.hospitops.billing.domain.port.out.InvoiceRepository;
 import id.co.hospitops.billing.domain.port.out.ReservationDetailPort;
@@ -24,7 +25,7 @@ import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for BillingService.findAll() — R3-05 fix.
- *
+ * <p>
  * Verifies that unknown PaymentStatus strings produce a clean HTTP-400-friendly
  * BusinessRuleViolationException instead of a raw IllegalArgumentException (500).
  * Also covers valid status filter and no-filter paths.
@@ -33,13 +34,21 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class BillingServiceFindAllTest {
 
-    @Mock InvoiceRepository         invoiceRepo;
-    @Mock InvoiceNumberGenerator    numberGenerator;
-    @Mock ReservationDetailPort     reservationDetail;
-    @Mock InvoicePdfGenerator       pdfGenerator;
-    @Mock ApplicationEventPublisher eventPublisher;
+    @Mock
+    InvoiceRepository invoiceRepo;
+    @Mock
+    InvoiceNumberGenerator numberGenerator;
+    @Mock
+    ReservationDetailPort reservationDetail;
+    @Mock
+    HotelPolicyPort hotelPolicyPort;
+    @Mock
+    InvoicePdfGenerator pdfGenerator;
+    @Mock
+    ApplicationEventPublisher eventPublisher;
 
-    @InjectMocks BillingService service;
+    @InjectMocks
+    BillingService service;
 
     private final Pageable page = PageRequest.of(0, 10);
 

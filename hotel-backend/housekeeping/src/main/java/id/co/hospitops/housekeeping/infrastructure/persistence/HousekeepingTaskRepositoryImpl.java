@@ -2,6 +2,7 @@ package id.co.hospitops.housekeeping.infrastructure.persistence;
 
 import id.co.hospitops.housekeeping.domain.model.HousekeepingTask;
 import id.co.hospitops.housekeeping.domain.port.out.HousekeepingTaskRepository;
+import id.co.hospitops.shared.HotelContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
@@ -21,16 +22,18 @@ public class HousekeepingTaskRepositoryImpl implements HousekeepingTaskRepositor
 
     @Override
     public Optional<HousekeepingTask> findById(UUID id) {
-        return jpa.findById(id).map(mapper::toDomain);
+        return jpa.findByIdAndHotelId(id, HotelContext.current().value())
+                .map(mapper::toDomain);
     }
 
     @Override
     public List<HousekeepingTask> findPending(Pageable p) {
-        return jpa.findPending(p).stream().map(mapper::toDomain).toList();
+        return jpa.findPendingByHotelId(HotelContext.current().value(), p)
+                .stream().map(mapper::toDomain).toList();
     }
 
     @Override
     public long countPending() {
-        return jpa.countByCompletedFalse();
+        return jpa.countByHotelIdAndCompletedFalse(HotelContext.current().value());
     }
 }

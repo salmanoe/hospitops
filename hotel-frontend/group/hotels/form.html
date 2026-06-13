@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>New Hotel — HospitOps</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="/assets/css/custom.css" rel="stylesheet"/>
+    <style>
+        body { background-color: var(--bs-body-bg); }
+
+        .group-topbar {
+            background: var(--hospitops-surface);
+            border-bottom: 1px solid var(--bs-border-color);
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .group-topbar .brand {
+            font-family: 'Playfair Display', serif;
+            font-size: 20px;
+            color: var(--hospitops-gold);
+            text-decoration: none;
+        }
+
+        .group-topbar .brand small {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: var(--hospitops-muted);
+            display: block;
+            line-height: 1;
+            margin-top: 1px;
+        }
+
+        .form-card {
+            background: var(--hospitops-surface);
+            border: 1px solid var(--bs-border-color);
+            border-radius: 10px;
+            padding: 32px;
+            max-width: 520px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Top bar ─────────────────────────────────────────────── -->
+<div class="group-topbar">
+    <a href="/group/dashboard.html" class="brand">
+        HospitOps
+        <small>GROUP ADMIN</small>
+    </a>
+    <div class="d-flex align-items-center gap-3">
+        <a href="/group/hotels/list.html" class="text-muted small">← Hotels</a>
+        <span id="admin-email" class="text-muted small"></span>
+        <a href="#" id="logout-btn" class="text-danger small">Sign out</a>
+    </div>
+</div>
+
+<!-- ── Page body ───────────────────────────────────────────── -->
+<div class="page-body">
+
+    <h2 class="mb-1" style="font-family:'Playfair Display',serif;font-size:22px;">New Hotel</h2>
+    <p class="text-muted small mb-4">
+        Create a hotel under your group. It will start in <strong>SETUP</strong> status —
+        you'll complete the profile, policy, rooms, and staff in the setup wizard.
+    </p>
+
+    <div class="form-card">
+        <form id="create-form" novalidate>
+
+            <div class="mb-4">
+                <label for="hotel-name" class="form-label fw-semibold">Hotel Name</label>
+                <input type="text" id="hotel-name" class="form-control"
+                       placeholder="e.g. The Grand Nusantara"
+                       maxlength="200" required/>
+                <div class="invalid-feedback">Hotel name is required (max 200 characters).</div>
+            </div>
+
+            <div id="error-msg" class="alert alert-danger d-none" role="alert"></div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" id="submit-btn" class="btn btn-gold">
+                    Create Hotel
+                </button>
+                <a href="/group/hotels/list.html" class="btn btn-outline-secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/core.js"></script>
+<script>
+    if (!Auth.requireGroupAdmin()) throw new Error('Unauthorized');
+
+    const user = Auth.getUser();
+    document.getElementById('admin-email').textContent = user?.username ?? '';
+
+    document.getElementById('logout-btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        Auth.clear();
+        window.location.href = '/group/login.html';
+    });
+
+    const form      = document.getElementById('create-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const errorMsg  = document.getElementById('error-msg');
+    const nameInput = document.getElementById('hotel-name');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        form.classList.add('was-validated');
+
+        const name = nameInput.value.trim();
+        if (!name) return;
+
+        Utils.loading(submitBtn, true);
+        Utils.hide(errorMsg);
+
+        try {
+            const hotel = await API.hotels.create(name);
+            // Redirect straight to the setup wizard for the new hotel.
+            window.location.href = `/group/hotels/setup.html?hotelId=${hotel.id}`;
+        } catch (err) {
+            errorMsg.textContent = err.message || 'Failed to create hotel.';
+            Utils.show(errorMsg);
+            Utils.loading(submitBtn, false);
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 package id.co.hospitops.reservation.domain;
 
 import id.co.hospitops.reservation.domain.model.*;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.*;
 import org.junit.jupiter.api.*;
 
@@ -12,7 +13,7 @@ import static org.assertj.core.api.Assertions.*;
 class ReservationDomainTest {
 
     private Reservation res() {
-        return Reservation.create("RES-2025-00001",
+        return Reservation.create(HotelId.generate(), "RES-2025-00001",
                 GuestId.generate(), RoomId.generate(),
                 LocalDate.now(), LocalDate.now().plusDays(3),
                 Money.of(800_000L), 2, 0, null, StaffId.generate());
@@ -20,7 +21,7 @@ class ReservationDomainTest {
 
     @Test
     void rejectsCheckOutBeforeCheckIn() {
-        assertThatThrownBy(() -> Reservation.create("RES-X",
+        assertThatThrownBy(() -> Reservation.create(HotelId.generate(), "RES-X",
                 GuestId.generate(), RoomId.generate(),
                 LocalDate.now(), LocalDate.now(),
                 Money.of(100L), 1, 0, null, StaffId.generate()))

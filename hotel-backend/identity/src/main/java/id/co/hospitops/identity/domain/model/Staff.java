@@ -1,5 +1,6 @@
 package id.co.hospitops.identity.domain.model;
 
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.StaffId;
 import lombok.Getter;
 
@@ -14,34 +15,40 @@ public class Staff {
     private String passwordHash;
     private StaffRole role;
     private boolean active;
+    /**
+     * The hotel this staff member belongs to. Used for data-isolation filtering.
+     */
+    private final HotelId hotelId;
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public static Staff create(String fullName, String username,
+    public static Staff create(HotelId hotelId, String fullName, String username,
                                String passwordHash, StaffRole role) {
         return new Staff(
                 StaffId.generate(), fullName, username,
-                passwordHash, role, true,
+                passwordHash, role, true, hotelId,
                 LocalDateTime.now(), LocalDateTime.now()
         );
     }
 
     public static Staff reconstitute(StaffId id, String fullName, String username,
                                      String passwordHash, StaffRole role, boolean active,
-                                     LocalDateTime createdAt, LocalDateTime updatedAt) {
+                                     HotelId hotelId, LocalDateTime createdAt,
+                                     LocalDateTime updatedAt) {
         return new Staff(id, fullName, username, passwordHash, role,
-                active, createdAt, updatedAt);
+                active, hotelId, createdAt, updatedAt);
     }
 
     private Staff(StaffId id, String fullName, String username,
                   String passwordHash, StaffRole role, boolean active,
-                  LocalDateTime createdAt, LocalDateTime updatedAt) {
+                  HotelId hotelId, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.fullName = fullName;
         this.username = username;
         this.passwordHash = passwordHash;
         this.role = role;
         this.active = active;
+        this.hotelId = hotelId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }

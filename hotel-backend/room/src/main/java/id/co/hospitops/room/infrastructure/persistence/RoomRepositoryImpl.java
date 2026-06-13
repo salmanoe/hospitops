@@ -4,6 +4,8 @@ import id.co.hospitops.room.domain.model.Room;
 import id.co.hospitops.room.domain.model.RoomStatus;
 import id.co.hospitops.room.domain.port.out.RoomRepository;
 import id.co.hospitops.room.infrastructure.persistence.entity.RoomJpaEntity;
+import id.co.hospitops.shared.HotelContext;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.RoomId;
 import id.co.hospitops.shared.RoomTypeId;
 import lombok.RequiredArgsConstructor;
@@ -22,47 +24,65 @@ public class RoomRepositoryImpl implements RoomRepository {
 
     @Override
     public Room save(Room room) {
-        return toDomain(jpa.save(toJpa(room)));
+        // Copy onto the managed entity when it already exists rather than
+        // persisting a rebuilt instance with the same id (see
+        // RoomTypeRepositoryImpl#save for the rationale).
+        RoomJpaEntity entity = jpa.findById(room.getId().value())
+                .map(existing -> {
+                    existing.setRoomNumber(room.getRoomNumber());
+                    existing.setFloor(room.getFloor());
+                    existing.setStatus(room.getStatus());
+                    existing.setRoomTypeId(room.getRoomTypeId().value());
+                    existing.setNotes(room.getNotes());
+                    return existing;
+                })
+                .orElseGet(() -> toJpa(room));
+        return toDomain(jpa.save(entity));
     }
 
     @Override
     public Optional<Room> findById(RoomId id) {
-        return jpa.findById(id.value()).map(this::toDomain);
+        return jpa.findByIdAndHotelId(id.value(), HotelContext.current().value())
+                .map(this::toDomain);
     }
 
     @Override
     public boolean existsByRoomNumber(String roomNumber) {
-        return jpa.existsByRoomNumber(roomNumber);
+        return jpa.existsByRoomNumberAndHotelId(roomNumber, HotelContext.current().value());
     }
 
     @Override
     public List<Room> findAll(Pageable pageable) {
-        return jpa.findAll(pageable).stream().map(this::toDomain).toList();
+        return jpa.findByHotelId(HotelContext.current().value(), pageable)
+                .stream().map(this::toDomain).toList();
     }
 
     @Override
     public List<Room> findByStatus(RoomStatus status, Pageable pageable) {
-        return jpa.findByStatus(status, pageable).stream().map(this::toDomain).toList();
+        return jpa.findByHotelIdAndStatus(HotelContext.current().value(), status, pageable)
+                .stream().map(this::toDomain).toList();
     }
 
     @Override
     public long count() {
-        return jpa.count();
+        return jpa.countByHotelId(HotelContext.current().value());
     }
 
     @Override
     public long countByStatus(RoomStatus status) {
-        return jpa.countByStatus(status);
+        return jpa.countByHotelIdAndStatus(HotelContext.current().value(), status);
     }
 
     @Override
     public List<Room> findAvailable(LocalDate checkIn, LocalDate checkOut) {
-        return jpa.findAvailable(checkIn, checkOut).stream().map(this::toDomain).toList();
+        return jpa.findAvailable(HotelContext.current().value(), checkIn, checkOut)
+                .stream().map(this::toDomain).toList();
     }
 
     @Override
     public boolean isAvailable(RoomId roomId, LocalDate checkIn, LocalDate checkOut) {
-        return jpa.existsAvailableRoom(roomId.value(), checkIn, checkOut);
+        return jpa.existsAvailableRoom(roomId.value(), HotelContext.current().value(),
+                checkIn, checkOut);
     }
 
     // ── Mapping ─────────────────────────────────────────────────────────
@@ -75,6 +95,7 @@ public class RoomRepositoryImpl implements RoomRepository {
                 .status(r.getStatus())
                 .roomTypeId(r.getRoomTypeId().value())
                 .notes(r.getNotes())
+                .hotelId(r.getHotelId().value())
                 .build();
     }
 
@@ -86,6 +107,7 @@ public class RoomRepositoryImpl implements RoomRepository {
                 e.getStatus(),
                 RoomTypeId.of(e.getRoomTypeId()),
                 e.getNotes(),
+                HotelId.of(e.getHotelId()),
                 e.getCreatedAt(),
                 e.getUpdatedAt());
     }

@@ -9,7 +9,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0-6DB33F?logo=springboot)](https://spring.io/projects/spring-boot)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
-Hotel management system for medium hotels (20–100 rooms). A full-stack platform covering staff identity, room management, guest profiles, reservations, housekeeping, and billing — built as a clean-architecture Spring Boot monolith designed to evolve into Spring Modulith and then microservices without structural rewrites.
+Hotel management platform for hotel groups and individual properties. Manages group-level administration and per-hotel operations — staff identity, room management, guest profiles, reservations, housekeeping, and billing — built as a clean-architecture Spring Boot monolith designed to evolve into Spring Modulith and then microservices without structural rewrites.
 
 ---
 
@@ -19,6 +19,8 @@ Hotel management system for medium hotels (20–100 rooms). A full-stack platfor
 hospitops/
 ├── hotel-backend/          ← Java 25 · Spring Boot 4.0.6 · GraalVM Native Image
 │   ├── shared/             ← Typed IDs, Money, TaxPolicy, Guard, Domain Events, API wrappers
+│   ├── group/              ← Group profile, GROUP_ADMIN accounts, self-service signup
+│   ├── hotel/              ← Hotel profile, lifecycle, setup wizard, hotel_summary
 │   ├── identity/           ← Staff auth, JWT access tokens, refresh tokens
 │   ├── room/               ← Rooms, room types, seasonal rate overrides
 │   ├── guest/              ← Guest profiles, search
@@ -58,9 +60,9 @@ Docker Compose is the **only tool you need** to run the full stack locally. Run 
 # Docker Desktop 4.x+ or Docker Engine + Compose plugin v2.x
 docker compose version   # must be v2.x
 
-# Java + Maven (only needed to run Maven commands directly outside Docker)
+# Java (only needed to run Gradle commands directly outside Docker).
+# Gradle itself is provided by the wrapper (./gradlew) — no separate install.
 sdk install java 25.r25-nik   # GraalVM 25 via SDKMAN (Liberica NIK)
-sdk install maven
 ```
 
 ### Start the full stack
@@ -101,10 +103,10 @@ docker compose restart app       # reload backend after a code change
 # Open a psql shell in the running postgres container
 docker compose exec postgres psql -U hotel_user -d hotel_db
 
-# Run Maven commands directly (requires postgres running via Compose)
+# Run Gradle commands directly (requires postgres running via Compose)
 cd hotel-backend
-mvn test -pl bootstrap -am -Pdev
-mvn spring-boot:run -pl bootstrap -am -Pdev
+./gradlew test
+./gradlew :bootstrap:bootRun
 ```
 
 ### SonarQube (optional)
@@ -117,7 +119,7 @@ docker compose --profile sonar up -d sonarqube
 
 # First login: admin / admin (SonarQube will prompt to change it)
 # Then generate a token under My Account → Security, and run from hotel-backend/:
-mvn sonar:sonar -Psonar \
+./gradlew build sonar \
   -Dsonar.host.url=http://localhost:9000 \
   -Dsonar.token=YOUR_LOCAL_TOKEN
 ```
@@ -163,15 +165,23 @@ open http://localhost
 # Backend health (proxied through Nginx)
 curl http://localhost/actuator/health
 
-# Login — returns an access token and a refresh token
-curl -X POST http://localhost/api/v1/auth/login \
+# Hotel staff login — returns an access token and a refresh token
+# Replace {hotelId} with the UUID of the hotel seeded by Flyway
+curl -X POST http://localhost/api/v1/hotels/{hotelId}/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"admin123"}'
+
+# GROUP_ADMIN login
+curl -X POST http://localhost/api/v1/group/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"groupadmin","password":"groupadmin123"}'
 ```
 
 ---
 
 ## Default Credentials
+
+### Hotel staff (scoped to the seed hotel)
 
 | Username      | Password        | Role         |
 |---------------|-----------------|--------------|
@@ -181,7 +191,17 @@ curl -X POST http://localhost/api/v1/auth/login \
 | `housekeeper` | `hk123456`      | Housekeeping |
 | `accountant`  | `acc12345`      | Accountant   |
 
-> ⚠️ Change all passwords before deploying to any shared environment: `PATCH /api/v1/staff/{id}/password`
+Login endpoint: `POST /api/v1/hotels/{hotelId}/auth/login`
+
+### Group admin
+
+| Username      | Password          | Role         |
+|---------------|-------------------|--------------|
+| `groupadmin`  | `groupadmin123`   | GROUP_ADMIN  |
+
+Login endpoint: `POST /api/v1/group/auth/login`
+
+> ⚠️ Change all passwords before deploying to any shared environment.
 
 ---
 
@@ -190,9 +210,9 @@ curl -X POST http://localhost/api/v1/auth/login \
 ```bash
 cd hotel-backend
 
-mvn test                          # unit tests (domain + application + web slice)
-mvn clean verify -Pcoverage       # tests + JaCoCo coverage report
-mvn sonar:sonar -Psonar \         # SonarQube analysis (requires running instance)
+./gradlew test                    # all module tests (domain + application + web slice + integration)
+./gradlew build                   # compile, test, and JaCoCo coverage reports
+./gradlew build sonar \           # SonarQube analysis (requires running instance)
   -Dsonar.host.url=... \
   -Dsonar.token=...
 ```
@@ -207,10 +227,10 @@ Coverage targets enforced by SonarQube Quality Gate:
 ```bash
 cd hotel-backend
 
-mvn package -pl bootstrap -am -DskipTests                   # fat JAR
-mvn -Pnative native:compile -pl bootstrap -am              # native binary (~5–15 min)
-mvn -Pnative spring-boot:build-image -pl bootstrap -am \   # native Docker image
-  -Dspring-boot.build-image.imageName=ghcr.io/<owner>/hotel-backend:<tag>
+./gradlew :bootstrap:bootJar                  # fat JAR (build/libs/bootstrap-*.jar)
+./gradlew :bootstrap:nativeCompile            # native binary (~5–15 min)
+./gradlew :bootstrap:bootBuildImage \         # native Docker image
+  --imageName=ghcr.io/<owner>/hotel-backend:<tag>
 ```
 
 | Mode                  | Startup  | Memory  | Notes                     |

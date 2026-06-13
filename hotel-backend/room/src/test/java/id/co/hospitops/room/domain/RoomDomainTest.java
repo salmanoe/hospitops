@@ -2,6 +2,7 @@ package id.co.hospitops.room.domain;
 
 import id.co.hospitops.room.domain.model.Room;
 import id.co.hospitops.room.domain.model.RoomStatus;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.RoomTypeId;
 import org.junit.jupiter.api.*;
 
@@ -9,7 +10,7 @@ import static org.assertj.core.api.Assertions.*;
 
 /**
  * Unit tests for the Room state machine (R-05 fix).
- *
+ * <p>
  * Covers every valid transition and every illegal-source-state combination
  * so that future changes to Room will fail fast here if a guard is broken.
  */
@@ -17,7 +18,7 @@ import static org.assertj.core.api.Assertions.*;
 class RoomDomainTest {
 
     private Room available() {
-        return Room.create("101", 1, RoomTypeId.generate(), null);
+        return Room.create(HotelId.generate(), "101", 1, RoomTypeId.generate(), null);
     }
 
     // ── markOccupied ─────────────────────────────────────────────────────
@@ -298,14 +299,14 @@ class RoomDomainTest {
         @Test
         @DisplayName("blank room number throws")
         void blankRoomNumber() {
-            assertThatThrownBy(() -> Room.create("", 1, RoomTypeId.generate(), null))
+            assertThatThrownBy(() -> Room.create(HotelId.generate(), "", 1, RoomTypeId.generate(), null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("floor < 1 throws")
         void invalidFloor() {
-            assertThatThrownBy(() -> Room.create("101", 0, RoomTypeId.generate(), null))
+            assertThatThrownBy(() -> Room.create(HotelId.generate(), "101", 0, RoomTypeId.generate(), null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 

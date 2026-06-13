@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Group Dashboard — HospitOps</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="/assets/css/custom.css" rel="stylesheet"/>
+    <style>
+        /* Minimal GROUP_ADMIN chrome — no hotel sidebar */
+        body { background-color: var(--bs-body-bg); }
+
+        .group-topbar {
+            background: var(--hospitops-surface);
+            border-bottom: 1px solid var(--bs-border-color);
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .group-topbar .brand {
+            font-family: 'Playfair Display', serif;
+            font-size: 20px;
+            color: var(--hospitops-gold);
+            text-decoration: none;
+        }
+
+        .group-topbar .brand small {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: var(--hospitops-muted);
+            display: block;
+            line-height: 1;
+            margin-top: 1px;
+        }
+
+        .hotel-card {
+            background: var(--hospitops-surface);
+            border: 1px solid var(--bs-border-color);
+            border-radius: 10px;
+            transition: box-shadow .15s;
+        }
+
+        .hotel-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+
+        .hotel-card .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1px;
+            background: var(--bs-border-color);
+            border-top: 1px solid var(--bs-border-color);
+        }
+
+        .hotel-card .kpi-cell {
+            background: var(--hospitops-surface);
+            padding: 14px 16px;
+        }
+
+        .kpi-cell .kpi-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--hospitops-muted);
+            margin-bottom: 4px;
+        }
+
+        .kpi-cell .kpi-value {
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            color: var(--hospitops-gold);
+            line-height: 1.1;
+        }
+
+        .kpi-cell .kpi-sub {
+            font-size: 11px;
+            color: var(--hospitops-muted);
+        }
+
+        .occupancy-bar {
+            height: 4px;
+            border-radius: 2px;
+            background: var(--bs-border-color);
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .occupancy-bar-fill {
+            height: 100%;
+            background: var(--hospitops-gold);
+            border-radius: 2px;
+            transition: width .4s ease;
+        }
+
+        @media (max-width: 480px) {
+            .group-topbar { padding: 12px 16px; }
+            .page-body     { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Top bar ─────────────────────────────────────────────── -->
+<div class="group-topbar">
+    <a href="/group/dashboard.html" class="brand">
+        HospitOps
+        <small>GROUP DASHBOARD</small>
+    </a>
+    <div class="d-flex align-items-center gap-3">
+        <a href="/group/hotels/list.html" class="text-muted small">Hotels</a>
+        <a href="/group/profile.html"     class="text-muted small">Profile</a>
+        <span id="admin-email" class="text-muted small"></span>
+        <a href="#" id="logout-btn" class="text-danger small">Sign out</a>
+    </div>
+</div>
+
+<!-- ── Page body ───────────────────────────────────────────── -->
+<div class="page-body">
+
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="mb-0" style="font-family:'Playfair Display',serif;font-size:22px;">
+                Portfolio Overview
+            </h2>
+            <p class="text-muted small mb-0" id="subtitle">All hotels · live summary</p>
+        </div>
+        <button id="refresh-btn" class="btn btn-outline-secondary btn-sm">
+            ↻ Refresh
+        </button>
+    </div>
+
+    <!-- Loading state -->
+    <div id="loading-state" class="text-center py-5 text-muted">
+        <div class="spinner-border spinner-border-sm me-2"></div>
+        Loading hotels…
+    </div>
+
+    <!-- Error state -->
+    <div id="error-state" class="alert alert-danger d-none" role="alert"></div>
+
+    <!-- Hotel cards grid -->
+    <div id="hotel-grid" class="row g-4 d-none"></div>
+
+    <!-- Empty state -->
+    <div id="empty-state" class="text-center py-5 text-muted d-none">
+        <p class="mb-1">No hotels found in this group.</p>
+        <a href="/group/hotels/form.html" class="btn btn-gold btn-sm mt-2">Create your first hotel</a>
+    </div>
+
+</div>
+
+<!-- ── Enter hotel confirm modal ──────────────────────────── -->
+<div class="modal fade" id="enter-modal" tabindex="-1" aria-labelledby="enter-modal-label" aria-modal="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="enter-modal-label">Enter Hotel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">
+                    You are about to switch into
+                    <strong id="enter-hotel-name"></strong>.
+                    Your group token will be exchanged for a hotel-scoped session.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <button type="button" id="enter-confirm-btn" class="btn btn-gold btn-sm">
+                    Enter Hotel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/core.js"></script>
+<script>
+    // ── Auth guard ────────────────────────────────────────────
+    if (!Auth.requireGroupAdmin()) throw new Error('Unauthorized');
+
+    // ── Init user display ─────────────────────────────────────
+    const user = Auth.getUser();
+    document.getElementById('admin-email').textContent = user?.username ?? '';
+
+    // ── Logout ────────────────────────────────────────────────
+    document.getElementById('logout-btn').addEventListener('click', async (e) => {
+        e.preventDefault();
+        Auth.clear();
+        window.location.href = '/group/login.html';
+    });
+
+    // ── Hotel grid rendering ──────────────────────────────────
+    const formatRp        = Utils.formatRp;
+    const loadingEl       = document.getElementById('loading-state');
+    const errorEl         = document.getElementById('error-state');
+    const gridEl          = document.getElementById('hotel-grid');
+    const emptyEl         = document.getElementById('empty-state');
+
+    const escHtml = (s) => String(s ?? '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    function occupancyPct(occupied, total) {
+        if (!total) return 0;
+        return Math.round((occupied / total) * 100);
+    }
+
+    function renderHotelCard(summary) {
+        const pct       = occupancyPct(summary.occupiedRooms, summary.totalRooms);
+        const hotelName = summary.hotelName || summary.hotelId;
+        const status    = summary.hotelStatus || 'SETUP';
+        const isActive  = status === 'ACTIVE';
+        const isSetup   = status === 'SETUP';
+        const isSuspended = status === 'SUSPENDED';
+
+        // Primary action button — only ACTIVE hotels can be entered.
+        const actionBtn = isActive
+            ? `<button class="btn btn-gold btn-sm enter-btn"
+                       data-hotel-id="${escHtml(summary.hotelId)}"
+                       data-hotel-name="${escHtml(hotelName)}">
+                   Enter →
+               </button>`
+            : isSetup
+            ? `<a href="/group/hotels/setup.html?hotelId=${escHtml(summary.hotelId)}"
+                  class="btn btn-outline-warning btn-sm">
+                   Complete Setup →
+               </a>`
+            : `<span class="badge bg-secondary">Suspended</span>`;
+
+        // Status badge shown next to hotel name.
+        const statusBadge = isActive
+            ? `<span class="badge bg-success" style="font-size:9px;">ACTIVE</span>`
+            : isSetup
+            ? `<span class="badge bg-warning text-dark" style="font-size:9px;">SETUP</span>`
+            : `<span class="badge bg-secondary" style="font-size:9px;">SUSPENDED</span>`;
+
+        // KPI grid is only meaningful for ACTIVE hotels.
+        const kpiGrid = isActive ? `
+            <div class="kpi-grid">
+                <div class="kpi-cell">
+                    <div class="kpi-label">Arrivals Today</div>
+                    <div class="kpi-value">${summary.arrivalsToday}</div>
+                </div>
+                <div class="kpi-cell">
+                    <div class="kpi-label">Departures Today</div>
+                    <div class="kpi-value">${summary.departuresToday}</div>
+                </div>
+                <div class="kpi-cell">
+                    <div class="kpi-label">Revenue Today</div>
+                    <div class="kpi-value" style="font-size:18px;">${formatRp(summary.revenueToday)}</div>
+                </div>
+                <div class="kpi-cell">
+                    <div class="kpi-label">Revenue This Month</div>
+                    <div class="kpi-value" style="font-size:18px;">${formatRp(summary.revenueMonth)}</div>
+                    <div class="kpi-sub">${summary.dirtyRooms} room${summary.dirtyRooms !== 1 ? 's' : ''} need cleaning</div>
+                </div>
+            </div>` : `
+            <div class="p-3 border-top text-muted small">
+                ${isSetup
+                    ? 'Hotel setup is not complete. KPIs will appear once the hotel is active.'
+                    : 'This hotel is suspended. Contact support to reactivate.'}
+            </div>`;
+
+        return `
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="hotel-card">
+                    <div class="p-4 pb-3">
+                        <div class="d-flex align-items-start justify-content-between">
+                            <div>
+                                <div class="fw-semibold d-flex align-items-center gap-2" style="font-size:15px;">
+                                    ${escHtml(hotelName)} ${statusBadge}
+                                </div>
+                                <div class="text-muted" style="font-size:11px;margin-top:2px;">
+                                    ${!isSetup ? `<a href="/group/hotels/policy.html?hotelId=${escHtml(summary.hotelId)}"
+                                       class="text-muted text-decoration-none">Policy</a>` : ''}
+                                </div>
+                            </div>
+                            ${actionBtn}
+                        </div>
+
+                        ${isActive ? `
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted" style="font-size:11px;">Occupancy</span>
+                                <span class="fw-semibold" style="font-size:12px;">${pct}%</span>
+                            </div>
+                            <div class="occupancy-bar">
+                                <div class="occupancy-bar-fill" style="width:${pct}%"></div>
+                            </div>
+                            <div class="text-muted mt-1" style="font-size:11px;">
+                                ${summary.occupiedRooms} / ${summary.totalRooms} rooms occupied
+                            </div>
+                        </div>` : ''}
+                    </div>
+                    ${kpiGrid}
+                </div>
+            </div>`;
+    }
+
+    async function loadDashboard() {
+        Utils.show(loadingEl);
+        Utils.hide(errorEl);
+        Utils.hide(gridEl);
+        Utils.hide(emptyEl);
+
+        try {
+            const summaries = await API.groupDashboard.get();
+
+            Utils.hide(loadingEl);
+
+            if (!summaries || summaries.length === 0) {
+                Utils.show(emptyEl);
+                return;
+            }
+
+            gridEl.innerHTML = summaries.map(s => renderHotelCard(s)).join('');
+            document.getElementById('subtitle').textContent =
+                `${summaries.length} hotel${summaries.length !== 1 ? 's' : ''} · live summary`;
+            Utils.show(gridEl);
+
+        } catch (err) {
+            Utils.hide(loadingEl);
+            errorEl.textContent = err.message || 'Failed to load hotel summaries.';
+            Utils.show(errorEl);
+        }
+    }
+
+    loadDashboard();
+    document.getElementById('refresh-btn').addEventListener('click', loadDashboard);
+
+    // ── Enter hotel flow ──────────────────────────────────────
+    let _pendingHotelId   = null;
+    const enterModal      = new bootstrap.Modal(document.getElementById('enter-modal'));
+    const enterNameEl     = document.getElementById('enter-hotel-name');
+    const enterConfirmBtn = document.getElementById('enter-confirm-btn');
+
+    document.getElementById('hotel-grid').addEventListener('click', (e) => {
+        const btn = e.target.closest('.enter-btn');
+        if (!btn) return;
+        _pendingHotelId = btn.dataset.hotelId;
+        enterNameEl.textContent = btn.dataset.hotelName;
+        enterModal.show();
+    });
+
+    enterConfirmBtn.addEventListener('click', async () => {
+        if (!_pendingHotelId) return;
+        Utils.loading(enterConfirmBtn, true);
+
+        try {
+            const res = await API.groupAuth.enterHotel(_pendingHotelId);
+            Auth.save(res);
+            enterModal.hide();
+            window.location.href = '/dashboard.html';
+        } catch (err) {
+            enterModal.hide();
+            Utils.toast(err.message || 'Failed to enter hotel.', 'danger');
+            Utils.loading(enterConfirmBtn, false);
+        }
+    });
+</script>
+</body>
+</html>
