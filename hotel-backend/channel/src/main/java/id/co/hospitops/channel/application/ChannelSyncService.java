@@ -81,11 +81,20 @@ public class ChannelSyncService implements SyncChannelUseCase {
      * so it is safe to call from the reservation flow for non-channel hotels.
      */
     public void syncRoomNights(RoomId roomId, LocalDate from, LocalDate to) {
-        ChannelPropertyMapping property = propertyRepo.findByProvider(PROVIDER).orElse(null);
-        if (property == null || !property.isEnabled()) return;
-
         RoomTypeId roomTypeId = snapshot.roomTypeOf(roomId).orElse(null);
         if (roomTypeId == null) return;
+        syncRoomTypeNights(roomTypeId, from, to);
+    }
+
+    /**
+     * Best-effort ARI push for a room type over {@code [from, to)} (end
+     * exclusive). No-op when the channel is off or the room type is unmapped.
+     * Used by the reservation listener (availability) and the rate-change
+     * listener (pricing).
+     */
+    public void syncRoomTypeNights(RoomTypeId roomTypeId, LocalDate from, LocalDate to) {
+        ChannelPropertyMapping property = propertyRepo.findByProvider(PROVIDER).orElse(null);
+        if (property == null || !property.isEnabled()) return;
 
         ChannelRoomTypeMapping mapping = roomTypeRepo.findByRoomTypeId(roomTypeId).orElse(null);
         if (mapping == null) return;

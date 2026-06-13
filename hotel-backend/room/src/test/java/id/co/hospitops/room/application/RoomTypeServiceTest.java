@@ -48,6 +48,8 @@ class RoomTypeServiceTest {
     RoomTypeRepository roomTypeRepo;
     @Mock
     RoomRateOverrideRepository overrideRepo;
+    @Mock
+    org.springframework.context.ApplicationEventPublisher events;
 
     @InjectMocks
     RoomTypeService service;
@@ -224,10 +226,14 @@ class RoomTypeServiceTest {
                     "Weekend Rate", new BigDecimal("650000"),
                     LocalDate.of(2025, 8, 1), LocalDate.of(2025, 8, 31));
 
-            RoomTypeResponse result = service.addRateOverride(rt.getId(), cmd);
+            // addRateOverride stamps a RateChangedEvent with HotelContext.current().
+            RoomTypeResponse[] holder = new RoomTypeResponse[1];
+            ScopedValue.where(HotelContext.HOTEL_ID, HotelId.generate())
+                    .run(() -> holder[0] = service.addRateOverride(rt.getId(), cmd));
 
-            assertThat(result.name()).isEqualTo("Deluxe");
+            assertThat(holder[0].name()).isEqualTo("Deluxe");
             verify(overrideRepo).save(any());
+            verify(events).publishEvent(any(id.co.hospitops.shared.event.RateChangedEvent.class));
         }
     }
 }

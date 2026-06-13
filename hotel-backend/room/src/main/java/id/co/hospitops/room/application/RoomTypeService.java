@@ -7,9 +7,11 @@ import id.co.hospitops.room.domain.port.in.ManageRoomTypeUseCase;
 import id.co.hospitops.room.domain.port.out.*;
 import id.co.hospitops.shared.*;
 import id.co.hospitops.shared.HotelContext;
+import id.co.hospitops.shared.event.RateChangedEvent;
 import id.co.hospitops.shared.exception.*;
 import id.co.hospitops.shared.web.PageResult;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,7 @@ import java.util.*;
 public class RoomTypeService implements ManageRoomTypeUseCase {
     private final RoomTypeRepository roomTypeRepo;
     private final RoomRateOverrideRepository overrideRepo;
+    private final ApplicationEventPublisher events;
 
     @Override
     public RoomTypeResponse createRoomType(CreateRoomTypeCommand cmd) {
@@ -60,6 +63,9 @@ public class RoomTypeService implements ManageRoomTypeUseCase {
         RoomType rt = findRoomType(id);
         overrideRepo.save(new RoomRateOverride(UUID.randomUUID(), id, cmd.name(),
                 Money.of(cmd.priceOverride()), cmd.validFrom(), cmd.validUntil()));
+        // Notify the channel module so the new rate is pushed to OTAs.
+        events.publishEvent(new RateChangedEvent(
+                HotelContext.current(), id, cmd.validFrom(), cmd.validUntil()));
         return RoomTypeResponse.from(rt);
     }
 
