@@ -23,7 +23,21 @@ public class RoomTypeRepositoryImpl implements RoomTypeRepository {
 
     @Override
     public RoomType save(RoomType rt) {
-        return toDomain(jpa.save(toJpa(rt)));
+        // Copy onto the managed entity when it already exists rather than
+        // persisting a rebuilt instance with the same id: the latter throws
+        // NonUniqueObjectException once the service has loaded the row in the
+        // same transaction, and it discards the @Version. Mirrors the pattern
+        // already used by HotelRepositoryImpl / HotelPolicyRepositoryImpl.
+        RoomTypeJpaEntity entity = jpa.findById(rt.getId().value())
+                .map(existing -> {
+                    existing.setName(rt.getName());
+                    existing.setCapacity(rt.getCapacity());
+                    existing.setDescription(rt.getDescription());
+                    existing.setBasePrice(rt.getBasePrice().amount());
+                    return existing;
+                })
+                .orElseGet(() -> toJpa(rt));
+        return toDomain(jpa.save(entity));
     }
 
     @Override

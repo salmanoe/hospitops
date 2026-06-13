@@ -24,7 +24,20 @@ public class RoomRepositoryImpl implements RoomRepository {
 
     @Override
     public Room save(Room room) {
-        return toDomain(jpa.save(toJpa(room)));
+        // Copy onto the managed entity when it already exists rather than
+        // persisting a rebuilt instance with the same id (see
+        // RoomTypeRepositoryImpl#save for the rationale).
+        RoomJpaEntity entity = jpa.findById(room.getId().value())
+                .map(existing -> {
+                    existing.setRoomNumber(room.getRoomNumber());
+                    existing.setFloor(room.getFloor());
+                    existing.setStatus(room.getStatus());
+                    existing.setRoomTypeId(room.getRoomTypeId().value());
+                    existing.setNotes(room.getNotes());
+                    return existing;
+                })
+                .orElseGet(() -> toJpa(room));
+        return toDomain(jpa.save(entity));
     }
 
     @Override
