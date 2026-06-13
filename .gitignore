@@ -43,3 +43,6 @@ Thumbs.db
 
 # SonarQube scanner cache
 .scannerwork/
+
+# Playwright MCP scratch output
+.playwright-mcp/
