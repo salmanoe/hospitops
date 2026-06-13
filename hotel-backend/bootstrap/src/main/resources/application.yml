@@ -205,6 +205,9 @@ channex:
   relay:
     enabled: ${CHANNEX_RELAY_ENABLED:false}
     poll-ms: ${CHANNEX_RELAY_POLL_MS:15000}
+  inbound:
+    enabled: ${CHANNEX_INBOUND_ENABLED:false}
+    poll-ms: ${CHANNEX_INBOUND_POLL_MS:20000}
 
 ---
 # ── Dev profile (local, non-K8s) ────────────────────────────────

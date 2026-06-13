@@ -13,4 +13,7 @@ public interface ChannelPropertyMappingJpaRepository
     Optional<ChannelPropertyMappingJpaEntity> findByHotelIdAndProvider(UUID hotelId, ChannelProvider provider);
 
     boolean existsByHotelIdAndProvider(UUID hotelId, ChannelProvider provider);
+
+    Optional<ChannelPropertyMappingJpaEntity> findByProviderAndExternalPropertyId(
+            ChannelProvider provider, String externalPropertyId);
 }

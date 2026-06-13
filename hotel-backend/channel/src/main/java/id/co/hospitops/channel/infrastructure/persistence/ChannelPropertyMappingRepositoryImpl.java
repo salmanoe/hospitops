@@ -47,6 +47,13 @@ public class ChannelPropertyMappingRepositoryImpl implements ChannelPropertyMapp
         return jpa.existsByHotelIdAndProvider(HotelContext.current().value(), provider);
     }
 
+    @Override
+    public Optional<ChannelPropertyMapping> findByExternalProperty(ChannelProvider provider, String externalPropertyId) {
+        // Global (no hotel scope) — resolves the owning hotel for inbound bookings.
+        return jpa.findByProviderAndExternalPropertyId(provider, externalPropertyId)
+                .map(this::toDomain);
+    }
+
     // ── Mapping ─────────────────────────────────────────────────────────
 
     private ChannelPropertyMappingJpaEntity toJpa(ChannelPropertyMapping m) {

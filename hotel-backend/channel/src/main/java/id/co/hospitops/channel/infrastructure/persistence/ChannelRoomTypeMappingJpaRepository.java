@@ -12,6 +12,8 @@ public interface ChannelRoomTypeMappingJpaRepository
 
     Optional<ChannelRoomTypeMappingJpaEntity> findByHotelIdAndRoomTypeId(UUID hotelId, UUID roomTypeId);
 
+    Optional<ChannelRoomTypeMappingJpaEntity> findByHotelIdAndExternalRoomTypeId(UUID hotelId, String externalRoomTypeId);
+
     List<ChannelRoomTypeMappingJpaEntity> findByHotelId(UUID hotelId);
 
     boolean existsByHotelIdAndRoomTypeId(UUID hotelId, UUID roomTypeId);

@@ -16,6 +16,9 @@ public interface ChannelRoomTypeMappingRepository {
 
     Optional<ChannelRoomTypeMapping> findByRoomTypeId(RoomTypeId roomTypeId);
 
+    /** Reverse lookup by the provider's room-type id within the current hotel. */
+    Optional<ChannelRoomTypeMapping> findByExternalRoomTypeId(String externalRoomTypeId);
+
     List<ChannelRoomTypeMapping> findAll();
 
     boolean existsByRoomTypeId(RoomTypeId roomTypeId);

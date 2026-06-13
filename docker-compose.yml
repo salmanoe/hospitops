@@ -99,9 +99,11 @@ services:
       # staging sandbox. Off by default so the module stays inert.
       CHANNEX_BASE_URL:      ${CHANNEX_BASE_URL:-https://staging.channex.io/api/v1}
       CHANNEX_API_KEY:       ${CHANNEX_API_KEY:-}
-      CHANNEX_ENABLED:       ${CHANNEX_ENABLED:-false}
-      CHANNEX_RELAY_ENABLED: ${CHANNEX_RELAY_ENABLED:-false}
-      CHANNEX_RELAY_POLL_MS: ${CHANNEX_RELAY_POLL_MS:-15000}
+      CHANNEX_ENABLED:         ${CHANNEX_ENABLED:-false}
+      CHANNEX_RELAY_ENABLED:   ${CHANNEX_RELAY_ENABLED:-false}
+      CHANNEX_RELAY_POLL_MS:   ${CHANNEX_RELAY_POLL_MS:-15000}
+      CHANNEX_INBOUND_ENABLED: ${CHANNEX_INBOUND_ENABLED:-false}
+      CHANNEX_INBOUND_POLL_MS: ${CHANNEX_INBOUND_POLL_MS:-20000}
     depends_on:
       postgres:
         condition: service_healthy

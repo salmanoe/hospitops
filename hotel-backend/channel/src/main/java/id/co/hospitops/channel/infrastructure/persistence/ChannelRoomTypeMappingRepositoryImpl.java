@@ -40,6 +40,12 @@ public class ChannelRoomTypeMappingRepositoryImpl implements ChannelRoomTypeMapp
     }
 
     @Override
+    public Optional<ChannelRoomTypeMapping> findByExternalRoomTypeId(String externalRoomTypeId) {
+        return jpa.findByHotelIdAndExternalRoomTypeId(HotelContext.current().value(), externalRoomTypeId)
+                .map(this::toDomain);
+    }
+
+    @Override
     public List<ChannelRoomTypeMapping> findAll() {
         return jpa.findByHotelId(HotelContext.current().value())
                 .stream().map(this::toDomain).toList();

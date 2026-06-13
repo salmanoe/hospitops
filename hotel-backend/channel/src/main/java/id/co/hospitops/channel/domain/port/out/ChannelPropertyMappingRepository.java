@@ -17,4 +17,11 @@ public interface ChannelPropertyMappingRepository {
     Optional<ChannelPropertyMapping> findByProvider(ChannelProvider provider);
 
     boolean existsByProvider(ChannelProvider provider);
+
+    /**
+     * Reverse lookup by the provider's property id, across ALL hotels (no
+     * HotelContext) — used by the inbound processor to resolve which hotel an
+     * OTA booking belongs to.
+     */
+    Optional<ChannelPropertyMapping> findByExternalProperty(ChannelProvider provider, String externalPropertyId);
 }

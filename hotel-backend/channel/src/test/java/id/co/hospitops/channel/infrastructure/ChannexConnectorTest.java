@@ -1,5 +1,6 @@
 package id.co.hospitops.channel.infrastructure;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import id.co.hospitops.channel.domain.model.AriUpdate;
 import id.co.hospitops.channel.domain.port.out.ChannelConnectorException;
 import id.co.hospitops.channel.infrastructure.config.ChannexProperties;
@@ -36,7 +37,8 @@ class ChannexConnectorTest {
     @Test
     @DisplayName("throws when disabled or missing API key")
     void throwsWhenDisabled() {
-        ChannexConnector connector = new ChannexConnector(RestClient.builder().build(), props(false, ""));
+        ChannexConnector connector = new ChannexConnector(
+                RestClient.builder().build(), props(false, ""), new ObjectMapper());
         assertThatThrownBy(() -> connector.pushAri("prop-1", ARI))
                 .isInstanceOf(ChannelConnectorException.class);
     }
@@ -60,7 +62,7 @@ class ChannexConnectorTest {
                 .andExpect(jsonPath("$.values[0].rate_plan_id").value("rp-1"))
                 .andRespond(withSuccess());
 
-        ChannexConnector connector = new ChannexConnector(builder.build(), props);
+        ChannexConnector connector = new ChannexConnector(builder.build(), props, new ObjectMapper());
         connector.pushAri("prop-1", ARI);
 
         server.verify();

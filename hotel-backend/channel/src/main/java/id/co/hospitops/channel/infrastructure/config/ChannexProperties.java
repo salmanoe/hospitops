@@ -27,6 +27,8 @@ public class ChannexProperties {
 
     private Relay relay = new Relay();
 
+    private Inbound inbound = new Inbound();
+
     @Getter
     @Setter
     public static class Relay {
@@ -34,5 +36,14 @@ public class ChannexProperties {
         private boolean enabled = false;
         /** Poll interval for the outbox relay, milliseconds. */
         private long pollMs = 15000;
+    }
+
+    @Getter
+    @Setter
+    public static class Inbound {
+        /** When false the scheduled booking-revisions poller is not created. */
+        private boolean enabled = false;
+        /** Poll interval for the inbound feed, milliseconds. */
+        private long pollMs = 20000;
     }
 }
