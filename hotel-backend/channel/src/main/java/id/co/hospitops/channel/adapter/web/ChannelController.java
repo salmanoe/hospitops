@@ -2,9 +2,11 @@ package id.co.hospitops.channel.adapter.web;
 
 import id.co.hospitops.channel.application.command.ConfigureChannelPropertyCommand;
 import id.co.hospitops.channel.application.command.MapRoomTypeCommand;
+import id.co.hospitops.channel.application.command.PushAriCommand;
 import id.co.hospitops.channel.application.response.ChannelPropertyMappingResponse;
 import id.co.hospitops.channel.application.response.ChannelRoomTypeMappingResponse;
 import id.co.hospitops.channel.domain.port.in.ManageChannelMappingUseCase;
+import id.co.hospitops.channel.domain.port.in.SyncChannelUseCase;
 import id.co.hospitops.shared.RoomTypeId;
 import id.co.hospitops.shared.web.ApiResponse;
 import id.co.hospitops.shared.web.RequiresHotelContext;
@@ -28,6 +30,7 @@ import java.util.UUID;
 public class ChannelController {
 
     private final ManageChannelMappingUseCase useCase;
+    private final SyncChannelUseCase syncUseCase;
 
     // ── Property hookup ─────────────────────────────────────────────────
 
@@ -71,5 +74,24 @@ public class ChannelController {
             @PathVariable UUID roomTypeId, @Valid @RequestBody MapRoomTypeRequest req) {
         return ResponseEntity.ok(ApiResponse.ok(useCase.mapRoomType(new MapRoomTypeCommand(
                 RoomTypeId.of(roomTypeId), req.externalRoomTypeId(), req.externalRatePlanId()))));
+    }
+
+    // ── Outbound ARI ────────────────────────────────────────────────────
+
+    /**
+     * Enqueue an availability/rate push for a room type. Delivery to the
+     * provider is asynchronous (outbox relay), so this returns 202 Accepted.
+     */
+    @PostMapping("/room-types/{roomTypeId}/push")
+    @PreAuthorize("hasAnyRole('ADMIN','MANAGER','GROUP_ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> pushAri(
+            @PathVariable UUID roomTypeId, @Valid @RequestBody PushAriRequest req) {
+        syncUseCase.enqueueAriPush(new PushAriCommand(
+                RoomTypeId.of(roomTypeId),
+                req.nights().stream()
+                        .map(n -> new PushAriCommand.Night(n.date(), n.availability(), n.rate()))
+                        .toList()));
+        return ResponseEntity.accepted().body(
+                ApiResponse.<Void>ok("Channel sync enqueued", null));
     }
 }
