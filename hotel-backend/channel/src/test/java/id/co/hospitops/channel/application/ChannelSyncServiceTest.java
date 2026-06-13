@@ -13,6 +13,7 @@ import id.co.hospitops.channel.domain.port.out.ChannelRoomTypeMappingRepository;
 import id.co.hospitops.channel.domain.port.out.ChannelSyncMessageRepository;
 import id.co.hospitops.shared.HotelContext;
 import id.co.hospitops.shared.HotelId;
+import id.co.hospitops.shared.Money;
 import id.co.hospitops.shared.RoomId;
 import id.co.hospitops.shared.RoomTypeId;
 import id.co.hospitops.shared.channel.RoomAvailabilitySnapshotProvider;
@@ -101,7 +102,7 @@ class ChannelSyncServiceTest {
         when(snapshot.roomTypeOf(roomId)).thenReturn(Optional.of(rt));
         when(roomTypeRepo.findByRoomTypeId(rt)).thenReturn(Optional.of(mapping));
         when(snapshot.availableUnits(eq(rt), any())).thenReturn(3);
-        when(snapshot.ratePerNight(eq(rt), any())).thenReturn(new BigDecimal("500000"));
+        when(snapshot.ratePerNight(eq(rt), any())).thenReturn(Money.of(new BigDecimal("500000")));
 
         ArgumentCaptor<ChannelSyncMessage> captor = ArgumentCaptor.forClass(ChannelSyncMessage.class);
 
@@ -114,5 +115,8 @@ class ChannelSyncServiceTest {
         assertThat(payload.updates()).hasSize(2); // two nights
         assertThat(payload.updates().getFirst().availability()).isEqualTo(3);
         assertThat(payload.updates().getFirst().externalRoomTypeId()).isEqualTo("chx-rt");
+        // IDR has 2 ISO-4217 fraction digits (verified against the Channex
+        // staging round-trip), so 500000 major units → 50000000 minor units.
+        assertThat(payload.updates().getFirst().rate()).isEqualTo(50000000L);
     }
 }

@@ -1,17 +1,18 @@
 package id.co.hospitops.room.infrastructure.spi;
 
+import id.co.hospitops.room.domain.model.RoomRateOverride;
 import id.co.hospitops.room.domain.model.RoomType;
 import id.co.hospitops.room.domain.port.out.RoomRateOverrideRepository;
 import id.co.hospitops.room.domain.port.out.RoomRepository;
 import id.co.hospitops.room.domain.port.out.RoomTypeRepository;
 import id.co.hospitops.room.infrastructure.persistence.RoomJpaRepository;
+import id.co.hospitops.shared.Money;
 import id.co.hospitops.shared.RoomId;
 import id.co.hospitops.shared.RoomTypeId;
 import id.co.hospitops.shared.channel.RoomAvailabilitySnapshotProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
@@ -39,14 +40,13 @@ public class RoomAvailabilitySnapshotProviderImpl implements RoomAvailabilitySna
     }
 
     @Override
-    public BigDecimal ratePerNight(RoomTypeId roomTypeId, LocalDate night) {
+    public Money ratePerNight(RoomTypeId roomTypeId, LocalDate night) {
         return overrideRepository.findByRoomTypeId(roomTypeId).stream()
                 .filter(o -> o.isActiveOn(night))
                 .findFirst()
-                .map(o -> o.priceOverride().amount())
+                .map(RoomRateOverride::priceOverride)
                 .orElseGet(() -> roomTypeRepository.findById(roomTypeId)
                         .map(RoomType::getBasePrice)
-                        .map(m -> m.amount())
-                        .orElse(BigDecimal.ZERO));
+                        .orElse(Money.zero()));
     }
 }

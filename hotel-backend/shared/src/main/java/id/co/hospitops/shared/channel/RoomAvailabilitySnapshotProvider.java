@@ -1,9 +1,9 @@
 package id.co.hospitops.shared.channel;
 
+import id.co.hospitops.shared.Money;
 import id.co.hospitops.shared.RoomId;
 import id.co.hospitops.shared.RoomTypeId;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
@@ -31,7 +31,9 @@ public interface RoomAvailabilitySnapshotProvider {
 
     /**
      * Rate to publish for a room type on a given night: an active seasonal
-     * override if one applies, otherwise the room type's base price.
+     * override if one applies, otherwise the room type's base price. Returns
+     * {@link Money} so the currency (and thus minor-unit conversion) is known
+     * at the channel/Channex boundary.
      */
-    BigDecimal ratePerNight(RoomTypeId roomTypeId, LocalDate night);
+    Money ratePerNight(RoomTypeId roomTypeId, LocalDate night);
 }

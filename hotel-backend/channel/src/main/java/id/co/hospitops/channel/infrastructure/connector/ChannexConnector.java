@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -37,10 +38,16 @@ public class ChannexConnector implements ChannelConnectorPort {
             throw new ChannelConnectorException(
                     "Channex connector disabled or API key missing (set channex.enabled + channex.api-key)");
         }
-        if (updates.isEmpty()) return;
+        // Channex rejects past dates — only send today onward.
+        LocalDate today = LocalDate.now();
+        List<AriUpdate> future = updates.stream()
+                .filter(u -> !u.date().isBefore(today))
+                .toList();
+        if (future.isEmpty()) return;
 
-        // Availability and rates are separate Channex endpoints.
-        post("/availability", Map.of("values", updates.stream()
+        // Availability (per room type) and restrictions/rates (per rate plan) are
+        // SEPARATE Channex endpoints. Rate is an integer in minor units.
+        post("/availability", Map.of("values", future.stream()
                 .map(u -> Map.<String, Object>of(
                         "property_id", externalPropertyId,
                         "room_type_id", u.externalRoomTypeId(),
@@ -48,16 +55,15 @@ public class ChannexConnector implements ChannelConnectorPort {
                         "availability", u.availability()))
                 .toList()));
 
-        post("/restrictions", Map.of("values", updates.stream()
+        post("/restrictions", Map.of("values", future.stream()
                 .map(u -> Map.<String, Object>of(
                         "property_id", externalPropertyId,
-                        "room_type_id", u.externalRoomTypeId(),
                         "rate_plan_id", u.externalRatePlanId(),
                         "date", u.date().toString(),
                         "rate", u.rate()))
                 .toList()));
 
-        log.debug("Pushed {} ARI night(s) to Channex property {}", updates.size(), externalPropertyId);
+        log.debug("Pushed {} ARI night(s) to Channex property {}", future.size(), externalPropertyId);
     }
 
     private void post(String path, Object body) {

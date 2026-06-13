@@ -10,7 +10,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -30,8 +29,9 @@ class ChannexConnectorTest {
         return p;
     }
 
+    // Use a clearly future date so the connector's past-date guard never drops it.
     private static final List<AriUpdate> ARI = List.of(
-            new AriUpdate("rt-1", "rp-1", LocalDate.of(2026, 6, 13), 4, new BigDecimal("500000")));
+            new AriUpdate("rt-1", "rp-1", LocalDate.now().plusDays(30), 4, 500000L));
 
     @Test
     @DisplayName("throws when disabled or missing API key")

@@ -20,7 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -48,7 +47,7 @@ class ChannelOutboxProcessorTest {
 
     private ChannelSyncMessage ariMessage() throws Exception {
         ChannelSyncPayload payload = new ChannelSyncPayload("prop-1",
-                List.of(new AriUpdate("rt-1", "rp-1", LocalDate.now(), 3, new BigDecimal("500000"))));
+                List.of(new AriUpdate("rt-1", "rp-1", LocalDate.now(), 3, 500000L)));
         return ChannelSyncMessage.create(HotelId.generate(), SyncMessageType.ARI_PUSH,
                 objectMapper.writeValueAsString(payload));
     }

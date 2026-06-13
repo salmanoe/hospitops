@@ -15,6 +15,7 @@ import id.co.hospitops.channel.domain.port.out.ChannelPropertyMappingRepository;
 import id.co.hospitops.channel.domain.port.out.ChannelRoomTypeMappingRepository;
 import id.co.hospitops.channel.domain.port.out.ChannelSyncMessageRepository;
 import id.co.hospitops.shared.HotelContext;
+import id.co.hospitops.shared.Money;
 import id.co.hospitops.shared.RoomId;
 import id.co.hospitops.shared.RoomTypeId;
 import id.co.hospitops.shared.channel.RoomAvailabilitySnapshotProvider;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Currency;
 import java.util.List;
 
 /**
@@ -57,9 +59,15 @@ public class ChannelSyncService implements SyncChannelUseCase {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "ChannelRoomTypeMapping", command.roomTypeId().value()));
 
+        // The request rate is in major units; convert to Channex minor units
+        // using the room type's currency.
+        Currency currency = command.nights().isEmpty()
+                ? Money.IDR
+                : snapshot.ratePerNight(command.roomTypeId(), command.nights().getFirst().date()).currency();
+
         List<AriUpdate> updates = command.nights().stream()
                 .map(n -> new AriUpdate(rt.getExternalRoomTypeId(), rt.getExternalRatePlanId(),
-                        n.date(), n.availability(), n.rate()))
+                        n.date(), n.availability(), MinorUnits.of(n.rate(), currency)))
                 .toList();
 
         String payload = serialize(new ChannelSyncPayload(property.getExternalPropertyId(), updates));
@@ -87,7 +95,7 @@ public class ChannelSyncService implements SyncChannelUseCase {
             updates.add(new AriUpdate(
                     mapping.getExternalRoomTypeId(), mapping.getExternalRatePlanId(), night,
                     snapshot.availableUnits(roomTypeId, night),
-                    snapshot.ratePerNight(roomTypeId, night)));
+                    MinorUnits.of(snapshot.ratePerNight(roomTypeId, night))));
         }
         if (updates.isEmpty()) return;
 
