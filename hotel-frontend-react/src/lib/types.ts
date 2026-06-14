@@ -171,6 +171,20 @@ export interface HotelSummary {
 export type PaymentMethod = "CASH" | "CREDIT_CARD" | "DEBIT_CARD" | "BANK_TRANSFER";
 export type PaymentStatus = "UNPAID" | "PARTIAL" | "PAID";
 
+export interface InvoiceItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface Payment {
+  amount: number;
+  method: PaymentMethod;
+  referenceNo?: string | null;
+  paidAt?: string;
+}
+
 export interface Invoice {
   id: string;
   invoiceNumber: string;
@@ -181,6 +195,15 @@ export interface Invoice {
   balance: number;
   paymentStatus: PaymentStatus;
   issuedAt?: string;
+  // Detail-only fields (populated by GET /invoices/:id):
+  reservationId?: string;
+  subtotal?: number;
+  taxAmount?: number;
+  discountAmount?: number;
+  dueDate?: string | null;
+  notes?: string | null;
+  items?: InvoiceItem[];
+  payments?: Payment[];
 }
 
 export type ReservationStatus =

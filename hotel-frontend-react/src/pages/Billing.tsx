@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "../lib/api";
 import { useToast } from "../lib/toast";
@@ -94,7 +95,7 @@ export default function Billing() {
               <tbody>
                 {rows.map((inv) => (
                   <tr key={inv.id}>
-                    <td><small className="text-muted">{inv.invoiceNumber}</small></td>
+                    <td><Link to={`/billing/${inv.id}`} className="small">{inv.invoiceNumber}</Link></td>
                     <td>
                       <small className="text-muted">{inv.reservationNumber}</small>
                       {inv.guestName && <><br /><span className="fw-semibold small">{inv.guestName}</span></>}

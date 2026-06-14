@@ -18,6 +18,7 @@ import HotelPolicy from "./pages/HotelPolicy";
 import HotelSetup from "./pages/HotelSetup";
 import HotelsList from "./pages/HotelsList";
 import Housekeeping from "./pages/Housekeeping";
+import InvoiceDetail from "./pages/InvoiceDetail";
 import Login from "./pages/Login";
 import ReservationDetail from "./pages/ReservationDetail";
 import ReservationNew from "./pages/ReservationNew";
@@ -55,6 +56,7 @@ export default function App() {
             <Route path="/room-types" element={<RoomTypes />} />
             <Route path="/housekeeping" element={<Housekeeping />} />
             <Route path="/billing" element={<Billing />} />
+            <Route path="/billing/:id" element={<InvoiceDetail />} />
             <Route path="/channels" element={<Channels />} />
             <Route path="/staff" element={<Staff />} />
             <Route path="/staff/new" element={<StaffForm />} />
