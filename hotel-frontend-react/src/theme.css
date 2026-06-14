@@ -1,0 +1,163 @@
+/* ============================================================
+   HospitOps — "Boutique Brass" theme
+   A thin layer over Bootstrap 5.3. Recolors via Bootstrap's own
+   CSS custom properties (no component rewrites). Headings get an
+   editorial serif; body gets a humanist sans; brass is the accent.
+   ============================================================ */
+
+:root {
+  /* Type */
+  --font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
+  --font-body: "Geist Variable", system-ui, -apple-system, sans-serif;
+
+  /* Brand */
+  --brass: #9a6b3f;        /* accent: borders, active state, links-on-dark */
+  --brass-solid: #8c5e34;  /* buttons (darker for white-text contrast)     */
+  --brass-hover: #774d29;
+  --brass-tint: #f0e7dc;   /* active nav background on dark sidebar         */
+  --ink: #2b2622;          /* warm near-black body text                     */
+  --canvas: #faf8f5;       /* warm off-white app background                 */
+  --surface: #ffffff;      /* cards                                         */
+  --hairline: #ece6df;     /* warm borders                                  */
+  --sidebar-bg: #1c1a17;   /* warm near-black (not Bootstrap's cold #212529)*/
+  --sidebar-fg: #cfc7bd;
+
+  /* Bootstrap overrides */
+  --bs-body-font-family: var(--font-body);
+  --bs-body-bg: var(--canvas);
+  --bs-body-color: var(--ink);
+  --bs-emphasis-color: var(--ink);
+  --bs-primary: var(--brass);
+  --bs-primary-rgb: 154, 107, 63;
+  --bs-link-color: #855227;
+  --bs-link-color-rgb: 133, 82, 39;
+  --bs-link-hover-color: var(--brass-hover);
+  --bs-border-color: var(--hairline);
+  --bs-light-rgb: 250, 248, 245;        /* main bg-light → warm canvas */
+
+  /* Premium muted semantic palette (harmonizes with brass, keeps
+     white-on-badge contrast better than stock yellow/blue) */
+  --bs-success-rgb: 79, 122, 82;
+  --bs-warning-rgb: 176, 122, 46;
+  --bs-danger-rgb: 179, 73, 61;
+  --bs-info-rgb: 74, 124, 140;
+  --bs-secondary-rgb: 138, 129, 120;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--canvas);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Editorial headings ------------------------------------ */
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 540;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+/* ---- Primary buttons (brass) ------------------------------- */
+.btn-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--brass-solid);
+  --bs-btn-border-color: var(--brass-solid);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--brass-hover);
+  --bs-btn-hover-border-color: var(--brass-hover);
+  --bs-btn-active-bg: var(--brass-hover);
+  --bs-btn-active-border-color: var(--brass-hover);
+  --bs-btn-focus-shadow-rgb: 154, 107, 63;
+  --bs-btn-disabled-bg: var(--brass-solid);
+  --bs-btn-disabled-border-color: var(--brass-solid);
+}
+
+/* Focus ring → brass instead of blue */
+.form-control:focus,
+.form-select:focus,
+.btn:focus-visible,
+.form-check-input:focus {
+  border-color: var(--brass);
+  box-shadow: 0 0 0 0.2rem rgba(154, 107, 63, 0.2);
+}
+.form-check-input:checked {
+  background-color: var(--brass-solid);
+  border-color: var(--brass-solid);
+}
+
+/* ---- Cards: warm surface, hairline border, quiet shadow ---- */
+.card {
+  --bs-card-bg: var(--surface);
+  --bs-card-border-color: var(--hairline);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(43, 38, 34, 0.04), 0 1px 12px rgba(43, 38, 34, 0.03);
+}
+.card-header {
+  background-color: transparent;
+  border-bottom-color: var(--hairline);
+  font-family: var(--font-display);
+  font-weight: 540;
+  letter-spacing: -0.005em;
+}
+
+/* ---- Tables: lighter rules, warm hover --------------------- */
+.table {
+  --bs-table-border-color: var(--hairline);
+  --bs-table-hover-bg: #f7f1ea;
+}
+.table > thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #8a8178;
+  font-weight: 600;
+  border-bottom-color: var(--hairline);
+}
+
+/* ---- App shell: sidebar ------------------------------------ */
+.app-sidebar {
+  background-color: var(--sidebar-bg);
+  color: var(--sidebar-fg);
+  width: 240px;
+}
+.app-brand {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.app-brand::first-letter { color: var(--brass); }
+
+.app-sidebar .nav-link {
+  color: var(--sidebar-fg);
+  border-radius: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.92rem;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.app-sidebar .nav-link:hover {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.06);
+}
+.app-sidebar .nav-link.active {
+  color: #fff;
+  background-color: rgba(154, 107, 63, 0.28);
+  box-shadow: inset 2px 0 0 var(--brass);
+}
+
+/* ---- Page-load reveal (one orchestrated moment) ------------ */
+@keyframes ho-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+main > * {
+  animation: ho-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  main > * { animation: none; }
+}

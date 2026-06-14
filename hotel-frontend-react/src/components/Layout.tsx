@@ -35,15 +35,15 @@ export default function Layout() {
 
   return (
     <div className="d-flex" style={{ minHeight: "100vh" }}>
-      <aside className="bg-dark text-white p-3 d-flex flex-column" style={{ width: 240 }}>
-        <h5 className="mb-4 fw-bold">HospitOps</h5>
-        <nav className="nav nav-pills flex-column gap-1 flex-grow-1">
+      <aside className="app-sidebar p-3 d-flex flex-column">
+        <div className="app-brand mb-4">HospitOps</div>
+        <nav className="nav flex-column gap-1 flex-grow-1">
           {visible.map((n) => (
             <NavLink
               key={n.to}
               to={n.to}
               className={({ isActive }) =>
-                "nav-link text-white" + (isActive ? " active" : "")
+                "nav-link" + (isActive ? " active" : "")
               }
             >
               {n.label}

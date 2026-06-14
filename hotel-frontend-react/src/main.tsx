@@ -1,4 +1,7 @@
 import "bootstrap/dist/css/bootstrap.min.css";
+import "@fontsource-variable/fraunces";
+import "@fontsource-variable/geist";
+import "./theme.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
