@@ -32,7 +32,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.6</version>
+        <version>4.1.0</version>
         <relativePath/>
     </parent>
 
@@ -70,7 +70,7 @@
             Used as an annotation processor — generates code at compile time only,
             not included in the final artifact.
         -->
-        <hibernate.version>7.4.0.Final</hibernate.version>
+        <hibernate.version>7.4.1.Final</hibernate.version>
         <!--
             Declared explicitly so ${spring-boot.version} resolves in child modules
             even when IntelliJ cannot download spring-boot-starter-parent from
