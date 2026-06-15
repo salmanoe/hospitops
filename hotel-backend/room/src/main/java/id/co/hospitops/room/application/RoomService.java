@@ -102,6 +102,12 @@ public class RoomService implements ManageRoomUseCase, RoomAvailabilityUseCase {
         return PageResult.of(list, pageNumber, pageSize, total);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public long countRooms() {
+        return roomRepo.count();
+    }
+
     // ── Availability ────────────────────────────────────────────
 
     @Override

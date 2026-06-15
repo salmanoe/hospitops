@@ -57,9 +57,18 @@ export default function Dashboard() {
     weekday: "long", day: "2-digit", month: "long", year: "numeric",
   });
 
+  // Trailing 30-day window for realised ADR / RevPAR / occupancy.
+  const metricsFrom = iso(addDays(new Date(), -30));
+  const metricsTo = iso(new Date());
+
   const roomsQ = useQuery({ queryKey: ["rooms", { size: 200 }], queryFn: () => api.rooms.list({ size: 200 }) });
   const resQ = useQuery({ queryKey: ["reservations", "analytics", { size: 500 }], queryFn: () => api.reservations.list({ size: 500 }) });
   const invQ = useQuery({ queryKey: ["invoices", "analytics", { size: 500 }], queryFn: () => api.invoices.list({ size: 500 }) });
+  const metricsQ = useQuery({
+    queryKey: ["reservations", "revenue-metrics", metricsFrom, metricsTo],
+    queryFn: () => api.reservations.revenueMetrics(metricsFrom, metricsTo),
+  });
+  const metrics = metricsQ.data;
 
   const rooms = roomsQ.data?.content ?? [];
   const reservations = useMemo(() => resQ.data?.content ?? [], [resQ.data]);
@@ -78,8 +87,6 @@ export default function Dashboard() {
   );
   const monthRevenue = monthInvoices.reduce((s, i) => s + (i.totalAmount ?? 0), 0);
   const outstanding = invoices.reduce((s, i) => s + (i.balance ?? 0), 0);
-  const avgBooking = monthInvoices.length ? monthRevenue / monthInvoices.length : 0;
-  const revPerRoom = totalRooms ? monthRevenue / totalRooms : 0;
 
   // ── Revenue, last 14 days (bar) ──────────────────────────────────────────
   const revenueSeries = useMemo(() => {
@@ -134,9 +141,9 @@ export default function Dashboard() {
         </div>
 
         <div className="row g-3 mb-4">
-          <KpiCard label="Avg Booking Value" value={dash ?? formatRp(avgBooking)} hint="Per invoice, this month" />
-          <KpiCard label="Revenue / Room" value={dash ?? formatRp(revPerRoom)} hint="MTD revenue ÷ rooms" />
-          <KpiCard label="Reservations" value={dash ?? String(reservations.length)} hint="In current window" />
+          <KpiCard label="ADR" value={metricsQ.isLoading ? "—" : formatRp(metrics?.adr ?? 0)} hint="Avg daily rate · last 30d" />
+          <KpiCard label="RevPAR" value={metricsQ.isLoading ? "—" : formatRp(metrics?.revpar ?? 0)} hint="Revenue per available room · 30d" />
+          <KpiCard label="Occupancy (30d)" value={metricsQ.isLoading ? "—" : `${metrics?.occupancyRate ?? 0}%`} hint={`${metrics?.roomNightsSold ?? 0} of ${metrics?.availableRoomNights ?? 0} room-nights`} />
           <KpiCard label="In-House" value={dash ?? String(reservations.filter((r) => r.status === "CHECKED_IN").length)} hint="Currently checked in" />
         </div>
 

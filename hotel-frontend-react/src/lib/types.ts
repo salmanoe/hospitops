@@ -256,6 +256,20 @@ export interface Guest {
   createdAt?: string;
 }
 
+/** GET /reservations/analytics/revenue → ADR / RevPAR / occupancy for a window. */
+export interface RevenueMetrics {
+  from: string;
+  to: string;
+  days: number;
+  totalRooms: number;
+  roomNightsSold: number;
+  availableRoomNights: number;
+  roomRevenue: number;
+  adr: number;
+  revpar: number;
+  occupancyRate: number;
+}
+
 // ── Rate / availability calendar ───────────────────────────────────────────
 export interface RoomCalendarDay {
   date: string;

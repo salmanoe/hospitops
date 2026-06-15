@@ -27,4 +27,9 @@ public class RoomAvailabilityAdapter implements RoomAvailabilityPort {
     public Money resolveRate(RoomId id, LocalDate checkIn) {
         return roomUseCase.resolveRate(id, checkIn);
     }
+
+    @Override
+    public long totalRooms() {
+        return roomUseCase.countRooms();
+    }
 }

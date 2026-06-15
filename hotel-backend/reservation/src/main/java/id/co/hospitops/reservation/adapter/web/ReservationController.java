@@ -8,6 +8,7 @@ package id.co.hospitops.reservation.adapter.web;
 
 import id.co.hospitops.reservation.application.command.CreateReservationCommand;
 import id.co.hospitops.reservation.application.response.ReservationResponse;
+import id.co.hospitops.reservation.application.response.RevenueMetricsResponse;
 import id.co.hospitops.reservation.domain.port.in.ReservationUseCase;
 import id.co.hospitops.reservation.adapter.web.request.CreateReservationRequest;
 import id.co.hospitops.shared.*;
@@ -15,10 +16,12 @@ import id.co.hospitops.shared.web.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -53,6 +56,20 @@ public class ReservationController {
     @GetMapping("/today/departures")
     public ResponseEntity<ApiResponse<List<ReservationResponse>>> departures() {
         return ResponseEntity.ok(ApiResponse.ok(reservationUseCase.todayDepartures()));
+    }
+
+    @GetMapping("/calendar")
+    public ResponseEntity<ApiResponse<List<ReservationResponse>>> calendar(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(ApiResponse.ok(reservationUseCase.findInRange(from, to)));
+    }
+
+    @GetMapping("/analytics/revenue")
+    public ResponseEntity<ApiResponse<RevenueMetricsResponse>> revenueMetrics(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(ApiResponse.ok(reservationUseCase.revenueMetrics(from, to)));
     }
 
     @PostMapping

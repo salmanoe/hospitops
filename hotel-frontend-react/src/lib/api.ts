@@ -29,6 +29,7 @@ import type {
   PageResult,
   PaymentMethod,
   ReservationSummary,
+  RevenueMetrics,
   Room,
   RoomStatus,
   RoomType,
@@ -210,6 +211,10 @@ export const api = {
     create: (data: CreateReservationInput) => post<ReservationSummary>("/reservations", data),
     arrivals: () => get<ReservationSummary[]>("/reservations/today/arrivals"),
     departures: () => get<ReservationSummary[]>("/reservations/today/departures"),
+    range: (from: string, to: string) =>
+      get<ReservationSummary[]>("/reservations/calendar", { from, to }),
+    revenueMetrics: (from: string, to: string) =>
+      get<RevenueMetrics>("/reservations/analytics/revenue", { from, to }),
     checkIn: (id: string) => patch<ReservationSummary>(`/reservations/${id}/checkin`),
     checkOut: (id: string) => patch<ReservationSummary>(`/reservations/${id}/checkout`),
     cancel: (id: string) => patch<ReservationSummary>(`/reservations/${id}/cancel`),

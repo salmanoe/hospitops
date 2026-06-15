@@ -2,6 +2,7 @@ package id.co.hospitops.reservation.application;
 
 import id.co.hospitops.reservation.application.command.CreateReservationCommand;
 import id.co.hospitops.reservation.application.response.ReservationResponse;
+import id.co.hospitops.reservation.application.response.RevenueMetricsResponse;
 import id.co.hospitops.reservation.domain.model.*;
 import id.co.hospitops.reservation.domain.port.in.ReservationUseCase;
 import id.co.hospitops.reservation.domain.port.out.*;
@@ -18,14 +19,24 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class ReservationService implements ReservationUseCase {
+
+    // Reservations that count as "sold" for revenue analytics — on-the-books
+    // and realised stays, excluding PENDING and CANCELLED.
+    private static final Set<ReservationStatus> SOLD = EnumSet.of(
+            ReservationStatus.CONFIRMED, ReservationStatus.CHECKED_IN, ReservationStatus.CHECKED_OUT);
 
     private final ReservationRepository reservationRepo;
     private final RoomAvailabilityPort roomAvailability;
@@ -158,6 +169,51 @@ public class ReservationService implements ReservationUseCase {
     public List<ReservationResponse> todayDepartures() {
         return reservationRepo.findTodayDepartures(LocalDate.now())
                 .stream().map(this::enrich).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ReservationResponse> findInRange(LocalDate from, LocalDate to) {
+        validateRange(from, to);
+        return reservationRepo.findOverlapping(from, to)
+                .stream().map(this::enrich).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RevenueMetricsResponse revenueMetrics(LocalDate from, LocalDate to) {
+        validateRange(from, to);
+        long days = ChronoUnit.DAYS.between(from, to);
+
+        long roomNightsSold = 0;
+        Money roomRevenue = Money.zero();
+        for (Reservation r : reservationRepo.findOverlapping(from, to)) {
+            if (!SOLD.contains(r.getStatus())) continue;
+            roomNightsSold += r.nightsWithin(from, to);
+            roomRevenue = roomRevenue.add(r.roomRevenueWithin(from, to));
+        }
+
+        long totalRooms = roomAvailability.totalRooms();
+        long availableRoomNights = totalRooms * days;
+        BigDecimal revenue = roomRevenue.amount();
+
+        BigDecimal adr = roomNightsSold > 0
+                ? revenue.divide(BigDecimal.valueOf(roomNightsSold), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        BigDecimal revpar = availableRoomNights > 0
+                ? revenue.divide(BigDecimal.valueOf(availableRoomNights), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        double occupancyRate = availableRoomNights > 0
+                ? Math.round((double) roomNightsSold / availableRoomNights * 1000.0) / 10.0
+                : 0.0;
+
+        return new RevenueMetricsResponse(from, to, days, totalRooms, roomNightsSold,
+                availableRoomNights, revenue, adr, revpar, occupancyRate);
+    }
+
+    private void validateRange(LocalDate from, LocalDate to) {
+        if (from == null || to == null || !to.isAfter(from))
+            throw new BusinessRuleViolationException("'to' date must be after 'from' date");
     }
 
     private Reservation findReservation(ReservationId id) {

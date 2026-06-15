@@ -28,5 +28,12 @@ public interface ReservationRepository {
 
     List<Reservation> findTodayDepartures(LocalDate date);
 
+    /**
+     * All reservations whose stay overlaps the window {@code [from, to)}
+     * (i.e. checkIn &lt; to AND checkOut &gt; from), ordered by room then
+     * check-in. Backs the booking calendar and revenue analytics.
+     */
+    List<Reservation> findOverlapping(LocalDate from, LocalDate to);
+
     long count();
 }

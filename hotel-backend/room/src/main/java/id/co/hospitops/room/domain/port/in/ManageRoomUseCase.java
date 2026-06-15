@@ -31,6 +31,13 @@ public interface ManageRoomUseCase {
 
     PageResult<RoomResponse> findAll(String statusFilter, Pageable pageable);
 
+    /**
+     * Total number of rooms in the current hotel. Used by the reservation
+     * module's revenue analytics to compute available room-nights (the
+     * denominator of RevPAR and occupancy).
+     */
+    long countRooms();
+
     // --- Cross-module operations ---
 
     /**

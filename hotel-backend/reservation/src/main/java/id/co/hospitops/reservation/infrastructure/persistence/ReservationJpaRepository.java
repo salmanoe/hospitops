@@ -50,4 +50,15 @@ public interface ReservationJpaRepository extends JpaRepository<ReservationJpaEn
     List<ReservationJpaEntity> findTodayDepartures(@Param("hotelId") UUID hotelId,
                                                    @Param("date") LocalDate date,
                                                    @Param("status") ReservationStatus status);
+
+    @Query("""
+                SELECT r FROM ReservationJpaEntity r
+                WHERE r.hotelId = :hotelId
+                  AND r.checkInDate < :to
+                  AND r.checkOutDate > :from
+                ORDER BY r.roomId, r.checkInDate
+            """)
+    List<ReservationJpaEntity> findOverlapping(@Param("hotelId") UUID hotelId,
+                                               @Param("from") LocalDate from,
+                                               @Param("to") LocalDate to);
 }

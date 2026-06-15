@@ -103,4 +103,22 @@ public class Reservation {
     public Money calculateSubtotal() {
         return ratePerNight.multiply((int) getNights());
     }
+
+    /**
+     * Number of this reservation's nights that fall within the window
+     * {@code [from, to)} (check-out exclusive, mirroring how a stay occupies
+     * the nights of {@code [checkIn, checkOut)}). Used by revenue analytics so a
+     * stay straddling the window edge only contributes its in-window nights.
+     */
+    public long nightsWithin(LocalDate from, LocalDate to) {
+        LocalDate start = checkInDate.isAfter(from) ? checkInDate : from;
+        LocalDate end = checkOutDate.isBefore(to) ? checkOutDate : to;
+        long nights = ChronoUnit.DAYS.between(start, end);
+        return Math.max(0, nights);
+    }
+
+    /** Room revenue earned within {@code [from, to)} = in-window nights × nightly rate. */
+    public Money roomRevenueWithin(LocalDate from, LocalDate to) {
+        return ratePerNight.multiply((int) nightsWithin(from, to));
+    }
 }

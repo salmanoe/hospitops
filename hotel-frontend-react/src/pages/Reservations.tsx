@@ -93,9 +93,11 @@ export default function Reservations() {
   const from = iso(calDays[0]);
   const to = iso(calDays[DAYS - 1]);
 
+  // Server-side date-range fetch — only the reservations overlapping the
+  // visible window come back, not the whole table.
   const calRes = useQuery({
-    queryKey: ["reservations", "calendar", { size: 500 }],
-    queryFn: () => api.reservations.list({ size: 500 }),
+    queryKey: ["reservations", "calendar", from, to],
+    queryFn: () => api.reservations.range(from, to),
     enabled: view === "calendar",
   });
 
@@ -106,7 +108,7 @@ export default function Reservations() {
 
   const byRoom = useMemo(() => {
     const map = new Map<string, ReservationSummary[]>();
-    for (const r of calRes.data?.content ?? []) {
+    for (const r of calRes.data ?? []) {
       if (!r.checkInDate || !r.checkOutDate) continue;
       if (!ACTIVE_CAL.includes(r.status)) continue;
       if (r.checkOutDate <= from || r.checkInDate > to) continue; // no overlap

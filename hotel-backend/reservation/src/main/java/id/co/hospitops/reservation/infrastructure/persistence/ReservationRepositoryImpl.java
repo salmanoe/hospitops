@@ -73,6 +73,12 @@ public class ReservationRepositoryImpl implements ReservationRepository {
     }
 
     @Override
+    public List<Reservation> findOverlapping(LocalDate from, LocalDate to) {
+        return jpa.findOverlapping(HotelContext.current().value(), from, to)
+                .stream().map(this::toDomain).toList();
+    }
+
+    @Override
     public long count() {
         return jpa.countByHotelId(HotelContext.current().value());
     }
