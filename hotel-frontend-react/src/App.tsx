@@ -3,7 +3,6 @@ import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import GroupLayout from "./components/GroupLayout";
 import Billing from "./pages/Billing";
-import CalendarBookings from "./pages/CalendarBookings";
 import CalendarRates from "./pages/CalendarRates";
 import Channels from "./pages/Channels";
 import Dashboard from "./pages/Dashboard";
@@ -43,7 +42,6 @@ export default function App() {
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/reservations" element={<Reservations />} />
-            <Route path="/calendar" element={<CalendarBookings />} />
             <Route path="/rates" element={<CalendarRates />} />
             <Route path="/reservations/new" element={<ReservationNew />} />
             <Route path="/reservations/:id" element={<ReservationDetail />} />
