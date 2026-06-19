@@ -4,6 +4,7 @@ import id.co.hospitops.identity.application.command.LoginCommand;
 import id.co.hospitops.identity.application.response.LoginResponse;
 import id.co.hospitops.identity.domain.model.Staff;
 import id.co.hospitops.identity.domain.port.in.AuthUseCase;
+import id.co.hospitops.identity.domain.port.out.HotelStatusPort;
 import id.co.hospitops.identity.domain.port.out.RefreshTokenStore;
 import id.co.hospitops.identity.domain.port.out.StaffRepository;
 import id.co.hospitops.identity.domain.port.out.TokenBlacklist;
@@ -33,6 +34,7 @@ public class AuthService implements AuthUseCase {
     private final TokenBlacklist tokenBlacklist;
     private final RefreshTokenStore refreshTokenStore;
     private final StaffRepository staffRepository;
+    private final HotelStatusPort hotelStatusPort;
     private final long refreshExpirationSeconds;
 
     public AuthService(
@@ -41,6 +43,7 @@ public class AuthService implements AuthUseCase {
             TokenBlacklist tokenBlacklist,
             RefreshTokenStore refreshTokenStore,
             StaffRepository staffRepository,
+            HotelStatusPort hotelStatusPort,
             @Value("${hospitops.refresh-token.expiration-seconds:604800}") long refreshExpirationSeconds
     ) {
         this.authenticationManager = authenticationManager;
@@ -48,6 +51,7 @@ public class AuthService implements AuthUseCase {
         this.tokenBlacklist = tokenBlacklist;
         this.refreshTokenStore = refreshTokenStore;
         this.staffRepository = staffRepository;
+        this.hotelStatusPort = hotelStatusPort;
         this.refreshExpirationSeconds = refreshExpirationSeconds;
     }
 
@@ -60,12 +64,16 @@ public class AuthService implements AuthUseCase {
             );
             Staff staff = ((StaffUserDetails) Objects.requireNonNull(authentication.getPrincipal())).staff();
 
+            // Staff belong to exactly one hotel; that hotel must be ACTIVE for them to sign in.
+            // A single lookup yields both the guard and the hotel name surfaced in the response.
+            HotelStatusPort.HotelInfo hotel = requireActiveHotel(staff);
+
             String accessToken  = tokenService.generate(staff);
             String refreshToken = issueRefreshToken(staff.getId());
 
-            log.info("Staff {} logged in", staff.getUsername());
+            log.info("Staff {} logged into hotel {}", staff.getUsername(), hotel.id().value());
             return LoginResponse.of(accessToken, tokenService.getExpirationSeconds(),
-                    refreshToken, refreshExpirationSeconds, staff);
+                    refreshToken, refreshExpirationSeconds, staff, hotel.id(), hotel.name());
 
         } catch (DisabledException e) {
             throw new BusinessRuleViolationException("Account is deactivated");
@@ -95,6 +103,10 @@ public class AuthService implements AuthUseCase {
             throw new BusinessRuleViolationException("Account is deactivated");
         }
 
+        // Re-check the hotel is still ACTIVE on every refresh — a suspended hotel
+        // must not be able to keep extending its staff's sessions.
+        HotelStatusPort.HotelInfo hotel = requireActiveHotel(staff);
+
         // Rotate: revoke the old token before issuing the new one.
         // If the store revocation fails the old token should not be accepted again
         // because findStaffId will return empty after the TTL elapses anyway.
@@ -104,7 +116,7 @@ public class AuthService implements AuthUseCase {
 
         log.info("Tokens refreshed for staff {}", staff.getUsername());
         return LoginResponse.of(newAccessToken, tokenService.getExpirationSeconds(),
-                newRefreshToken, refreshExpirationSeconds, staff);
+                newRefreshToken, refreshExpirationSeconds, staff, hotel.id(), hotel.name());
     }
 
     /**
@@ -121,6 +133,18 @@ public class AuthService implements AuthUseCase {
             refreshTokenStore.revoke(refreshToken);
         }
         log.info("Logout complete — access token blacklisted, refresh token revoked={}", refreshToken != null);
+    }
+
+    /**
+     * Resolves the staff member's hotel and asserts it is ACTIVE. The hotel id is a
+     * property of the account (staff belong to exactly one hotel), so it is never
+     * supplied by the caller.
+     *
+     * @throws BusinessRuleViolationException if the hotel is in SETUP/SUSPENDED status or unknown
+     */
+    private HotelStatusPort.HotelInfo requireActiveHotel(Staff staff) {
+        return hotelStatusPort.findActiveHotel(staff.getHotelId())
+                .orElseThrow(() -> new BusinessRuleViolationException("Hotel is not currently active"));
     }
 
     private String issueRefreshToken(StaffId staffId) {

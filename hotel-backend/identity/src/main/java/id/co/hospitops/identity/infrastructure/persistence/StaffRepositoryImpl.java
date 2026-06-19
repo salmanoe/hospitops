@@ -3,7 +3,6 @@ package id.co.hospitops.identity.infrastructure.persistence;
 import id.co.hospitops.identity.domain.model.Staff;
 import id.co.hospitops.identity.domain.port.out.StaffRepository;
 import id.co.hospitops.shared.HotelContext;
-import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.shared.StaffId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -42,14 +41,10 @@ public class StaffRepositoryImpl implements StaffRepository {
     }
 
     @Override
-    public Optional<Staff> findByUsernameAndHotelId(String username, HotelId hotelId) {
-        return jpaRepo.findByUsernameAndHotelId(username, hotelId.value()).map(mapper::toDomain);
-    }
-
-    @Override
     public boolean existsByUsername(String u) {
-        // Hotel-scoped uniqueness: two hotels may have staff with the same username
-        return jpaRepo.existsByUsernameAndHotelId(u, HotelContext.current().value());
+        // Global uniqueness: username is unique across all hotels (DB constraint),
+        // which is what lets staff sign in with username + password alone.
+        return jpaRepo.existsByUsername(u);
     }
 
     @Override

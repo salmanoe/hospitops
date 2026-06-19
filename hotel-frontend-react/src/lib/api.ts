@@ -142,8 +142,8 @@ async function getPdf(path: string): Promise<Blob> {
 // ── Domain-specific API surface (mirrors core.js) ──────────────────────────
 export const api = {
   auth: {
-    login: (username: string, password: string, hotelId: string) =>
-      post<StaffLoginResponse>(`/hotels/${hotelId}/auth/login`, { username, password }),
+    login: (username: string, password: string) =>
+      post<StaffLoginResponse>("/auth/login", { username, password }),
     logout: () => post<void>("/auth/logout", { refreshToken: getRefreshToken() }),
     me: () => get<StaffLoginResponse>("/auth/me"),
   },

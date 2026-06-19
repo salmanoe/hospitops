@@ -22,10 +22,9 @@ import java.time.Instant;
 /**
  * GROUP_ADMIN authentication and hotel context-switching.
  *
- * <p>Login deliberately mirrors the credential-check pattern in {@code HotelAuthService}:
- * no {@code AuthenticationManager} involvement, direct password comparison.
- * This keeps GROUP_ADMIN auth fully independent of Spring Security's staff-oriented
- * {@code UserDetailsService}.
+ * <p>Login deliberately performs a direct password comparison with no
+ * {@code AuthenticationManager} involvement. This keeps GROUP_ADMIN auth fully
+ * independent of Spring Security's staff-oriented {@code UserDetailsService}.
  */
 @Slf4j
 @Service

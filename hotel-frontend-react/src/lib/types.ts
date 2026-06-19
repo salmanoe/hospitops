@@ -36,7 +36,7 @@ export interface StoredUser {
   hotelName?: string | null;
 }
 
-/** POST /api/v1/hotels/{id}/auth/login → LoginResponse */
+/** POST /api/v1/auth/login → LoginResponse */
 export interface StaffLoginResponse {
   token: string;
   refreshToken?: string;
@@ -44,6 +44,8 @@ export interface StaffLoginResponse {
   fullName: string;
   username: string;
   role: Role;
+  hotelId?: string | null;
+  hotelName?: string | null;
 }
 
 /** POST /api/v1/group/auth/login and /enter → GroupLoginResponse */

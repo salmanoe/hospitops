@@ -55,6 +55,9 @@ export default function Layout() {
           ))}
         </nav>
         <div className="border-top border-secondary pt-3 mt-3">
+          {user?.hotelName && (
+            <div className="small text-light fw-semibold">{user.hotelName}</div>
+          )}
           <div className="small text-secondary">{user?.name}</div>
           <div className="small text-secondary mb-2">{user?.role.replace(/_/g, " ")}</div>
           <button className="btn btn-outline-light btn-sm w-100" onClick={onLogout}>

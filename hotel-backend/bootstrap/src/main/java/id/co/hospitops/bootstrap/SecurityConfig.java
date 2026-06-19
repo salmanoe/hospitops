@@ -77,10 +77,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         // ── Public endpoints ─────────────────────────────────────
-                        // Legacy unscoped login (kept for backward compatibility)
+                        // Staff login — username + password only; the hotel is a property
+                        // of the account and travels inside the issued JWT.
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
-                        // Hotel-aware staff login — hotelId is in the URL path
-                        .requestMatchers(HttpMethod.POST, "/api/v1/hotels/*/auth/login").permitAll()
                         // Refresh does not carry a valid access token — must be public
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
                         // Group self-service signup and login — no auth required

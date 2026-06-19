@@ -3,8 +3,8 @@ package id.co.hospitops.identity.adapter.web;
 import id.co.hospitops.identity.application.response.LoginResponse;
 import id.co.hospitops.identity.domain.model.StaffRole;
 import id.co.hospitops.identity.domain.port.in.AuthUseCase;
-import id.co.hospitops.identity.domain.port.in.HotelAuthUseCase;
 import id.co.hospitops.identity.domain.port.in.ManageStaffUseCase;
+import id.co.hospitops.shared.HotelId;
 import id.co.hospitops.identity.domain.port.out.StaffRepository;
 import id.co.hospitops.identity.domain.port.out.TokenBlacklist;
 import id.co.hospitops.identity.infrastructure.security.JwtUtil;
@@ -38,10 +38,6 @@ class IdentityControllerTest {
     @MockitoBean
     ManageStaffUseCase staffUseCase;
 
-    // HotelAuthController is in the same adapter.web scan scope.
-    @MockitoBean
-    HotelAuthUseCase hotelAuthUseCase;
-
     // JwtAuthFilter (@Component Filter) is included in the @WebMvcTest slice;
     // its dependencies must be mocked so the context loads.
     @MockitoBean
@@ -58,7 +54,8 @@ class IdentityControllerTest {
         return new LoginResponse(
                 "jwt-token", "Bearer", 28800L,
                 "refresh-uuid", 604800L,
-                StaffId.generate(), "Test User", "testuser", StaffRole.FRONT_DESK);
+                StaffId.generate(), "Test User", "testuser", StaffRole.FRONT_DESK,
+                HotelId.generate(), "Grand Sari Bali");
     }
 
     // ── POST /api/v1/auth/login ──────────────────────────────────────
@@ -121,7 +118,8 @@ class IdentityControllerTest {
             LoginResponse rotated = new LoginResponse(
                     "new-jwt", "Bearer", 28800L,
                     "new-refresh-uuid", 604800L,
-                    StaffId.generate(), "Test User", "testuser", StaffRole.FRONT_DESK);
+                    StaffId.generate(), "Test User", "testuser", StaffRole.FRONT_DESK,
+                    HotelId.generate(), "Grand Sari Bali");
             given(authUseCase.refresh("valid-refresh-uuid")).willReturn(rotated);
 
             mockMvc.perform(post("/api/v1/auth/refresh")

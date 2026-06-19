@@ -5,6 +5,7 @@ import id.co.hospitops.identity.application.response.LoginResponse;
 import id.co.hospitops.identity.domain.model.Staff;
 import id.co.hospitops.identity.domain.model.StaffRole;
 import id.co.hospitops.shared.HotelId;
+import id.co.hospitops.identity.domain.port.out.HotelStatusPort;
 import id.co.hospitops.identity.domain.port.out.RefreshTokenStore;
 import id.co.hospitops.identity.domain.port.out.StaffRepository;
 import id.co.hospitops.identity.domain.port.out.TokenBlacklist;
@@ -44,6 +45,8 @@ class AuthServiceTest {
     @Mock
     StaffRepository staffRepository;
     @Mock
+    HotelStatusPort hotelStatusPort;
+    @Mock
     Authentication authentication;
 
     /**
@@ -57,7 +60,7 @@ class AuthServiceTest {
     void setUp() {
         authService = new AuthService(
                 authenticationManager, tokenService, tokenBlacklist,
-                refreshTokenStore, staffRepository, REFRESH_TTL_SECONDS);
+                refreshTokenStore, staffRepository, hotelStatusPort, REFRESH_TTL_SECONDS);
     }
 
     private Staff activeStaff() {
@@ -88,6 +91,8 @@ class AuthServiceTest {
                     new UsernamePasswordAuthenticationToken("testuser", "correctpass")))
                     .willReturn(authentication);
             given(authentication.getPrincipal()).willReturn(new StaffUserDetails(staff));
+            given(hotelStatusPort.findActiveHotel(staff.getHotelId()))
+                    .willReturn(Optional.of(new HotelStatusPort.HotelInfo(staff.getHotelId(), "Grand Sari Bali")));
             given(tokenService.generate(staff)).willReturn("access-jwt");
             given(tokenService.getExpirationSeconds()).willReturn(28800L);
 
@@ -98,6 +103,24 @@ class AuthServiceTest {
             assertThat(response.expiresIn()).isEqualTo(28800L);
             assertThat(response.refreshToken()).isNotNull().isNotBlank();
             assertThat(response.refreshExpiresIn()).isEqualTo(REFRESH_TTL_SECONDS);
+            // The hotel is a property of the account — surfaced in the response.
+            assertThat(response.hotelId()).isEqualTo(staff.getHotelId());
+            assertThat(response.hotelName()).isEqualTo("Grand Sari Bali");
+        }
+
+        @Test
+        @DisplayName("throws BusinessRuleViolationException when the staff's hotel is not ACTIVE")
+        void throwsWhenHotelNotActive() {
+            Staff staff = activeStaff();
+            given(authenticationManager.authenticate(any())).willReturn(authentication);
+            given(authentication.getPrincipal()).willReturn(new StaffUserDetails(staff));
+            given(hotelStatusPort.findActiveHotel(staff.getHotelId())).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> authService.login(new LoginCommand("testuser", "pass")))
+                    .isInstanceOf(BusinessRuleViolationException.class)
+                    .hasMessageContaining("Hotel is not currently active");
+
+            verify(tokenService, never()).generate(any());
         }
 
         @Test
@@ -106,6 +129,8 @@ class AuthServiceTest {
             Staff staff = activeStaff();
             given(authenticationManager.authenticate(any())).willReturn(authentication);
             given(authentication.getPrincipal()).willReturn(new StaffUserDetails(staff));
+            given(hotelStatusPort.findActiveHotel(staff.getHotelId()))
+                    .willReturn(Optional.of(new HotelStatusPort.HotelInfo(staff.getHotelId(), "Grand Sari Bali")));
             given(tokenService.generate(any())).willReturn("access-jwt");
             given(tokenService.getExpirationSeconds()).willReturn(28800L);
 
@@ -156,6 +181,8 @@ class AuthServiceTest {
 
             given(refreshTokenStore.findStaffId(oldRefresh)).willReturn(Optional.of(staff.getId()));
             given(staffRepository.findById(staff.getId())).willReturn(Optional.of(staff));
+            given(hotelStatusPort.findActiveHotel(staff.getHotelId()))
+                    .willReturn(Optional.of(new HotelStatusPort.HotelInfo(staff.getHotelId(), "Grand Sari Bali")));
             given(tokenService.generate(staff)).willReturn("new-access-jwt");
             given(tokenService.getExpirationSeconds()).willReturn(28800L);
 

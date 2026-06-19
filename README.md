@@ -165,9 +165,9 @@ open http://localhost
 # Backend health (proxied through Nginx)
 curl http://localhost/actuator/health
 
-# Hotel staff login — returns an access token and a refresh token
-# Replace {hotelId} with the UUID of the hotel seeded by Flyway
-curl -X POST http://localhost/api/v1/hotels/{hotelId}/auth/login \
+# Hotel staff login — username + password only; returns an access token and a
+# refresh token. The staff member's hotel is carried inside the issued JWT.
+curl -X POST http://localhost/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"admin123"}'
 
@@ -191,7 +191,7 @@ curl -X POST http://localhost/api/v1/group/auth/login \
 | `housekeeper` | `hk123456`      | Housekeeping |
 | `accountant`  | `acc12345`      | Accountant   |
 
-Login endpoint: `POST /api/v1/hotels/{hotelId}/auth/login`
+Login endpoint: `POST /api/v1/auth/login` (the hotel is resolved from the account and embedded in the JWT)
 
 ### Group admin
 

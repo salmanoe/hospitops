@@ -176,7 +176,7 @@ class SetupWizardIntegrationTest {
                 {"username":"%s","password":"%s"}
                 """.formatted(STAFF_USERNAME, STAFF_PASSWORD);
 
-        mockMvc.perform(post("/api/v1/hotels/{hotelId}/auth/login", hotelId)
+        mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginBody))
                 .andExpect(status().isUnprocessableEntity())
@@ -225,7 +225,7 @@ class SetupWizardIntegrationTest {
                 {"username":"%s","password":"%s"}
                 """.formatted(STAFF_USERNAME, STAFF_PASSWORD);
 
-        MvcResult result = mockMvc.perform(post("/api/v1/hotels/{hotelId}/auth/login", hotelId)
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginBody))
                 .andExpect(status().isOk())
@@ -290,7 +290,7 @@ class SetupWizardIntegrationTest {
                 {"username":"%s","password":"%s"}
                 """.formatted(STAFF_USERNAME, STAFF_PASSWORD);
 
-        mockMvc.perform(post("/api/v1/hotels/{hotelId}/auth/login", hotelId)
+        mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginBody))
                 .andExpect(status().isUnprocessableEntity())
@@ -314,7 +314,7 @@ class SetupWizardIntegrationTest {
                 {"username":"%s","password":"%s"}
                 """.formatted(STAFF_USERNAME, STAFF_PASSWORD);
 
-        mockMvc.perform(post("/api/v1/hotels/{hotelId}/auth/login", hotelId)
+        mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginBody))
                 .andExpect(status().isOk())
