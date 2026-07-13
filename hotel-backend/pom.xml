@@ -48,7 +48,7 @@
         <mapstruct.version>1.6.3</mapstruct.version>
         <lombok.version>1.18.46</lombok.version>
         <auth0.java-jwt.version>4.5.2</auth0.java-jwt.version>
-        <itext.version>9.6.0</itext.version>
+        <itext.version>9.7.0</itext.version>
         <!--
             Spring Boot 4.0.6's BOM declares testcontainers.version=2.0.5, but
             Testcontainers 2.x is NOT published to Maven Central — all 2.0.x
