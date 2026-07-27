@@ -60,7 +60,7 @@
             pins in bootstrap/pom.xml resolve correctly.
         -->
         <testcontainers.version>1.21.4</testcontainers.version>
-        <native.maven.plugin.version>1.1.1</native.maven.plugin.version>
+        <native.maven.plugin.version>1.1.6</native.maven.plugin.version>
 
         <!--
             Change 3: hibernate-processor replaces the deprecated hibernate-jpamodelgen
