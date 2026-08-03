@@ -63,7 +63,7 @@ jobs:
 
       # Gradle wrapper validation + dependency/build caching.
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6.2.0
 
       # Full build: compile, unit + Testcontainers integration tests, JaCoCo.
       # Docker is available on ubuntu-latest, so Testcontainers works directly.
@@ -110,7 +110,7 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6.2.0
 
       # Skip analysis entirely when SONAR_HOST_URL is not configured.
       # This prevents a misleading "URI with undefined scheme" failure on
